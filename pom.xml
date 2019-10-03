@@ -2,18 +2,15 @@
 <project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xmlns="http://maven.apache.org/POM/4.0.0"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <artifactId>automator-parent</artifactId>
-        <groupId>net.yudichev</groupId>
-        <version>1.0-SNAPSHOT</version>
-    </parent>
+    <groupId>net.yudichev</groupId>
+    <artifactId>google-photos-upload</artifactId>
+    <version>1.0-SNAPSHOT</version>
     <modelVersion>4.0.0</modelVersion>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <artifactId>google-photos-upload</artifactId>
     <dependencyManagement>
         <dependencies>
             <dependency>
