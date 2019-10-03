@@ -1,0 +1,15 @@
+Configuration:
+  name: Automator
+  shutdownHook: disable
+  appenders:
+    Console:
+      name: STDOUT
+      PatternLayout:
+        Pattern: "%d %p [%t] %C{1.} %m%n"
+
+  Loggers:
+    Root:
+      level: debug
+      includeLocation: true
+      AppenderRef:
+        - ref: STDOUT

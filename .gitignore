@@ -1,0 +1,8 @@
+*.iml
+**/target/**
+.idea/libraries/**
+.idea/compiler.xml
+.idea/modules.xml
+.idea/encodings.xml
+.idea/workspace.xml
+**/dependency-reduced-pom.xml
