@@ -34,10 +34,7 @@ final class UploadPhotos extends BaseLifecycleComponent {
         asUnchecked(() -> {
             ImmutableList.Builder<CompletableFuture<Void>> resultFutureBuilder = ImmutableList.builder();
 
-            directoryTreeWalker.walk(file -> {
-                logger.info("Scheduling upload of {}", file);
-                resultFutureBuilder.add(uploader.uploadFile(file));
-            });
+            directoryTreeWalker.walk(file -> resultFutureBuilder.add(uploader.uploadFile(file)));
 
             ImmutableList<CompletableFuture<Void>> futureList = resultFutureBuilder.build();
             logger.info("Started uploading {} file(s)", futureList.size());

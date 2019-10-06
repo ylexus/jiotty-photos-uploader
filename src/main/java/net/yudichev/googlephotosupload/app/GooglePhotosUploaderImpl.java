@@ -39,6 +39,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     private final ExecutorService executorService;
     private final RemoteApiResultHandler backOffHandler;
+    private final RemoteApiResultHandler invalidMediaItemHandler;
     private final AlbumManager albumManager;
     private final StateSaver stateSaver;
     private Map<Path, CompletableFuture<ItemState>> uploadedItemStateByPath;
@@ -50,11 +51,13 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                              @RootDir Path rootDir,
                              @Backpressured ExecutorService executorService,
                              @Backoff RemoteApiResultHandler backOffHandler,
+                             @InvalidMediaItem RemoteApiResultHandler invalidMediaItemHandler,
                              StateSaverFactory stateSaverFactory,
                              AlbumManager albumManager) {
         this.varStore = checkNotNull(varStore);
         this.executorService = checkNotNull(executorService);
         this.backOffHandler = checkNotNull(backOffHandler);
+        this.invalidMediaItemHandler = checkNotNull(invalidMediaItemHandler);
         this.albumManager = checkNotNull(albumManager);
         checkArgument(Files.isDirectory(rootDir), "Path is not a directory: %s", rootDir);
         stateSaver = stateSaverFactory.create("uploaded-items", this::saveState);
@@ -66,19 +69,28 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         Path parentDir = file.getParent();
         return albumManager.albumForDir(parentDir)
                 .map(albumFuture -> albumFuture
-                        .thenApply(GooglePhotosAlbum::getId)
                         .thenApply(Optional::of))
                 .orElse(CompletableFuture.completedFuture(Optional.empty()))
-                .thenCompose(albumIdOptional -> uploadedItemStateByPath.compute(file,
+                .thenCompose(album -> uploadedItemStateByPath.compute(file,
                         (theFile, currentFuture) -> {
-                            if (currentFuture == null ||
-                                    currentFuture.isCompletedExceptionally() ||
-                                    completeAndHasNoAlbum(currentFuture)) {
-                                currentFuture = googlePhotosClient.uploadMediaItem(albumIdOptional, theFile, executorService)
-                                        .thenApply(googleMediaItem -> {
-                                            logger.info("Uploaded file {} as media item {} and album {}", theFile, googleMediaItem.getId(), albumIdOptional);
-                                            return ItemState.of(googleMediaItem.getId(), albumIdOptional);
-                                        });
+                            if (currentFuture == null || currentFuture.isCompletedExceptionally()) {
+                                logger.info("Scheduling upload of {}", file);
+                                currentFuture = doUpload(album, theFile);
+                            } else {
+                                if (currentFuture.isDone()) {
+                                    if (!currentFuture.getNow(null).mediaId().isPresent()) {
+                                        logger.info("Permanently failed before, skipping: {}", file);
+                                    } else if (!currentFuture.getNow(null).albumId().isPresent()) {
+                                        // TODO completely remove this condition, only possible with my broken data
+                                        //  otherwise it'll fail on on items in root dir and will keep uploading them
+                                        logger.info("Previously uploaded, but not in album, uploading again: {}", file);
+                                        currentFuture = doUpload(album, theFile);
+                                    } else {
+                                        logger.info("Already uploaded, skipping: {}", file);
+                                    }
+                                } else {
+                                    logger.error("Unexpected future state for {}: {}", file, currentFuture);
+                                }
                             }
                             return currentFuture;
                         }))
@@ -93,8 +105,13 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                 .exceptionally(exception -> {
                     String operationName = "uploading file " + file;
                     boolean shouldRetry = backOffHandler.handle(operationName, exception);
-                    if (!shouldRetry) {
-                        logger.error("failed operation '{}'", operationName, exception);
+                    boolean invalidMediaItem = invalidMediaItemHandler.handle(operationName, exception);
+                    if (invalidMediaItem) {
+                        uploadedItemStateByPath.computeIfPresent(file, (path, existingStateFuture) ->
+                                CompletableFuture.completedFuture(ItemState.builder().build()));
+                    }
+                    if (!shouldRetry && !invalidMediaItem) {
+                        logger.error("failed operation '{}': {}", operationName, exception.getMessage());
                     }
                     return shouldRetry;
                 })
@@ -122,10 +139,17 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         stateSaver.close();
     }
 
-    private static boolean completeAndHasNoAlbum(CompletableFuture<ItemState> currentFuture) {
-        return Optional.ofNullable(currentFuture.getNow(null))
-                .map(state -> !state.albumId().isPresent())
-                .orElse(false);
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    private CompletableFuture<ItemState> doUpload(Optional<GooglePhotosAlbum> album, Path file) {
+        Optional<String> albumId = album.map(GooglePhotosAlbum::getId);
+        return googlePhotosClient.uploadMediaItem(albumId, file, executorService)
+                .thenApply(googleMediaItem -> {
+                    logger.info("Uploaded file {} as media item {} and album {}", file, googleMediaItem.getId(), album.map(GooglePhotosAlbum::getTitle));
+                    return ItemState.builder()
+                            .setMediaId(googleMediaItem.getId())
+                            .setAlbumId(albumId)
+                            .build();
+                });
     }
 
     private void saveState() {
@@ -145,5 +169,11 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
     @interface Backoff {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface InvalidMediaItem {
     }
 }

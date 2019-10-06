@@ -4,10 +4,12 @@ import com.google.api.gax.grpc.GrpcStatusCode;
 import com.google.api.gax.rpc.ResourceExhaustedException;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
+import com.google.rpc.Code;
 import io.grpc.Status;
 import net.jiotty.connector.google.photos.GoogleMediaItem;
 import net.jiotty.connector.google.photos.GooglePhotosAlbum;
 import net.jiotty.connector.google.photos.GooglePhotosClient;
+import net.jiotty.connector.google.photos.MediaItemCreationFailedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +36,13 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
     @Override
     public CompletableFuture<GoogleMediaItem> uploadMediaItem(Optional<String> albumId, Path path, Executor executor) {
         return CompletableFuture.supplyAsync(() -> {
-            checkArgument(path.toString().endsWith(".jpg"), "Failed: There was an error while trying to create this media item.");
+            if (!path.toString().endsWith(".jpg")) {
+                throw new MediaItemCreationFailedException("Unable to create media item for file",
+                        com.google.rpc.Status.newBuilder()
+                                .setCode(Code.INVALID_ARGUMENT_VALUE)
+                                .setMessage("Failed: There was an error while trying to create this media item.")
+                                .build());
+            }
             simulateResourceExhaustion(ImmutableSet.of("uploadMediaItem", path));
             UploadedGoogleMediaItem item = new UploadedGoogleMediaItem(path, albumId);
             itemsById.put(item.getId(), item);
@@ -105,6 +113,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         }
     }
 
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     public static class UploadedGoogleMediaItem implements GoogleMediaItem {
         private final String id;
         private final Optional<String> albumId;

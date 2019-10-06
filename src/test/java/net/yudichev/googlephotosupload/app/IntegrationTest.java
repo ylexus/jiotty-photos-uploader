@@ -86,7 +86,8 @@ final class IntegrationTest {
         String photosUploaderKey = "photosUploader";
         String outerAlbumPhotoAbsolutePath = outerAlbumPhoto.toAbsolutePath().toString();
         varStore.saveValue(photosUploaderKey, UploadState.builder()
-                .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath, ItemState.of("some-unknown-media-item-id", Optional.empty()))
+                .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath,
+                        ItemState.of(Optional.of("some-unknown-media-item-id"), Optional.empty()))
                 .build());
 
         doUploadTest();
@@ -95,7 +96,7 @@ final class IntegrationTest {
         assertThat(newUploadState, is(optionalWithValue()));
         //noinspection OptionalGetWithoutIsPresent
         assertThat(newUploadState.get().uploadedMediaItemIdByAbsolutePath().get(outerAlbumPhotoAbsolutePath),
-                is(ItemState.of(outerAlbumPhotoAbsolutePath, Optional.of("outer-album"))));
+                is(ItemState.of(Optional.of(outerAlbumPhotoAbsolutePath), Optional.of("outer-album"))));
     }
 
     @Test
@@ -104,16 +105,38 @@ final class IntegrationTest {
         String photosUploaderKey = "photosUploader";
         String outerAlbumPhotoAbsolutePath = outerAlbumPhoto.toAbsolutePath().toString();
         varStore.saveValue(photosUploaderKey, UploadState.builder()
-                .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath, ItemState.of(outerAlbumPhotoAbsolutePath, Optional.empty()))
+                .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath,
+                        ItemState.of(Optional.of(outerAlbumPhotoAbsolutePath), Optional.empty()))
                 .build());
 
         doUploadTest();
 
-        Optional<UploadState> newUploadState = varStore.readValue(UploadState.class, photosUploaderKey);
-        assertThat(newUploadState, is(optionalWithValue()));
-        //noinspection OptionalGetWithoutIsPresent
-        assertThat(newUploadState.get().uploadedMediaItemIdByAbsolutePath().get(outerAlbumPhotoAbsolutePath),
-                is(ItemState.of(outerAlbumPhotoAbsolutePath, Optional.of("outer-album"))));
+        Map<String, ItemState> uploadedMediaItemIdByAbsolutePath = readVarStoreDirectly();
+        assertThat(uploadedMediaItemIdByAbsolutePath.get(outerAlbumPhotoAbsolutePath),
+                is(ItemState.of(Optional.of(outerAlbumPhotoAbsolutePath), Optional.of("outer-album"))));
+    }
+
+    @Test
+    void ignoresIfSavedStateShowsInvalidMediaItem() throws InterruptedException, IOException {
+        VarStore varStore = Guice.createInjector(new VarStoreModule(varStoreAppName)).getInstance(VarStore.class);
+        String photosUploaderKey = "photosUploader";
+        String outerAlbumPhotoAbsolutePath = outerAlbumPhoto.toAbsolutePath().toString();
+        varStore.saveValue(photosUploaderKey, UploadState.builder()
+                .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath,
+                        ItemState.of(Optional.empty(), Optional.empty()))
+                .build());
+
+        doExecuteUpload();
+
+        Collection<UploadedGoogleMediaItem> allItems = googlePhotosClient.getAllItems();
+        assertThat(allItems, containsInAnyOrder(
+                allOf(itemForFile(equalTo(rootPhoto)), itemWithNoAlbum()),
+                // outer album item skipped
+                allOf(itemForFile(equalTo(innerAlbumPhoto)), itemInAlbumWithId(equalTo("outer-album: inner-album")))));
+
+        Map<String, ItemState> uploadedMediaItemIdByAbsolutePath = readVarStoreDirectly();
+        assertThat(uploadedMediaItemIdByAbsolutePath.get(outerAlbumPhotoAbsolutePath),
+                is(ItemState.of(Optional.empty(), Optional.empty())));
     }
 
     @Test
@@ -125,11 +148,19 @@ final class IntegrationTest {
     }
 
     @Test
-    void handlesFailedUploadOperation() throws IOException, InterruptedException {
-        Path invalidPhoto = root.resolve("not-a-media-file.bin");
-        Files.write(invalidPhoto, new byte[]{0});
+    void handlesFailedUploadOperationAndSavesErrorStateToVarStore() throws IOException, InterruptedException {
+        Path invalidMediaItemPath = root.resolve("not-a-media-file.bin").toAbsolutePath();
+        Files.write(invalidMediaItemPath, new byte[]{0});
 
-        doUploadTest();
+        doExecuteUpload();
+
+        doVerifyGoogleClientState();
+
+        Map<String, ItemState> uploadedMediaItemIdByAbsolutePath = readVarStoreDirectly();
+        assertThat(uploadedMediaItemIdByAbsolutePath.values(), hasSize(4));
+        doVerifyJpegFilesInVarStore(uploadedMediaItemIdByAbsolutePath);
+        assertThat(uploadedMediaItemIdByAbsolutePath.get(invalidMediaItemPath.toString()),
+                is(ItemState.of(Optional.empty(), Optional.empty())));
     }
 
     @AfterEach
@@ -138,7 +169,40 @@ final class IntegrationTest {
         removeDir(root);
     }
 
+    private Map<String, ItemState> readVarStoreDirectly() throws IOException {
+        VarStoreData varStoreData = Json.parse(new String(Files.readAllBytes(varStoreDir.resolve("data.json")), UTF_8), VarStoreData.class);
+        assertThat(varStoreData.albumManager().uploadedAlbumIdByTitle().keySet(), containsInAnyOrder("outer-album", "outer-album: inner-album"));
+        return varStoreData.photosUploader().uploadedMediaItemIdByAbsolutePath();
+    }
+
+    private void doVerifyJpegFilesInVarStore(Map<String, ItemState> uploadedMediaItemIdByAbsolutePath) {
+        String innerPhotoPath = innerAlbumPhoto.toAbsolutePath().toString();
+        String outerPhotoPath = outerAlbumPhoto.toAbsolutePath().toString();
+        String rootPhotoPath = rootPhoto.toAbsolutePath().toString();
+        assertThat(uploadedMediaItemIdByAbsolutePath.get(rootPhotoPath), is(ItemState.of(Optional.of(rootPhotoPath), Optional.empty())));
+        assertThat(uploadedMediaItemIdByAbsolutePath.get(innerPhotoPath), is(ItemState.of(Optional.of(innerPhotoPath), Optional.of("outer-album: inner-album"))));
+        assertThat(uploadedMediaItemIdByAbsolutePath.get(outerPhotoPath), is(ItemState.of(Optional.of(outerPhotoPath), Optional.of("outer-album"))));
+    }
+
     private void doUploadTest() throws InterruptedException, IOException {
+        doExecuteUpload();
+
+        doVerifyGoogleClientState();
+
+        Map<String, ItemState> uploadedMediaItemIdByAbsolutePath = readVarStoreDirectly();
+        assertThat(uploadedMediaItemIdByAbsolutePath.values(), hasSize(3));
+        doVerifyJpegFilesInVarStore(uploadedMediaItemIdByAbsolutePath);
+    }
+
+    private void doVerifyGoogleClientState() {
+        Collection<UploadedGoogleMediaItem> allItems = googlePhotosClient.getAllItems();
+        assertThat(allItems, containsInAnyOrder(
+                allOf(itemForFile(equalTo(rootPhoto)), itemWithNoAlbum()),
+                allOf(itemForFile(equalTo(outerAlbumPhoto)), itemInAlbumWithId(equalTo("outer-album"))),
+                allOf(itemForFile(equalTo(innerAlbumPhoto)), itemInAlbumWithId(equalTo("outer-album: inner-album")))));
+    }
+
+    private void doExecuteUpload() throws InterruptedException {
         Options options = new Options()
                 .addOption(Option.builder("r")
                         .hasArg()
@@ -159,23 +223,6 @@ final class IntegrationTest {
             applicationExitedLatch.countDown();
         }, "application main").start();
         applicationExitedLatch.await(5, TimeUnit.SECONDS);
-
-        Collection<UploadedGoogleMediaItem> allItems = googlePhotosClient.getAllItems();
-        assertThat(allItems, containsInAnyOrder(
-                allOf(itemForFile(equalTo(rootPhoto)), itemWithNoAlbum()),
-                allOf(itemForFile(equalTo(outerAlbumPhoto)), itemInAlbumWithId(equalTo("outer-album"))),
-                allOf(itemForFile(equalTo(innerAlbumPhoto)), itemInAlbumWithId(equalTo("outer-album: inner-album")))));
-
-        VarStoreData varStoreData = Json.parse(new String(Files.readAllBytes(varStoreDir.resolve("data.json")), UTF_8), VarStoreData.class);
-        assertThat(varStoreData.albumManager().uploadedAlbumIdByTitle().keySet(), containsInAnyOrder("outer-album", "outer-album: inner-album"));
-        Map<String, ItemState> uploadedMediaItemIdByAbsolutePath = varStoreData.photosUploader().uploadedMediaItemIdByAbsolutePath();
-        assertThat(uploadedMediaItemIdByAbsolutePath.values(), hasSize(3));
-        String innerPhotoPath = innerAlbumPhoto.toAbsolutePath().toString();
-        String outerPhotoPath = outerAlbumPhoto.toAbsolutePath().toString();
-        String rootPhotoPath = rootPhoto.toAbsolutePath().toString();
-        assertThat(uploadedMediaItemIdByAbsolutePath.get(rootPhotoPath), is(ItemState.of(rootPhotoPath, Optional.empty())));
-        assertThat(uploadedMediaItemIdByAbsolutePath.get(innerPhotoPath), is(ItemState.of(innerPhotoPath, Optional.of("outer-album: inner-album"))));
-        assertThat(uploadedMediaItemIdByAbsolutePath.get(outerPhotoPath), is(ItemState.of(outerPhotoPath, Optional.of("outer-album"))));
     }
 
     private void removeDir(Path dir) {

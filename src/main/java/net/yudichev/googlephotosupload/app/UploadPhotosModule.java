@@ -29,6 +29,8 @@ final class UploadPhotosModule extends BaseLifecycleComponentModule {
         bind(BackOff.class).annotatedWith(BackingOffRemoteApiResultHandler.Dependency.class).toProvider(BackOffProvider.class);
         bind(RemoteApiResultHandler.class).annotatedWith(GooglePhotosUploaderImpl.Backoff.class)
                 .to(BackingOffRemoteApiResultHandler.class);
+        bind(RemoteApiResultHandler.class).annotatedWith(GooglePhotosUploaderImpl.InvalidMediaItem.class)
+                .to(InvalidMediaItemRemoteApiResultHandler.class);
         bind(ExecutorService.class).annotatedWith(Backpressured.class).toProvider(BackpressuredExecutorServiceProvider.class);
         bind(Path.class).annotatedWith(RootDir.class).toProvider(RootDirProvider.class);
         bind(DirectoryTreeWalker.class).to(DirectoryTreeWalkerImpl.class);

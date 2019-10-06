@@ -13,7 +13,7 @@ import java.util.Optional;
 @JsonDeserialize
 interface BaseItemState {
     @Value.Parameter
-    String mediaId();
+    Optional<String> mediaId();
 
     @Value.Parameter
     Optional<String> albumId();

@@ -3,7 +3,7 @@ package net.yudichev.googlephotosupload.app;
 import net.jiotty.common.app.Application;
 import net.jiotty.common.async.ExecutorModule;
 import net.jiotty.common.varstore.VarStoreModule;
-import net.jiotty.connector.google.GoogleApiSettings;
+import net.jiotty.connector.google.common.GoogleApiSettings;
 import net.jiotty.connector.google.photos.GooglePhotosModule;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
