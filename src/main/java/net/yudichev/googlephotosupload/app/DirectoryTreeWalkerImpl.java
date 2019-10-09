@@ -1,7 +1,7 @@
 package net.yudichev.googlephotosupload.app;
 
 import com.google.common.collect.ImmutableSet;
-import net.jiotty.common.lang.MoreThrowables;
+import net.yudichev.jiotty.common.lang.MoreThrowables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

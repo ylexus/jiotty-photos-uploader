@@ -16,8 +16,8 @@ import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
-import static net.jiotty.common.lang.MoreThrowables.asUnchecked;
-import static net.jiotty.common.lang.MoreThrowables.getAsUnchecked;
+import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
+import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class BackingOffRemoteApiResultHandler implements RemoteApiResultHandler {
     private static final Logger logger = LoggerFactory.getLogger(BackingOffRemoteApiResultHandler.class);

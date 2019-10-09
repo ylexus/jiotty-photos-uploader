@@ -1,6 +1,6 @@
 package net.yudichev.googlephotosupload.app;
 
-import net.jiotty.connector.google.photos.GooglePhotosAlbum;
+import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 
 import java.nio.file.Path;
 import java.util.Optional;

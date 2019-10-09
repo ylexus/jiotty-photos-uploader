@@ -6,10 +6,10 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 import com.google.rpc.Code;
 import io.grpc.Status;
-import net.jiotty.connector.google.photos.GoogleMediaItem;
-import net.jiotty.connector.google.photos.GooglePhotosAlbum;
-import net.jiotty.connector.google.photos.GooglePhotosClient;
-import net.jiotty.connector.google.photos.MediaItemCreationFailedException;
+import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
+import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
+import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
+import net.yudichev.jiotty.connector.google.photos.MediaItemCreationFailedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

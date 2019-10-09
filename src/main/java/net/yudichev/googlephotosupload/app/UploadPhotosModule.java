@@ -2,7 +2,7 @@ package net.yudichev.googlephotosupload.app;
 
 import com.google.api.client.util.BackOff;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
-import net.jiotty.common.inject.BaseLifecycleComponentModule;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 
 import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;

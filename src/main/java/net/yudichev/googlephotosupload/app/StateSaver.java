@@ -1,6 +1,6 @@
 package net.yudichev.googlephotosupload.app;
 
-import net.jiotty.common.lang.Closeable;
+import net.yudichev.jiotty.common.lang.Closeable;
 
 interface StateSaver extends Closeable {
     void save();

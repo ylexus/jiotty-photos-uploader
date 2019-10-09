@@ -4,11 +4,11 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
-import net.jiotty.common.inject.BaseLifecycleComponent;
-import net.jiotty.common.lang.PackagePrivateImmutablesStyle;
-import net.jiotty.common.varstore.VarStore;
-import net.jiotty.connector.google.photos.GooglePhotosAlbum;
-import net.jiotty.connector.google.photos.GooglePhotosClient;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
+import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
+import net.yudichev.jiotty.common.varstore.VarStore;
+import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
+import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
 import org.immutables.value.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -94,6 +94,8 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     @Override
     protected void doStart() {
         albumState = varStore.readValue(AlbumState.class, VAR_STORE_KEY).orElseGet(() -> AlbumState.builder().build());
+        // TODO load all albums from Google Photos; try to reconcile (merge duplicate albums from example)
+        logger.info("Scheduling retrieval of {} previously created album(s) from Google Photos...", albumState.uploadedAlbumIdByTitle().size());
         createdAlbumsByAlbumName = albumState.uploadedAlbumIdByTitle().entrySet().stream()
                 .collect(toConcurrentMap(
                         Map.Entry::getKey,

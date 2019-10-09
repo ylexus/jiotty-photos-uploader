@@ -2,7 +2,7 @@ package net.yudichev.googlephotosupload.app;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import net.jiotty.common.lang.PackagePrivateImmutablesStyle;
+import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
 import org.immutables.value.Value;
 
 import java.util.Map;

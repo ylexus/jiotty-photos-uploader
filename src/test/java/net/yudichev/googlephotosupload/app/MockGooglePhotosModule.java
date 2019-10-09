@@ -1,8 +1,8 @@
 package net.yudichev.googlephotosupload.app;
 
-import net.jiotty.common.inject.BaseLifecycleComponentModule;
-import net.jiotty.common.inject.ExposedKeyModule;
-import net.jiotty.connector.google.photos.GooglePhotosClient;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
+import net.yudichev.jiotty.common.inject.ExposedKeyModule;
+import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

@@ -1,9 +1,9 @@
 package net.yudichev.googlephotosupload.app;
 
 import com.google.inject.assistedinject.Assisted;
-import net.jiotty.common.async.ExecutorFactory;
-import net.jiotty.common.async.SchedulingExecutor;
-import net.jiotty.common.lang.DispatchingConflatingRunnable;
+import net.yudichev.jiotty.common.async.ExecutorFactory;
+import net.yudichev.jiotty.common.async.SchedulingExecutor;
+import net.yudichev.jiotty.common.lang.DispatchingConflatingRunnable;
 
 import javax.inject.Inject;
 

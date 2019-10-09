@@ -14,7 +14,7 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>net.jiotty</groupId>
+                <groupId>net.yudichev.jiotty</groupId>
                 <artifactId>jiotty-bom</artifactId>
                 <version>1.0-SNAPSHOT</version>
                 <type>pom</type>
@@ -63,11 +63,11 @@
 
     <dependencies>
         <dependency>
-            <groupId>net.jiotty</groupId>
+            <groupId>net.yudichev.jiotty</groupId>
             <artifactId>jiotty-common</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.jiotty</groupId>
+            <groupId>net.yudichev.jiotty</groupId>
             <artifactId>jiotty-connector-google-photos</artifactId>
         </dependency>
         <dependency>
@@ -188,7 +188,7 @@
             <artifactId>hamcrest-optional</artifactId>
         </dependency>
         <dependency>
-            <groupId>net.jiotty</groupId>
+            <groupId>net.yudichev.jiotty</groupId>
             <artifactId>jiotty-common</artifactId>
             <type>test-jar</type>
         </dependency>

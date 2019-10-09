@@ -1,10 +1,10 @@
 package net.yudichev.googlephotosupload.app;
 
 import com.google.inject.BindingAnnotation;
-import net.jiotty.common.inject.BaseLifecycleComponent;
-import net.jiotty.common.varstore.VarStore;
-import net.jiotty.connector.google.photos.GooglePhotosAlbum;
-import net.jiotty.connector.google.photos.GooglePhotosClient;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
+import net.yudichev.jiotty.common.varstore.VarStore;
+import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
+import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,10 +25,10 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.stream.Collectors.toConcurrentMap;
-import static net.jiotty.common.lang.CompletableFutures.completedFuture;
-import static net.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
 import static net.yudichev.googlephotosupload.app.Bindings.Backpressured;
 import static net.yudichev.googlephotosupload.app.Bindings.RootDir;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
 
 final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements GooglePhotosUploader {
     private static final Logger logger = LoggerFactory.getLogger(GooglePhotosUploaderImpl.class);

@@ -1,6 +1,6 @@
 package net.yudichev.googlephotosupload.app;
 
-import net.jiotty.connector.google.photos.MediaItemCreationFailedException;
+import net.yudichev.jiotty.connector.google.photos.MediaItemCreationFailedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
