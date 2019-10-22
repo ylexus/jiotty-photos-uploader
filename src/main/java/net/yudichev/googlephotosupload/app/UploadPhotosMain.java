@@ -6,6 +6,7 @@ import net.yudichev.jiotty.common.varstore.VarStoreModule;
 import net.yudichev.jiotty.connector.google.common.GoogleApiSettings;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosModule;
 import org.apache.commons.cli.*;
+import org.apache.logging.log4j.LogManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +17,6 @@ import java.net.URL;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 public class UploadPhotosMain {
-    private static final Logger logger = LoggerFactory.getLogger(UploadPhotosMain.class);
     private static final Options OPTIONS = new Options()
             .addOption(Option.builder("r")
                     .longOpt("root-dir")
@@ -48,13 +48,14 @@ public class UploadPhotosMain {
                     .build()
                     .run();
         } catch (ParseException e) {
+            Logger logger = LoggerFactory.getLogger(UploadPhotosMain.class);
             logger.error(e.getMessage());
-            printHelp();
+            printHelp(logger);
         }
-
+        LogManager.shutdown();
     }
 
-    private static void printHelp() {
+    private static void printHelp(Logger logger) {
         HelpFormatter helpFormatter = new HelpFormatter();
         helpFormatter.setWidth(100);
         StringWriter sw = new StringWriter();

@@ -3,6 +3,7 @@ package net.yudichev.googlephotosupload.app;
 import com.google.api.gax.grpc.GrpcStatusCode;
 import com.google.api.gax.rpc.ResourceExhaustedException;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.rpc.Code;
 import io.grpc.Status;
@@ -30,6 +31,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
 
     private final Map<String, UploadedGoogleMediaItem> itemsById = new ConcurrentHashMap<>();
     private final Map<String, CreatedGooglePhotosAlbum> albumsById = new ConcurrentHashMap<>();
+    private final Map<String, Integer> albumIdSuffixByName = new ConcurrentHashMap<>();
     private final Map<Object, Integer> resourceExhaustionCountByKey = new ConcurrentHashMap<>();
     private boolean resourceExhaustedExceptions;
 
@@ -59,7 +61,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
     public CompletableFuture<GooglePhotosAlbum> createAlbum(String name, Executor executor) {
         return CompletableFuture.supplyAsync(() -> {
             simulateResourceExhaustion(ImmutableSet.of("createAlbum", name));
-            CreatedGooglePhotosAlbum album = new CreatedGooglePhotosAlbum(name);
+            CreatedGooglePhotosAlbum album = new CreatedGooglePhotosAlbum(name, generateAlbumId(name));
             albumsById.put(album.getId(), album);
             return album;
         }, executor);
@@ -84,12 +86,32 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         }, executor);
     }
 
+    @Override
+    public CompletableFuture<List<GooglePhotosAlbum>> listAllAlbums(Executor executor) {
+        return CompletableFuture.supplyAsync(() -> albumsById.values().stream()
+                .collect(ImmutableList.toImmutableList()));
+    }
+
     void enableResourceExhaustedExceptions() {
         resourceExhaustedExceptions = true;
     }
 
     Collection<UploadedGoogleMediaItem> getAllItems() {
         return itemsById.values();
+    }
+
+    Collection<CreatedGooglePhotosAlbum> getAllAlbums() {
+        return albumsById.values();
+    }
+
+    private String generateAlbumId(String name) {
+        int idSuffix = albumIdSuffixByName.compute(name, (theName, currentIdSuffix) -> {
+            if (currentIdSuffix == null) {
+                return 0;
+            }
+            return currentIdSuffix + 1;
+        });
+        return idSuffix == 0 ? name : name + idSuffix;
     }
 
     private void simulateResourceExhaustion(Object key) {
@@ -150,9 +172,11 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
 
     public static class CreatedGooglePhotosAlbum implements GooglePhotosAlbum {
         private final String name;
+        private final String id;
 
-        CreatedGooglePhotosAlbum(String name) {
+        CreatedGooglePhotosAlbum(String name, String id) {
             this.name = checkNotNull(name);
+            this.id = checkNotNull(id);
         }
 
         @Override
@@ -167,13 +191,14 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
 
         @Override
         public String getId() {
-            return name;
+            return id;
         }
 
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                     .add("name", name)
+                    .add("id", id)
                     .toString();
         }
     }
