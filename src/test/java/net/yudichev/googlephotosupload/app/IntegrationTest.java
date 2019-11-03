@@ -391,6 +391,9 @@ final class IntegrationTest {
     }
 
     private void removeDir(Path dir) {
+        if (!Files.exists(dir)) {
+            return;
+        }
         asUnchecked(() -> Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
