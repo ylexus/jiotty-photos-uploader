@@ -16,7 +16,7 @@ import java.net.URL;
 
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
-public class UploadPhotosMain {
+public final class UploadPhotosMain {
     private static final Options OPTIONS = new Options()
             .addOption(Option.builder("r")
                     .longOpt("root-dir")

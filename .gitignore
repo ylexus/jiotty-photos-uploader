@@ -1,8 +1,9 @@
 *.iml
 **/target/**
-.idea/libraries/**
-.idea/compiler.xml
-.idea/modules.xml
-.idea/encodings.xml
-.idea/workspace.xml
+/.idea/libraries/**
+/.idea/compiler.xml
+/.idea/modules.xml
+/.idea/encodings.xml
+/.idea/workspace.xml
 **/dependency-reduced-pom.xml
+/.idea/$PRODUCT_WORKSPACE_FILE$

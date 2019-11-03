@@ -6,7 +6,7 @@ import org.apache.commons.cli.CommandLine;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 final class CommandLineModule extends AbstractModule {
-    private CommandLine commandLine;
+    private final CommandLine commandLine;
 
     CommandLineModule(CommandLine commandLine) {
         this.commandLine = checkNotNull(commandLine);

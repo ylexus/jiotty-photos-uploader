@@ -3,12 +3,15 @@ package net.yudichev.googlephotosupload.app;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
+import net.yudichev.googlephotosupload.app.RecordingGooglePhotosClient.CreatedGooglePhotosAlbum;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
 import net.yudichev.jiotty.common.varstore.VarStore;
 import net.yudichev.jiotty.common.varstore.VarStoreModule;
+import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
+import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import org.apache.commons.cli.*;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.FeatureMatcher;
@@ -25,17 +28,18 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.SecureRandom;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
+import java.util.stream.IntStream;
 
+import static com.google.common.collect.Iterables.getOnlyElement;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.spotify.hamcrest.optional.OptionalMatchers.optionalWithValue;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.FileVisitResult.CONTINUE;
-import static net.yudichev.googlephotosupload.app.RecordingGooglePhotosClient.CreatedGooglePhotosAlbum;
+import static java.util.stream.Collectors.toList;
 import static net.yudichev.googlephotosupload.app.RecordingGooglePhotosClient.UploadedGoogleMediaItem;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
@@ -58,10 +62,15 @@ final class IntegrationTest {
         root = Files.createTempDirectory(getClass().getSimpleName());
         rootPhoto = root.resolve("root-photo.jpg");
         Files.write(rootPhoto, new byte[]{0});
+
         Path outerAlbumDir = root.resolve("outer-album");
         Files.createDirectories(outerAlbumDir);
         outerAlbumPhoto = outerAlbumDir.resolve("outer-album-photo.jpg");
         Files.write(outerAlbumPhoto, new byte[]{1});
+        Files.write(outerAlbumDir.resolve("picasa.ini"), new byte[]{1});
+
+        Files.createDirectories(root.resolve("DS_Store"));
+
         Path innerAlbumDir = outerAlbumDir.resolve("inner-album");
         Files.createDirectories(innerAlbumDir);
         innerAlbumPhoto = innerAlbumDir.resolve("inner-album-photo.jpg");
@@ -122,12 +131,23 @@ final class IntegrationTest {
         doUploadTest();
 
         VarStoreData varStoreData = readVarStoreDirectly();
-        assertThat(varStoreData.albumManager().uploadedAlbumIdByTitle(), allOf(
-                hasEntry("outer-album", AlbumState.builder().addAlbumIds("outer-album").setPrimaryAlbumId("outer-album").build()),
-                hasEntry("outer-album: inner-album",
-                        AlbumState.builder().addAlbumIds("outer-album: inner-album").setPrimaryAlbumId("outer-album: inner-album").build())));
         assertThat(varStoreData.photosUploader().uploadedMediaItemIdByAbsolutePath().get(outerAlbumPhotoAbsolutePath),
                 is(ItemState.of(Optional.of(outerAlbumPhotoAbsolutePath), Optional.of("outer-album"))));
+    }
+
+    @Test
+    void skipsUploadIfSavedStateShowsAlreadyUploaded() throws InterruptedException {
+        VarStore varStore = Guice.createInjector(new VarStoreModule(varStoreAppName)).getInstance(VarStore.class);
+        String photosUploaderKey = "photosUploader";
+        String outerAlbumPhotoAbsolutePath = outerAlbumPhoto.toAbsolutePath().toString();
+        varStore.saveValue(photosUploaderKey, UploadState.builder()
+                .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath,
+                        ItemState.of(Optional.of(outerAlbumPhotoAbsolutePath), Optional.of("outer-album")))
+                .build());
+
+        doExecuteUpload();
+
+        assertThat(googlePhotosClient.getAllItems(), not(hasItem(itemForFile(outerAlbumPhoto))));
     }
 
     @Test
@@ -144,12 +164,11 @@ final class IntegrationTest {
 
         Collection<UploadedGoogleMediaItem> allItems = googlePhotosClient.getAllItems();
         assertThat(allItems, containsInAnyOrder(
-                allOf(itemForFile(equalTo(rootPhoto)), itemWithNoAlbum()),
+                allOf(itemForFile(rootPhoto), itemWithNoAlbum()),
                 // outer album item skipped
-                allOf(itemForFile(equalTo(innerAlbumPhoto)), itemInAlbumWithId(equalTo("outer-album: inner-album")))));
+                allOf(itemForFile(innerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album: inner-album")))));
 
         VarStoreData varStoreData = readVarStoreDirectly();
-        doVerifyAlbumsInVarStore(varStoreData);
         assertThat(varStoreData.photosUploader().uploadedMediaItemIdByAbsolutePath().get(outerAlbumPhotoAbsolutePath),
                 is(ItemState.of(Optional.empty(), Optional.empty())));
     }
@@ -188,17 +207,121 @@ final class IntegrationTest {
     }
 
     @Test
-    void reusesPreExistingAlbumWithTwoAlbumsHavingSameName() throws InterruptedException, TimeoutException, ExecutionException {
+    void mergesPreExistingEmptyAlbumsWithSameNameAndReusesResultingAlbum() throws InterruptedException, TimeoutException, ExecutionException {
         googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
         googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
 
         doExecuteUpload();
 
-        doVerifyGooglClientItemState();
+        doVerifyGoogleClientItemState();
         assertThat(googlePhotosClient.getAllAlbums(), containsInAnyOrder(
-                albumWithId(equalTo("outer-album")),
-                albumWithId(equalTo("outer-album1")),
-                albumWithId(equalTo("outer-album: inner-album"))));
+                albumWithId("outer-album"),
+                albumWithId("outer-album1"),
+                albumWithId("outer-album: inner-album")));
+    }
+
+    @Test
+    void mergesPreExistingNonEmptyAlbumsWithSameNameAndReusesResultingAlbum() throws InterruptedException, TimeoutException, ExecutionException, IOException {
+        GooglePhotosAlbum preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        GooglePhotosAlbum preExistingAlbum3 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+
+        Path preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "photo1.jpg");
+        Path preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "photo2.jpg");
+
+        doExecuteUpload();
+
+        assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
+                allOf(itemForFile(rootPhoto), itemWithNoAlbum()),
+                allOf(itemForFile(preExistingPhoto1), itemInAlbumWithId(equalTo("outer-album"))),
+                allOf(itemForFile(preExistingPhoto2), itemInAlbumWithId(equalTo("outer-album"))),
+                allOf(itemForFile(outerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album"))),
+                allOf(itemForFile(innerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album: inner-album")))));
+        assertThat(googlePhotosClient.getAllAlbums(), containsInAnyOrder(
+                albumWithId("outer-album"),
+                albumWithId("outer-album1"),
+                albumWithId("outer-album2"),
+                albumWithId("outer-album: inner-album")));
+        assertThat(preExistingAlbum2, is(emptyAlbum()));
+        assertThat(preExistingAlbum3, is(emptyAlbum()));
+    }
+
+    @Test
+    void mergesAlbumsWithMoreThanMaxItemsAllowedPerRequest() throws InterruptedException, TimeoutException, ExecutionException, IOException {
+        GooglePhotosAlbum preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+
+        uploadPhoto(preExistingAlbum1, "photo-in-album1.jpg");
+        List<Path> filePaths = IntStream.range(0, 51)
+                .mapToObj(i -> getAsUnchecked(() -> uploadPhoto(preExistingAlbum2, "photo" + i + ".jpg")))
+                .collect(toList());
+
+        doExecuteUpload();
+
+        List<GoogleMediaItem> outerAlbumItems = preExistingAlbum1.getMediaItems().get(3, TimeUnit.SECONDS);
+        assertThat(outerAlbumItems, hasSize(53));
+        filePaths.forEach(path -> assertThat(outerAlbumItems, hasItem(itemForFile(path))));
+        assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
+
+        assertThat(preExistingAlbum2, is(emptyAlbum()));
+    }
+
+    @Test
+    void mergesPreExistingAlbumsWithSameNameSecondOneNonEmptyAndReusesResultingAlbum() throws InterruptedException, TimeoutException, ExecutionException, IOException {
+        CompletableFuture<GooglePhotosAlbum> preExistingEmptyAlbum = googlePhotosClient.createAlbum("outer-album");
+        preExistingEmptyAlbum.get(1, TimeUnit.SECONDS);
+        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+
+        Path preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "photo2.jpg");
+
+        doExecuteUpload();
+
+        assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
+                allOf(itemForFile(rootPhoto), itemWithNoAlbum()),
+                allOf(itemForFile(preExistingPhoto2), itemInAlbumWithId(equalTo("outer-album1"))),
+                allOf(itemForFile(outerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album1"))),
+                allOf(itemForFile(innerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album: inner-album")))));
+        assertThat(googlePhotosClient.getAllAlbums(), containsInAnyOrder(
+                allOf(albumWithId("outer-album1"),
+                        albumWithItems(containsInAnyOrder(itemForFile(outerAlbumPhoto), itemForFile(preExistingPhoto2)))),
+                allOf(albumWithId("outer-album"), emptyAlbum()),
+                allOf(albumWithId("outer-album: inner-album"), albumWithItems(contains(itemForFile(innerAlbumPhoto))))));
+    }
+
+    @Test
+    void testPermanentUploadFailureIsIgnored() throws IOException, InterruptedException {
+        Path failedPhoto = root.resolve("failOnMe.jpg");
+        Files.write(failedPhoto, new byte[]{0});
+
+        doUploadTest();
+    }
+
+    @Test
+    void testPermanentAlbumCreationFailureStopsUpload() throws IOException, InterruptedException {
+        Path failOnMeAlbumDir = root.resolve("failOnMe");
+        Files.createDirectories(failOnMeAlbumDir);
+        Path photo = failOnMeAlbumDir.resolve("photo-new.jpg");
+        Files.write(photo, new byte[]{0});
+
+        doExecuteUpload();
+
+        assertThat(googlePhotosClient.getAllItems(), is(empty()));
+        assertThat(googlePhotosClient.getAllItems(), is(empty()));
+    }
+
+    private Path uploadPhoto(GooglePhotosAlbum album, String fileName) throws IOException, InterruptedException, ExecutionException, TimeoutException {
+        Path path = null;
+        try {
+            path = root.resolve(fileName);
+            Files.write(path, new byte[]{0});
+
+            googlePhotosClient.uploadMediaItem(Optional.of(album.getId()), path).get(1, TimeUnit.SECONDS);
+        } finally {
+            if (path != null) {
+                Files.delete(path);
+            }
+        }
+        return path;
     }
 
     private VarStoreData readVarStoreDirectly() throws IOException {
@@ -224,32 +347,24 @@ final class IntegrationTest {
         VarStoreData varStoreData = readVarStoreDirectly();
         assertThat(varStoreData.photosUploader().uploadedMediaItemIdByAbsolutePath().values(), hasSize(3));
         doVerifyJpegFilesInVarStore(varStoreData);
-        doVerifyAlbumsInVarStore(varStoreData);
-    }
-
-    private void doVerifyAlbumsInVarStore(VarStoreData varStoreData) {
-        assertThat(varStoreData.albumManager().uploadedAlbumIdByTitle(), allOf(
-                hasEntry("outer-album", AlbumState.builder().addAlbumIds("outer-album").setPrimaryAlbumId("outer-album").build()),
-                hasEntry("outer-album: inner-album",
-                        AlbumState.builder().addAlbumIds("outer-album: inner-album").setPrimaryAlbumId("outer-album: inner-album").build())));
     }
 
     private void doVerifyGoogleClientState() {
-        doVerifyGooglClientItemState();
+        doVerifyGoogleClientItemState();
         doVerifyGoogleCloudAlbumState();
     }
 
     private void doVerifyGoogleCloudAlbumState() {
         assertThat(googlePhotosClient.getAllAlbums(), containsInAnyOrder(
-                albumWithId(equalTo("outer-album")),
-                albumWithId(equalTo("outer-album: inner-album"))));
+                albumWithId("outer-album"),
+                albumWithId("outer-album: inner-album")));
     }
 
-    private void doVerifyGooglClientItemState() {
+    private void doVerifyGoogleClientItemState() {
         assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
-                allOf(itemForFile(equalTo(rootPhoto)), itemWithNoAlbum()),
-                allOf(itemForFile(equalTo(outerAlbumPhoto)), itemInAlbumWithId(equalTo("outer-album"))),
-                allOf(itemForFile(equalTo(innerAlbumPhoto)), itemInAlbumWithId(equalTo("outer-album: inner-album")))));
+                allOf(itemForFile(rootPhoto), itemWithNoAlbum()),
+                allOf(itemForFile(outerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album"))),
+                allOf(itemForFile(innerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album: inner-album")))));
     }
 
     private void doExecuteUpload() throws InterruptedException {
@@ -276,20 +391,10 @@ final class IntegrationTest {
     }
 
     private void removeDir(Path dir) {
-        asUnchecked(() -> Files.walkFileTree(dir, new FileVisitor<Path>() {
-            @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                return CONTINUE;
-            }
-
+        asUnchecked(() -> Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                 return delete(file);
-            }
-
-            @Override
-            public FileVisitResult visitFileFailed(Path file, IOException exc) {
-                return CONTINUE;
             }
 
             @Override
@@ -297,6 +402,7 @@ final class IntegrationTest {
                 return delete(dir);
             }
 
+            @SuppressWarnings("SameReturnValue")
             private FileVisitResult delete(Path path) throws IOException {
                 Files.delete(path);
                 return CONTINUE;
@@ -308,16 +414,39 @@ final class IntegrationTest {
         return new FeatureMatcher<UploadedGoogleMediaItem, String>(albumIdMatcher, "item in album", "item in album") {
             @Override
             protected String featureValueOf(UploadedGoogleMediaItem actual) {
-                return actual.getAlbumId().orElse("no album");
+                return getOnlyElement(actual.getAlbumIds());
             }
         };
     }
 
-    private static Matcher<CreatedGooglePhotosAlbum> albumWithId(Matcher<String> albumNameMatcher) {
-        return new FeatureMatcher<CreatedGooglePhotosAlbum, String>(albumNameMatcher, "album with name", "album with name") {
+    private static Matcher<CreatedGooglePhotosAlbum> albumWithId(String albumId) {
+        return albumWithId(equalTo(albumId));
+    }
+
+    private static Matcher<CreatedGooglePhotosAlbum> albumWithId(Matcher<String> albumIdMatcher) {
+        return new FeatureMatcher<CreatedGooglePhotosAlbum, String>(albumIdMatcher, "album with name", "album with name") {
             @Override
             protected String featureValueOf(CreatedGooglePhotosAlbum actual) {
                 return actual.getId();
+            }
+        };
+    }
+
+    private static Matcher<CreatedGooglePhotosAlbum> albumWithItems(Matcher<Iterable<? extends GoogleMediaItem>> itemsMatcher) {
+        return new FeatureMatcher<CreatedGooglePhotosAlbum, Iterable<GoogleMediaItem>>(
+                itemsMatcher, "album with items", "album with items") {
+            @Override
+            protected Iterable<GoogleMediaItem> featureValueOf(CreatedGooglePhotosAlbum actual) {
+                return getAsUnchecked(() -> actual.getMediaItems(directExecutor()).get(1, TimeUnit.SECONDS));
+            }
+        };
+    }
+
+    private static Matcher<? super GooglePhotosAlbum> emptyAlbum() {
+        return new CustomTypeSafeMatcher<GooglePhotosAlbum>("empty album") {
+            @Override
+            protected boolean matchesSafely(GooglePhotosAlbum item) {
+                return item.getMediaItemCount() == 0;
             }
         };
     }
@@ -326,26 +455,34 @@ final class IntegrationTest {
         return new CustomTypeSafeMatcher<UploadedGoogleMediaItem>("item with no album") {
             @Override
             protected boolean matchesSafely(UploadedGoogleMediaItem item) {
-                return !item.getAlbumId().isPresent();
+                return item.getAlbumIds().isEmpty();
             }
         };
     }
 
-    private static Matcher<UploadedGoogleMediaItem> itemForFile(Matcher<Path> fileMatcher) {
-        return new FeatureMatcher<UploadedGoogleMediaItem, Path>(fileMatcher, "item for file", "item for file") {
+    private static Matcher<? super GoogleMediaItem> itemForFile(Matcher<Path> fileMatcher) {
+        FeatureMatcher<String, Path> absolutePathMatcher = new FeatureMatcher<String, Path>(fileMatcher, "absolute path", "absolute path") {
             @Override
-            protected Path featureValueOf(UploadedGoogleMediaItem actual) {
-                return actual.getFile();
+            protected Path featureValueOf(String actual) {
+                return Paths.get(actual);
             }
         };
+        return new FeatureMatcher<GoogleMediaItem, String>(absolutePathMatcher, "item for file path", "item for file path") {
+            @Override
+            protected String featureValueOf(GoogleMediaItem actual) {
+                return actual.getId();
+            }
+        };
+    }
+
+    private static Matcher<? super GoogleMediaItem> itemForFile(Path filePath) {
+        return itemForFile(equalTo(filePath));
     }
 
     @Immutable
     @PackagePrivateImmutablesStyle
     @JsonDeserialize
     interface BaseVarStoreData {
-        AlbumsState albumManager();
-
         UploadState photosUploader();
     }
 }

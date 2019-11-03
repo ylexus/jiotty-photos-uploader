@@ -7,7 +7,7 @@ import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 final class MockGooglePhotosModule extends BaseLifecycleComponentModule implements ExposedKeyModule<GooglePhotosClient> {
-    private GooglePhotosClient googlePhotosClient;
+    private final GooglePhotosClient googlePhotosClient;
 
     MockGooglePhotosModule(GooglePhotosClient googlePhotosClient) {
         this.googlePhotosClient = checkNotNull(googlePhotosClient);

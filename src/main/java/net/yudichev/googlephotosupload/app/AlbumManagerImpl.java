@@ -1,179 +1,194 @@
 package net.yudichev.googlephotosupload.app;
 
-import com.google.common.collect.Streams;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import net.yudichev.jiotty.common.varstore.VarStore;
+import net.yudichev.jiotty.common.lang.CompletableFutures;
+import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
+import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
+import org.immutables.value.Value;
+import org.immutables.value.Value.Immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.lang.Math.min;
 import static java.util.concurrent.CompletableFuture.completedFuture;
+import static net.yudichev.googlephotosupload.app.Bindings.Backoff;
 import static net.yudichev.googlephotosupload.app.Bindings.Backpressured;
-import static net.yudichev.googlephotosupload.app.Bindings.RootDir;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfList;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumManager {
     private static final Logger logger = LoggerFactory.getLogger(AlbumManagerImpl.class);
-    private static final String VAR_STORE_KEY = "albumManager";
 
-    private final VarStore varStore;
     private final GooglePhotosClient googlePhotosClient;
-    private final int rootNameCount;
+    private final RemoteApiResultHandler backOffHandler;
+    private final DirectoryStructureSupplier directoryStructureSupplier;
     private final ExecutorService executorService;
-    private final Map<Path, Optional<CompletableFuture<GooglePhotosAlbum>>> albumByPath = new ConcurrentHashMap<>();
-    private final StateSaver stateSaver;
-    private final Map<String, GooglePhotoAlbumsOfTitle> albumsByTitle = new ConcurrentHashMap<>();
-    private AlbumsState albumState;
+    private Map<String, GooglePhotosAlbum> albumsByTitle;
 
     @Inject
-    AlbumManagerImpl(VarStore varStore,
-                     GooglePhotosClient googlePhotosClient,
-                     @RootDir Path rootDir,
+    AlbumManagerImpl(GooglePhotosClient googlePhotosClient,
                      @Backpressured ExecutorService executorService,
-                     StateSaverFactory stateSaverFactory) {
-        this.varStore = checkNotNull(varStore);
+                     @Backoff RemoteApiResultHandler backOffHandler,
+                     DirectoryStructureSupplier directoryStructureSupplier) {
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
-        rootNameCount = rootDir.getNameCount();
         this.executorService = checkNotNull(executorService);
-        stateSaver = stateSaverFactory.create("created-albums", this::saveState);
+        this.backOffHandler = checkNotNull(backOffHandler);
+        this.directoryStructureSupplier = checkNotNull(directoryStructureSupplier);
     }
 
     @Override
-    public Optional<CompletableFuture<GooglePhotosAlbum>> albumForDir(Path dir) {
-        return albumByPath.compute(dir, (theDir, currentAlbumByPathFuture) -> {
-            int nameCount = dir.getNameCount();
-            if (nameCount > rootNameCount) {
-                //noinspection OptionalAssignedToNull,OptionalGetWithoutIsPresent as designed
-                if (currentAlbumByPathFuture == null || currentAlbumByPathFuture.get().isCompletedExceptionally()) {
-                    Path albumNamePath = dir.subpath(rootNameCount, nameCount);
-                    String albumName = String.join(": ", Streams.stream(albumNamePath.iterator())
-                            .map(Path::toString)
-                            .collect(toImmutableList()));
-                    GooglePhotoAlbumsOfTitle googlePhotoAlbumsOfTitle = albumsByTitle.compute(albumName,
-                            (theName, albums) -> {
-                                if (albums == null || albums.primaryAlbum().isCompletedExceptionally()) {
-                                    GooglePhotoAlbumsOfTitle.Builder builder = GooglePhotoAlbumsOfTitle.builder();
-                                    if (albums != null) {
-                                        builder.from(albums);
-                                    }
-                                    albums = builder.setPrimaryAlbum(googlePhotosClient.createAlbum(theName, executorService)
-                                            .thenApply(googlePhotosAlbum -> {
-                                                saveState();
-                                                logger.info("Created album '{}', id {}", theName, googlePhotosAlbum.getId());
-                                                return googlePhotosAlbum;
-                                            }))
-                                            .build();
-                                }
-                                return albums;
-                            });
-                    logger.debug("Directory {}: albums of title: {}", dir, googlePhotoAlbumsOfTitle);
-                    return Optional.of(googlePhotoAlbumsOfTitle.primaryAlbum()
-                            .thenApply(googlePhotosAlbum -> {
-                                registerNewlyCreatedAlbum(albumName, googlePhotosAlbum);
-                                return googlePhotosAlbum;
-                            }));
-                } else {
-                    return currentAlbumByPathFuture;
-                }
-            } else {
-                logger.debug("Directory {}: no album", dir);
-                return Optional.empty();
-            }
-        });
+    public GooglePhotosAlbum albumForTitle(String albumTitle) {
+        GooglePhotosAlbum album = albumsByTitle.get(albumTitle);
+        checkArgument(album != null, "No known album for title {}", albumTitle);
+        return album;
     }
 
     @Override
     protected void doStart() {
-        logger.info("Reconciling album(s) with Google Photos");
-        albumState = varStore.readValue(AlbumsState.class, VAR_STORE_KEY).orElseGet(() -> AlbumsState.builder().build());
+        logger.info("Reconciling folders with Google Photos cloud");
 
-        Map<String, AlbumState> albumsInVarStore = albumState.uploadedAlbumIdByTitle();
-        logger.info("{} known album(s)", albumsInVarStore.size());
+        logger.info("Loading albums in cloud (may take several minutes)...");
+        List<GooglePhotosAlbum> albumsInCloud = getAsUnchecked(() ->
+                withBackOffAndRetry("get all albums", googlePhotosClient::listAlbums).get(30, TimeUnit.MINUTES));
+        logger.info("... loaded {} album(s) in cloud", albumsInCloud.size());
 
-        List<GooglePhotosAlbum> albumsInCloud = getAsUnchecked(() -> googlePhotosClient.listAllAlbums().get(1, TimeUnit.MINUTES));
-        logger.info("{} album(s) in cloud", albumsInCloud.size());
+        Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle = new HashMap<>(albumsInCloud.size());
+        albumsInCloud.forEach(googlePhotosAlbum ->
+                cloudAlbumsByTitle.computeIfAbsent(googlePhotosAlbum.getTitle(), title -> new ArrayList<>()).add(googlePhotosAlbum));
 
-        Map<String, GooglePhotosAlbum> cloudAlbumsById = albumsInCloud.stream()
-                .collect(toImmutableMap(
-                        GooglePhotosAlbum::getId,
-                        Function.identity()));
+        List<AlbumDirectory> albumDirectories = directoryStructureSupplier.getAlbumDirectories();
 
         // TODO user option "in case of album name match reuse existing albums, do not create new ones"
-        albumsInVarStore.forEach((title, albumState) -> {
-            Map<String, GooglePhotosAlbum> cloudAlbumsForThisTitleByAlbumId = albumState.albumIds().stream()
-                    .map(cloudAlbumsById::get)
-                    .filter(Objects::nonNull)
-                    .collect(toImmutableMap(
-                            GooglePhotosAlbum::getId,
-                            Function.identity()));
+        logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", albumDirectories.size());
+        albumsByTitle = albumDirectories.stream()
+                .map(albumDirectory -> albumDirectory.albumTitle()
+                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path())))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(future -> getAsUnchecked(() -> future.get(1, TimeUnit.HOURS)))
+                .collect(toImmutableMap(
+                        GooglePhotosAlbum::getTitle,
+                        Function.identity()));
+        logger.info("... done");
+    }
 
-            if (!cloudAlbumsForThisTitleByAlbumId.isEmpty()) {
-                albumsByTitle.put(title, GooglePhotoAlbumsOfTitle.builder()
-                        .addAllAlbums(cloudAlbumsForThisTitleByAlbumId.values())
-                        .setPrimaryAlbum(completedFuture(albumState.primaryAlbumId()
-                                .map(cloudAlbumsForThisTitleByAlbumId::get)
-                                .orElseGet(() -> cloudAlbumsForThisTitleByAlbumId.values().iterator().next())))
-                        .build());
+    private CompletableFuture<GooglePhotosAlbum> reconcile(Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle,
+                                                           String filesystemAlbumTitle,
+                                                           Path path) {
+        CompletableFuture<GooglePhotosAlbum> albumFuture;
+        List<GooglePhotosAlbum> cloudAlbumsForThisTitle = cloudAlbumsByTitle.get(filesystemAlbumTitle);
+        if (cloudAlbumsForThisTitle == null) {
+            logger.info("Creating album [{}] for path [{}]", filesystemAlbumTitle, path);
+            albumFuture = withBackOffAndRetry(
+                    "create album " + filesystemAlbumTitle,
+                    () -> googlePhotosClient.createAlbum(filesystemAlbumTitle, executorService));
+        } else if (cloudAlbumsForThisTitle.size() > 1) {
+            List<GooglePhotosAlbum> nonEmptyCloudAlbumsForThisTitle = cloudAlbumsForThisTitle.stream()
+                    .filter(googlePhotosAlbum -> googlePhotosAlbum.getMediaItemCount() > 0)
+                    .collect(toImmutableList());
+            if (nonEmptyCloudAlbumsForThisTitle.isEmpty()) {
+                cloudAlbumsForThisTitle.stream()
+                        .skip(1)
+                        .forEach(this::removeAlbum);
+                return completedFuture(cloudAlbumsForThisTitle.get(0));
+            } else if (nonEmptyCloudAlbumsForThisTitle.size() > 1) {
+                GooglePhotosAlbum primaryAlbum = cloudAlbumsForThisTitle.get(0);
+                logger.info("Merging {} duplicate cloud album(s) for path [{}] into {}", cloudAlbumsForThisTitle.size(), path, primaryAlbum);
+                albumFuture = mergeAlbums(primaryAlbum, cloudAlbumsForThisTitle.subList(1, cloudAlbumsForThisTitle.size()));
+            } else {
+                albumFuture = completedFuture(nonEmptyCloudAlbumsForThisTitle.get(0));
             }
-        });
-
-        albumsInCloud.forEach(cloudAlbum -> albumsByTitle.compute(cloudAlbum.getTitle(), (title, albums) -> albums == null ?
-                GooglePhotoAlbumsOfTitle.builder()
-                        .addAlbums(cloudAlbum)
-                        .setPrimaryAlbum(completedFuture(cloudAlbum))
-                        .build() :
-                GooglePhotoAlbumsOfTitle.builder()
-                        .from(albums)
-                        .addAlbums(cloudAlbum)
-                        .build()));
-        logger.info("Completed reconciliation; {} unique album title(s)", albumsByTitle.size());
-    }
-
-    @Override
-    protected void doStop() {
-        stateSaver.close();
-    }
-
-    private void registerNewlyCreatedAlbum(String albumName, GooglePhotosAlbum googlePhotosAlbum) {
-        albumsByTitle.computeIfPresent(albumName, (ignored, albumsByTitle) -> GooglePhotoAlbumsOfTitle.builder()
-                .from(albumsByTitle)
-                .addAlbums(googlePhotosAlbum)
-                .build());
-        saveState();
-    }
-
-    private void saveState() {
-        AlbumsState.Builder albumsStatBuilder = AlbumsState.builder();
-
-        albumsByTitle.forEach((title, googlePhotoAlbumsOfTitle) -> {
-            AlbumState.Builder albumStateBuilder = AlbumState.builder();
-            googlePhotoAlbumsOfTitle.albums().forEach(googlePhotosAlbum -> albumStateBuilder.addAlbumIds(googlePhotosAlbum.getId()));
-            if (googlePhotoAlbumsOfTitle.primaryAlbum().isDone() && !googlePhotoAlbumsOfTitle.primaryAlbum().isCompletedExceptionally()) {
-                albumStateBuilder.setPrimaryAlbumId(googlePhotoAlbumsOfTitle.primaryAlbum().getNow(null).getId());
-            }
-            albumsStatBuilder.putUploadedAlbumIdByTitle(title, albumStateBuilder.build());
-        });
-
-        AlbumsState newAlbumState = albumsStatBuilder.build();
-        if (!newAlbumState.equals(albumState)) {
-            albumState = newAlbumState;
-            varStore.saveValue(VAR_STORE_KEY, newAlbumState);
+        } else {
+            albumFuture = completedFuture(cloudAlbumsForThisTitle.get(0));
         }
+        return albumFuture;
+    }
+
+    private CompletableFuture<GooglePhotosAlbum> mergeAlbums(GooglePhotosAlbum primaryAlbum, List<GooglePhotosAlbum> albumsToBeMerged) {
+        return albumsToBeMerged.stream()
+                .map(albumToBeMerged -> albumToBeMerged.getMediaItems()
+                        .thenCompose(mediaItems -> mediaItems.isEmpty() ?
+                                CompletableFutures.completedFuture() :
+                                // move these items to primary album
+                                moveItems(albumToBeMerged, primaryAlbum, mediaItems))
+                        .thenRun(() -> removeAlbum(albumToBeMerged)))
+                .collect(toFutureOfList())
+                .thenApply(list -> primaryAlbum);
+    }
+
+    private CompletableFuture<Void> moveItems(GooglePhotosAlbum sourceAlbum, GooglePhotosAlbum destinationAlbum, List<GoogleMediaItem> mediaItems) {
+        int maxItemsPerRequest = 49;
+        return IntStream.range(0, mediaItems.size() / maxItemsPerRequest + 1)
+                .mapToObj(groupNumber -> mediaItems.subList(
+                        groupNumber * maxItemsPerRequest,
+                        min((groupNumber + 1) * maxItemsPerRequest, mediaItems.size())))
+                .map(itemsInGroup -> {
+                    logger.debug("Moving a batch of {} items from {} to {}", itemsInGroup.size(), sourceAlbum.getTitle(), destinationAlbum.getTitle());
+                    return destinationAlbum.addMediaItems(itemsInGroup, executorService)
+                            // 2. remove items from this album
+                            .thenCompose(aVoid -> sourceAlbum.removeMediaItems(itemsInGroup, executorService));
+                })
+                .map(future -> withBackOffAndRetry(
+                        "move items for " + sourceAlbum.getTitle() + " from " + sourceAlbum.getId() + " to " + destinationAlbum.getId(),
+                        () -> future))
+                .collect(toFutureOfList())
+                .thenApply(list -> null);
+    }
+
+    private void removeAlbum(GooglePhotosAlbum albumToBeMerged) {
+        // remove this album - CAN'T DO THIS :-(, so flagging to user
+        logger.info("MANUAL ACTION NEEDED: remove empty album '{}': {}",
+                albumToBeMerged.getTitle(), albumToBeMerged.getAlbumUrl());
+    }
+
+    private <T> CompletableFuture<T> withBackOffAndRetry(String operationName, Supplier<CompletableFuture<T>> action) {
+        return action.get()
+                .thenApply(value -> {
+                    backOffHandler.reset();
+                    return Either.<T, RetryableFailure>left(value);
+                })
+                .exceptionally(exception -> {
+                    boolean shouldRetry = backOffHandler.handle(operationName, exception);
+                    return Either.right(RetryableFailure.of(exception, shouldRetry));
+                })
+                .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(
+                        CompletableFuture::completedFuture,
+                        retryableFailure -> {
+                            if (retryableFailure.shouldRetry()) {
+                                logger.debug("Retrying operation '{}'", operationName);
+                                return action.get();
+                            } else {
+                                return CompletableFutures.failure(retryableFailure.exception());
+                            }
+                        }
+                ))
+                .whenComplete(logErrorOnFailure(logger, "Unhandled exception performing '%s'", operationName));
+    }
+
+    @Immutable
+    @PackagePrivateImmutablesStyle
+    interface BaseRetryableFailure {
+        @Value.Parameter
+        Throwable exception();
+
+        @Value.Parameter
+        boolean shouldRetry();
     }
 }

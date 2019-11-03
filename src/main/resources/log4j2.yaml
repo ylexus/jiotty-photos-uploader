@@ -8,6 +8,11 @@ Configuration:
         Pattern: "%d %p %m%n"
 
   Loggers:
+    #    TODO remove
+    logger:
+      - name: net.yudichev.jiotty.connector.google.photos
+        level: debug
+        includeLocation: true
     Root:
       level: info
       includeLocation: true

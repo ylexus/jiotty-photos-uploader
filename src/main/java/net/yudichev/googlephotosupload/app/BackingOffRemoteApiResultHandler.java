@@ -2,6 +2,7 @@ package net.yudichev.googlephotosupload.app;
 
 import com.google.api.client.util.BackOff;
 import com.google.api.gax.rpc.ResourceExhaustedException;
+import com.google.api.gax.rpc.UnavailableException;
 import com.google.inject.BindingAnnotation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,11 +32,11 @@ final class BackingOffRemoteApiResultHandler implements RemoteApiResultHandler {
     @Override
     public boolean handle(String operationName, Throwable exception) {
         return getCausalChain(exception).stream()
-                .filter(e -> e instanceof ResourceExhaustedException)
+                .filter(e -> e instanceof ResourceExhaustedException || e instanceof UnavailableException)
                 .findFirst()
                 .map(throwable -> {
                     long backOffMs = getAsUnchecked(backOff::nextBackOffMillis);
-                    logger.debug("Resource exhausted attempting operation '{}', backing off by waiting for {}ms", operationName, backOffMs);
+                    logger.debug("Retriable exception performing operation '{}', backing off by waiting for {}ms ({})", operationName, backOffMs, throwable);
                     asUnchecked(() -> Thread.sleep(backOffMs));
                     return TRUE;
                 })
