@@ -1,8 +1,11 @@
 package net.yudichev.googlephotosupload.app;
 
 import com.google.api.client.util.BackOff;
+import com.google.api.gax.rpc.AbortedException;
+import com.google.api.gax.rpc.DeadlineExceededException;
 import com.google.api.gax.rpc.ResourceExhaustedException;
 import com.google.api.gax.rpc.UnavailableException;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.BindingAnnotation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Throwables.getCausalChain;
@@ -23,6 +27,11 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 final class BackingOffRemoteApiResultHandler implements RemoteApiResultHandler {
     private static final Logger logger = LoggerFactory.getLogger(BackingOffRemoteApiResultHandler.class);
     private final BackOff backOff;
+    private Set<Class<? extends Throwable>> EXCEPTION_TYPES_REQUIRING_BACKOFF = ImmutableSet.of(
+            ResourceExhaustedException.class,
+            UnavailableException.class,
+            DeadlineExceededException.class,
+            AbortedException.class);
 
     @Inject
     BackingOffRemoteApiResultHandler(@Dependency BackOff backOff) {
@@ -32,11 +41,11 @@ final class BackingOffRemoteApiResultHandler implements RemoteApiResultHandler {
     @Override
     public boolean handle(String operationName, Throwable exception) {
         return getCausalChain(exception).stream()
-                .filter(e -> e instanceof ResourceExhaustedException || e instanceof UnavailableException)
+                .filter(e -> EXCEPTION_TYPES_REQUIRING_BACKOFF.contains(e.getClass()))
                 .findFirst()
                 .map(throwable -> {
                     long backOffMs = getAsUnchecked(backOff::nextBackOffMillis);
-                    logger.debug("Retriable exception performing operation '{}', backing off by waiting for {}ms ({})", operationName, backOffMs, throwable);
+                    logger.debug("Retryable exception performing operation '{}', backing off by waiting for {}ms ({})", operationName, backOffMs, throwable);
                     asUnchecked(() -> Thread.sleep(backOffMs));
                     return TRUE;
                 })

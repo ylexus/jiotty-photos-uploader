@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -39,16 +40,17 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     private final GooglePhotosClient googlePhotosClient;
     private final RemoteApiResultHandler backOffHandler;
     private final DirectoryStructureSupplier directoryStructureSupplier;
-    private final ExecutorService executorService;
+    private final Provider<ExecutorService> executorServiceProvider;
+    private ExecutorService executorService;
     private Map<String, GooglePhotosAlbum> albumsByTitle;
 
     @Inject
     AlbumManagerImpl(GooglePhotosClient googlePhotosClient,
-                     @Backpressured ExecutorService executorService,
+                     @Backpressured Provider<ExecutorService> executorServiceProvider,
                      @Backoff RemoteApiResultHandler backOffHandler,
                      DirectoryStructureSupplier directoryStructureSupplier) {
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
-        this.executorService = checkNotNull(executorService);
+        this.executorServiceProvider = checkNotNull(executorServiceProvider);
         this.backOffHandler = checkNotNull(backOffHandler);
         this.directoryStructureSupplier = checkNotNull(directoryStructureSupplier);
     }
@@ -62,6 +64,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
 
     @Override
     protected void doStart() {
+        executorService = executorServiceProvider.get();
         logger.info("Reconciling folders with Google Photos cloud");
 
         logger.info("Loading albums in cloud (may take several minutes)...");
@@ -141,13 +144,14 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                         min((groupNumber + 1) * maxItemsPerRequest, mediaItems.size())))
                 .map(itemsInGroup -> {
                     logger.debug("Moving a batch of {} items from {} to {}", itemsInGroup.size(), sourceAlbum.getTitle(), destinationAlbum.getTitle());
-                    return destinationAlbum.addMediaItems(itemsInGroup, executorService)
+                    return withBackOffAndRetry(
+                            "add items for " + sourceAlbum.getTitle() + " to album " + destinationAlbum.getId(),
+                            () -> destinationAlbum.addMediaItems(itemsInGroup, executorService))
                             // 2. remove items from this album
-                            .thenCompose(aVoid -> sourceAlbum.removeMediaItems(itemsInGroup, executorService));
+                            .thenCompose(aVoid -> withBackOffAndRetry(
+                                    "remove items for " + sourceAlbum.getTitle() + " from album " + sourceAlbum.getId(),
+                                    () -> sourceAlbum.removeMediaItems(itemsInGroup, executorService)));
                 })
-                .map(future -> withBackOffAndRetry(
-                        "move items for " + sourceAlbum.getTitle() + " from " + sourceAlbum.getId() + " to " + destinationAlbum.getId(),
-                        () -> future))
                 .collect(toFutureOfList())
                 .thenApply(list -> null);
     }
@@ -173,7 +177,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                         retryableFailure -> {
                             if (retryableFailure.shouldRetry()) {
                                 logger.debug("Retrying operation '{}'", operationName);
-                                return action.get();
+                                return withBackOffAndRetry(operationName, action);
                             } else {
                                 return CompletableFutures.failure(retryableFailure.exception());
                             }

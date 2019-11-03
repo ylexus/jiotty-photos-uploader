@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Path;
@@ -35,22 +36,23 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     private final VarStore varStore;
     private final GooglePhotosClient googlePhotosClient;
 
-    private final ExecutorService executorService;
+    private final Provider<ExecutorService> executorServiceProvider;
     private final RemoteApiResultHandler backOffHandler;
     private final RemoteApiResultHandler invalidMediaItemHandler;
     private final StateSaver stateSaver;
+    private ExecutorService executorService;
     private Map<Path, CompletableFuture<ItemState>> uploadedItemStateByPath;
     private UploadState uploadState;
 
     @Inject
     GooglePhotosUploaderImpl(VarStore varStore,
                              GooglePhotosClient googlePhotosClient,
-                             @Backpressured ExecutorService executorService,
+                             @Backpressured Provider<ExecutorService> executorServiceProvider,
                              @Backoff RemoteApiResultHandler backOffHandler,
                              @InvalidMediaItem RemoteApiResultHandler invalidMediaItemHandler,
                              StateSaverFactory stateSaverFactory) {
         this.varStore = checkNotNull(varStore);
-        this.executorService = checkNotNull(executorService);
+        this.executorServiceProvider = checkNotNull(executorServiceProvider);
         this.backOffHandler = checkNotNull(backOffHandler);
         this.invalidMediaItemHandler = checkNotNull(invalidMediaItemHandler);
         stateSaver = stateSaverFactory.create("uploaded-items", this::saveState);
@@ -113,6 +115,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     @Override
     protected void doStart() {
+        executorService = executorServiceProvider.get();
         uploadState = varStore.readValue(UploadState.class, VAR_STORE_KEY).orElseGet(() -> UploadState.builder().build());
         uploadedItemStateByPath = uploadState.uploadedMediaItemIdByAbsolutePath().entrySet().stream()
                 .collect(toConcurrentMap(
