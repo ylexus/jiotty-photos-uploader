@@ -5,7 +5,7 @@ Configuration:
     Console:
       name: STDOUT
       PatternLayout:
-        Pattern: "%d %p %m%n"
+        Pattern: "%d %p [%t] %C{1.} %m%n"
 
   Loggers:
     #    TODO remove

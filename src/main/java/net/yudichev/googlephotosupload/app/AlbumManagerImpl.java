@@ -69,7 +69,8 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
 
         logger.info("Loading albums in cloud (may take several minutes)...");
         List<GooglePhotosAlbum> albumsInCloud = getAsUnchecked(() ->
-                withBackOffAndRetry("get all albums", googlePhotosClient::listAlbums).get(30, TimeUnit.MINUTES));
+                withBackOffAndRetry("get all albums", () -> googlePhotosClient.listAlbums(executorService))
+                        .get(30, TimeUnit.MINUTES));
         logger.info("... loaded {} album(s) in cloud", albumsInCloud.size());
 
         Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle = new HashMap<>(albumsInCloud.size());
@@ -126,34 +127,51 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
 
     private CompletableFuture<GooglePhotosAlbum> mergeAlbums(GooglePhotosAlbum primaryAlbum, List<GooglePhotosAlbum> albumsToBeMerged) {
         return albumsToBeMerged.stream()
-                .map(albumToBeMerged -> albumToBeMerged.getMediaItems()
-                        .thenCompose(mediaItems -> mediaItems.isEmpty() ?
-                                CompletableFutures.completedFuture() :
-                                // move these items to primary album
-                                moveItems(albumToBeMerged, primaryAlbum, mediaItems))
+                .map(albumToBeMerged -> moveItems(albumToBeMerged, primaryAlbum)
                         .thenRun(() -> removeAlbum(albumToBeMerged)))
                 .collect(toFutureOfList())
                 .thenApply(list -> primaryAlbum);
     }
 
-    private CompletableFuture<Void> moveItems(GooglePhotosAlbum sourceAlbum, GooglePhotosAlbum destinationAlbum, List<GoogleMediaItem> mediaItems) {
+    private List<GoogleMediaItem> without(List<GoogleMediaItem> mediaItems, List<GoogleMediaItem> itemsToExclude) {
+        ArrayList<GoogleMediaItem> result = new ArrayList<>(mediaItems);
+        result.removeAll(itemsToExclude);
+        return result;
+    }
+
+    private CompletableFuture<Void> moveItems(GooglePhotosAlbum sourceAlbum,
+                                              GooglePhotosAlbum destinationAlbum) {
         int maxItemsPerRequest = 49;
-        return IntStream.range(0, mediaItems.size() / maxItemsPerRequest + 1)
-                .mapToObj(groupNumber -> mediaItems.subList(
-                        groupNumber * maxItemsPerRequest,
-                        min((groupNumber + 1) * maxItemsPerRequest, mediaItems.size())))
-                .map(itemsInGroup -> {
-                    logger.debug("Moving a batch of {} items from {} to {}", itemsInGroup.size(), sourceAlbum.getTitle(), destinationAlbum.getTitle());
-                    return withBackOffAndRetry(
-                            "add items for " + sourceAlbum.getTitle() + " to album " + destinationAlbum.getId(),
-                            () -> destinationAlbum.addMediaItems(itemsInGroup, executorService))
-                            // 2. remove items from this album
-                            .thenCompose(aVoid -> withBackOffAndRetry(
-                                    "remove items for " + sourceAlbum.getTitle() + " from album " + sourceAlbum.getId(),
-                                    () -> sourceAlbum.removeMediaItems(itemsInGroup, executorService)));
-                })
-                .collect(toFutureOfList())
-                .thenApply(list -> null);
+        CompletableFuture<List<GoogleMediaItem>> itemsAlreadyInDestinationAlbumFuture = getItemsInAlbum(destinationAlbum);
+        CompletableFuture<List<GoogleMediaItem>> itemsInSourceAlbumFuture = getItemsInAlbum(sourceAlbum);
+        return itemsAlreadyInDestinationAlbumFuture.thenCompose(itemsAlreadyInDestinationAlbum -> itemsInSourceAlbumFuture
+                .thenCompose(itemsInSourceAlbum -> itemsInSourceAlbum.isEmpty() ?
+                        CompletableFutures.completedFuture() :
+                        IntStream.range(0, itemsInSourceAlbum.size() / maxItemsPerRequest + 1)
+                                .mapToObj(groupNumber -> itemsInSourceAlbum.subList(
+                                        groupNumber * maxItemsPerRequest,
+                                        min((groupNumber + 1) * maxItemsPerRequest, itemsInSourceAlbum.size())))
+                                .filter(itemsInGroup -> !itemsInGroup.isEmpty())
+                                .map(itemsInGroup -> {
+                                    logger.debug("Moving a batch of {} items for {} from {} to {}",
+                                            itemsInGroup.size(), sourceAlbum.getTitle(), sourceAlbum.getId(), destinationAlbum.getId());
+                                    List<GoogleMediaItem> itemsToAdd = without(itemsInGroup, itemsAlreadyInDestinationAlbum);
+                                    CompletableFuture<Void> addFuture = itemsToAdd.isEmpty() ?
+                                            CompletableFutures.completedFuture() :
+                                            withBackOffAndRetry("add " + itemsToAdd.size() + "items for " + sourceAlbum.getTitle() +
+                                                            " to album " + destinationAlbum.getId(),
+                                                    () -> destinationAlbum.addMediaItems(itemsToAdd, executorService));
+                                    return addFuture.thenCompose(aVoid -> withBackOffAndRetry(
+                                            "remove " + itemsInGroup.size() + " items for " + sourceAlbum.getTitle() +
+                                                    " from album " + sourceAlbum.getId(),
+                                            () -> sourceAlbum.removeMediaItems(itemsInGroup, executorService)));
+                                })
+                                .collect(toFutureOfList())
+                                .thenApply(list -> null)));
+    }
+
+    private CompletableFuture<List<GoogleMediaItem>> getItemsInAlbum(GooglePhotosAlbum sourceAlbum) {
+        return withBackOffAndRetry("get media items in album " + sourceAlbum.getId(), () -> sourceAlbum.getMediaItems(executorService));
     }
 
     private void removeAlbum(GooglePhotosAlbum albumToBeMerged) {

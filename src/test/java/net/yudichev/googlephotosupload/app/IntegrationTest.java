@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.app;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import net.yudichev.googlephotosupload.app.RecordingGooglePhotosClient.CreatedGooglePhotosAlbum;
@@ -247,6 +248,22 @@ final class IntegrationTest {
     }
 
     @Test
+    void mergesPreExistingNonEmptyAlbumsWithSamePhotoInThem() throws InterruptedException, TimeoutException, ExecutionException, IOException {
+        GooglePhotosAlbum preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(3, TimeUnit.SECONDS);
+        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(3, TimeUnit.SECONDS);
+
+        Path preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "photo1.jpg");
+        preExistingAlbum2.addMediaItemsByIds(ImmutableList.of(preExistingPhoto1.toAbsolutePath().toString())).get(3, TimeUnit.SECONDS);
+
+        Files.delete(outerAlbumPhoto);
+
+        doExecuteUpload();
+
+        assertThat(preExistingAlbum1, is(albumWithItems(contains(itemForFile(preExistingPhoto1)))));
+        assertThat(preExistingAlbum2, is(emptyAlbum()));
+    }
+
+    @Test
     void mergesAlbumsWithMoreThanMaxItemsAllowedPerRequest() throws InterruptedException, TimeoutException, ExecutionException, IOException {
         GooglePhotosAlbum preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
         GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
@@ -260,6 +277,26 @@ final class IntegrationTest {
 
         List<GoogleMediaItem> outerAlbumItems = preExistingAlbum1.getMediaItems().get(3, TimeUnit.SECONDS);
         assertThat(outerAlbumItems, hasSize(53));
+        filePaths.forEach(path -> assertThat(outerAlbumItems, hasItem(itemForFile(path))));
+        assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
+
+        assertThat(preExistingAlbum2, is(emptyAlbum()));
+    }
+
+    @Test
+    void mergesAlbumsWithExactlyMaxItemsAllowedPerRequest() throws InterruptedException, TimeoutException, ExecutionException, IOException {
+        GooglePhotosAlbum preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+
+        uploadPhoto(preExistingAlbum1, "photo-in-album1.jpg");
+        List<Path> filePaths = IntStream.range(0, 49)
+                .mapToObj(i -> getAsUnchecked(() -> uploadPhoto(preExistingAlbum2, "photo" + i + ".jpg")))
+                .collect(toList());
+
+        doExecuteUpload();
+
+        List<GoogleMediaItem> outerAlbumItems = preExistingAlbum1.getMediaItems().get(3, TimeUnit.SECONDS);
+        assertThat(outerAlbumItems, hasSize(51));
         filePaths.forEach(path -> assertThat(outerAlbumItems, hasItem(itemForFile(path))));
         assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
 
@@ -435,11 +472,11 @@ final class IntegrationTest {
         };
     }
 
-    private static Matcher<CreatedGooglePhotosAlbum> albumWithItems(Matcher<Iterable<? extends GoogleMediaItem>> itemsMatcher) {
-        return new FeatureMatcher<CreatedGooglePhotosAlbum, Iterable<GoogleMediaItem>>(
+    private static Matcher<? super GooglePhotosAlbum> albumWithItems(Matcher<Iterable<? extends GoogleMediaItem>> itemsMatcher) {
+        return new FeatureMatcher<GooglePhotosAlbum, Iterable<GoogleMediaItem>>(
                 itemsMatcher, "album with items", "album with items") {
             @Override
-            protected Iterable<GoogleMediaItem> featureValueOf(CreatedGooglePhotosAlbum actual) {
+            protected Iterable<GoogleMediaItem> featureValueOf(GooglePhotosAlbum actual) {
                 return getAsUnchecked(() -> actual.getMediaItems(directExecutor()).get(1, TimeUnit.SECONDS));
             }
         };

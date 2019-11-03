@@ -1,6 +1,5 @@
 Configuration:
   name: Automator
-  shutdownHook: disable
   appenders:
     Console:
       name: STDOUT

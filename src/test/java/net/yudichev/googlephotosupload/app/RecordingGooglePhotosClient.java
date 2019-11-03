@@ -19,8 +19,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.*;
 import static com.google.common.collect.ImmutableList.copyOf;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -174,14 +173,14 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         void addToAlbum(String albumId) {
             synchronized (stateLock) {
                 logger.debug("Add item {} to album {}", this, albumId);
-                albumIds.add(albumId);
+                checkState(albumIds.add(albumId), "item %s is already in album %s", id, albumId);
             }
         }
 
         void removeFromAlbum(String albumId) {
             synchronized (stateLock) {
                 logger.debug("remove item {} from album {}", this, albumId);
-                albumIds.remove(albumId);
+                checkState(albumIds.remove(albumId), "item %s was not in album %s", id, albumId);
             }
         }
 
