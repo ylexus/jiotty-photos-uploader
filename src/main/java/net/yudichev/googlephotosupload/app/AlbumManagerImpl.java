@@ -1,5 +1,7 @@
 package net.yudichev.googlephotosupload.app;
 
+import com.google.common.base.Throwables;
+import io.grpc.StatusRuntimeException;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
@@ -20,12 +22,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static io.grpc.Status.INVALID_ARGUMENT;
 import static java.lang.Math.min;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static net.yudichev.googlephotosupload.app.Bindings.Backoff;
@@ -126,11 +130,17 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     }
 
     private CompletableFuture<GooglePhotosAlbum> mergeAlbums(GooglePhotosAlbum primaryAlbum, List<GooglePhotosAlbum> albumsToBeMerged) {
-        return albumsToBeMerged.stream()
-                .map(albumToBeMerged -> moveItems(albumToBeMerged, primaryAlbum)
-                        .thenRun(() -> removeAlbum(albumToBeMerged)))
-                .collect(toFutureOfList())
-                .thenApply(list -> primaryAlbum);
+        return getItemsInAlbum(primaryAlbum)
+                .thenCompose(itemsInPrimaryAlbum -> {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Items currently in primary album: {}", mediaItemsToIds(itemsInPrimaryAlbum));
+                    }
+                    return albumsToBeMerged.stream()
+                            .map(albumToBeMerged -> moveItems(albumToBeMerged, primaryAlbum, itemsInPrimaryAlbum)
+                                    .thenRun(() -> removeAlbum(albumToBeMerged)))
+                            .collect(toFutureOfList())
+                            .thenApply(list -> primaryAlbum);
+                });
     }
 
     private List<GoogleMediaItem> without(List<GoogleMediaItem> mediaItems, List<GoogleMediaItem> itemsToExclude) {
@@ -140,34 +150,43 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     }
 
     private CompletableFuture<Void> moveItems(GooglePhotosAlbum sourceAlbum,
-                                              GooglePhotosAlbum destinationAlbum) {
+                                              GooglePhotosAlbum destinationAlbum,
+                                              List<GoogleMediaItem> itemsInDestinationAlbum) {
         int maxItemsPerRequest = 49;
-        CompletableFuture<List<GoogleMediaItem>> itemsAlreadyInDestinationAlbumFuture = getItemsInAlbum(destinationAlbum);
-        CompletableFuture<List<GoogleMediaItem>> itemsInSourceAlbumFuture = getItemsInAlbum(sourceAlbum);
-        return itemsAlreadyInDestinationAlbumFuture.thenCompose(itemsAlreadyInDestinationAlbum -> itemsInSourceAlbumFuture
-                .thenCompose(itemsInSourceAlbum -> itemsInSourceAlbum.isEmpty() ?
-                        CompletableFutures.completedFuture() :
-                        IntStream.range(0, itemsInSourceAlbum.size() / maxItemsPerRequest + 1)
-                                .mapToObj(groupNumber -> itemsInSourceAlbum.subList(
-                                        groupNumber * maxItemsPerRequest,
-                                        min((groupNumber + 1) * maxItemsPerRequest, itemsInSourceAlbum.size())))
-                                .filter(itemsInGroup -> !itemsInGroup.isEmpty())
-                                .map(itemsInGroup -> {
-                                    logger.debug("Moving a batch of {} items for {} from {} to {}",
-                                            itemsInGroup.size(), sourceAlbum.getTitle(), sourceAlbum.getId(), destinationAlbum.getId());
-                                    List<GoogleMediaItem> itemsToAdd = without(itemsInGroup, itemsAlreadyInDestinationAlbum);
-                                    CompletableFuture<Void> addFuture = itemsToAdd.isEmpty() ?
-                                            CompletableFutures.completedFuture() :
-                                            withBackOffAndRetry("add " + itemsToAdd.size() + "items for " + sourceAlbum.getTitle() +
-                                                            " to album " + destinationAlbum.getId(),
-                                                    () -> destinationAlbum.addMediaItems(itemsToAdd, executorService));
-                                    return addFuture.thenCompose(aVoid -> withBackOffAndRetry(
-                                            "remove " + itemsInGroup.size() + " items for " + sourceAlbum.getTitle() +
-                                                    " from album " + sourceAlbum.getId(),
-                                            () -> sourceAlbum.removeMediaItems(itemsInGroup, executorService)));
-                                })
-                                .collect(toFutureOfList())
-                                .thenApply(list -> null)));
+        return getItemsInAlbum(sourceAlbum).thenCompose(itemsInSourceAlbum -> itemsInSourceAlbum.isEmpty() ?
+                CompletableFutures.completedFuture() :
+                IntStream.range(0, itemsInSourceAlbum.size() / maxItemsPerRequest + 1)
+                        .mapToObj(groupNumber -> itemsInSourceAlbum.subList(
+                                groupNumber * maxItemsPerRequest,
+                                min((groupNumber + 1) * maxItemsPerRequest, itemsInSourceAlbum.size())))
+                        .filter(itemsInGroup -> !itemsInGroup.isEmpty())
+                        .map(itemsInGroup -> {
+                            logger.debug("Moving a batch of {} items for {} from {} to {}",
+                                    itemsInGroup.size(), sourceAlbum.getTitle(), sourceAlbum.getId(), destinationAlbum.getId());
+                            List<GoogleMediaItem> itemsToAdd = without(itemsInGroup, itemsInDestinationAlbum);
+                            CompletableFuture<Void> addFuture;
+                            if (itemsToAdd.isEmpty()) {
+                                addFuture = CompletableFutures.completedFuture();
+                            } else {
+                                if (logger.isDebugEnabled()) {
+                                    logger.debug("Add to album {} items {}", destinationAlbum.getId(), mediaItemsToIds(itemsToAdd));
+                                }
+                                String addOperationName = "add " + itemsToAdd.size() + " items for " + sourceAlbum.getTitle() +
+                                        " to album " + destinationAlbum.getId();
+                                addFuture = withBackOffAndRetry(addOperationName,
+                                        () -> withInvalidMediaItemErrorIgnored(addOperationName, destinationAlbum.addMediaItems(itemsToAdd, executorService)));
+                            }
+                            String removeOperationName = "remove " + itemsInGroup.size() + " items for " + sourceAlbum.getTitle() +
+                                    " from album " + sourceAlbum.getId();
+                            return addFuture.thenCompose(aVoid -> withBackOffAndRetry(removeOperationName,
+                                    () -> withInvalidMediaItemErrorIgnored(removeOperationName, sourceAlbum.removeMediaItems(itemsInGroup, executorService))));
+                        })
+                        .collect(toFutureOfList())
+                        .thenApply(list -> null));
+    }
+
+    private String mediaItemsToIds(List<GoogleMediaItem> items) {
+        return items.stream().map(GoogleMediaItem::getId).collect(Collectors.joining(", "));
     }
 
     private CompletableFuture<List<GoogleMediaItem>> getItemsInAlbum(GooglePhotosAlbum sourceAlbum) {
@@ -178,6 +197,22 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
         // remove this album - CAN'T DO THIS :-(, so flagging to user
         logger.info("MANUAL ACTION NEEDED: remove empty album '{}': {}",
                 albumToBeMerged.getTitle(), albumToBeMerged.getAlbumUrl());
+    }
+
+    private static CompletableFuture<Void> withInvalidMediaItemErrorIgnored(String operationName, CompletableFuture<Void> action) {
+        return action
+                .exceptionally(exception -> {
+                    boolean shouldIgnore = Throwables.getCausalChain(exception).stream()
+                            .filter(throwable -> throwable instanceof StatusRuntimeException)
+                            .map(throwable -> (StatusRuntimeException) throwable)
+                            .anyMatch(statusRuntimeException -> INVALID_ARGUMENT.equals(statusRuntimeException.getStatus()));
+                    if (shouldIgnore) {
+                        logger.warn("Ignoring INVALID_ARGUMENT failure, must be pre-existing media item that we have no access to; operation was '{}'", operationName);
+                        return null;
+                    } else {
+                        throw new RuntimeException(exception);
+                    }
+                });
     }
 
     private <T> CompletableFuture<T> withBackOffAndRetry(String operationName, Supplier<CompletableFuture<T>> action) {

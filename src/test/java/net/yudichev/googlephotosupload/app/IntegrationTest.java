@@ -1,7 +1,6 @@
 package net.yudichev.googlephotosupload.app;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import net.yudichev.googlephotosupload.app.RecordingGooglePhotosClient.CreatedGooglePhotosAlbum;
@@ -32,9 +31,13 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 
+import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.spotify.hamcrest.optional.OptionalMatchers.optionalWithValue;
@@ -253,7 +256,7 @@ final class IntegrationTest {
         GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(3, TimeUnit.SECONDS);
 
         Path preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "photo1.jpg");
-        preExistingAlbum2.addMediaItemsByIds(ImmutableList.of(preExistingPhoto1.toAbsolutePath().toString())).get(3, TimeUnit.SECONDS);
+        preExistingAlbum2.addMediaItemsByIds(of(preExistingPhoto1.toAbsolutePath().toString())).get(3, TimeUnit.SECONDS);
 
         Files.delete(outerAlbumPhoto);
 
@@ -305,8 +308,7 @@ final class IntegrationTest {
 
     @Test
     void mergesPreExistingAlbumsWithSameNameSecondOneNonEmptyAndReusesResultingAlbum() throws InterruptedException, TimeoutException, ExecutionException, IOException {
-        CompletableFuture<GooglePhotosAlbum> preExistingEmptyAlbum = googlePhotosClient.createAlbum("outer-album");
-        preExistingEmptyAlbum.get(1, TimeUnit.SECONDS);
+        googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
         GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
 
         Path preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "photo2.jpg");
@@ -322,6 +324,27 @@ final class IntegrationTest {
                 allOf(albumWithId("outer-album1"),
                         albumWithItems(containsInAnyOrder(itemForFile(outerAlbumPhoto), itemForFile(preExistingPhoto2)))),
                 allOf(albumWithId("outer-album"), emptyAlbum()),
+                allOf(albumWithId("outer-album: inner-album"), albumWithItems(contains(itemForFile(innerAlbumPhoto))))));
+    }
+
+    @Test
+    void mergesPreExistingAlbumsSameNameWithPreexistingProtectedItemIgnoresError() throws InterruptedException, TimeoutException, ExecutionException, IOException {
+        GooglePhotosAlbum preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+
+        Path preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "protected1.jpg");
+        Path preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "protected2.jpg");
+
+        doExecuteUpload();
+        assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
+                allOf(itemForFile(rootPhoto), itemWithNoAlbum()),
+                allOf(itemForFile(outerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album"))),
+                allOf(itemForFile(innerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album: inner-album"))),
+                allOf(itemForFile(preExistingPhoto1), itemInAlbumWithId(equalTo(preExistingAlbum1.getId()))),
+                allOf(itemForFile(preExistingPhoto2), itemInAlbumWithId(equalTo(preExistingAlbum2.getId())))));
+        assertThat(googlePhotosClient.getAllAlbums(), containsInAnyOrder(
+                allOf(equalTo(preExistingAlbum1), albumWithItems(containsInAnyOrder(itemForFile(outerAlbumPhoto), itemForFile(preExistingPhoto1)))),
+                allOf(equalTo(preExistingAlbum2), albumWithItems(contains(itemForFile(preExistingPhoto2)))),
                 allOf(albumWithId("outer-album: inner-album"), albumWithItems(contains(itemForFile(innerAlbumPhoto))))));
     }
 
@@ -388,10 +411,10 @@ final class IntegrationTest {
 
     private void doVerifyGoogleClientState() {
         doVerifyGoogleClientItemState();
-        doVerifyGoogleCloudAlbumState();
+        doVerifyGoogleClientAlbumState();
     }
 
-    private void doVerifyGoogleCloudAlbumState() {
+    private void doVerifyGoogleClientAlbumState() {
         assertThat(googlePhotosClient.getAllAlbums(), containsInAnyOrder(
                 albumWithId("outer-album"),
                 albumWithId("outer-album: inner-album")));

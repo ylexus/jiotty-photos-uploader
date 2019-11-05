@@ -22,6 +22,7 @@ import java.util.concurrent.Executor;
 import static com.google.common.base.Preconditions.*;
 import static com.google.common.collect.ImmutableList.copyOf;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.grpc.Status.INVALID_ARGUMENT;
 
 final class RecordingGooglePhotosClient implements GooglePhotosClient {
     private static final Logger logger = LoggerFactory.getLogger(RecordingGooglePhotosClient.class);
@@ -126,7 +127,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         }
         int currentCount = resourceExhaustionCountByKey.compute(key, (ignored, count) -> {
             if (count == null) {
-                count = 2;
+                count = 3;
             }
             return --count;
         });
@@ -234,6 +235,11 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                         synchronized (lock) {
                             simulateResourceExhaustion(ImmutableSet.of("addMediaItemsByIds", list));
                             list.stream()
+                                    .peek(mediaItemId -> {
+                                        if (mediaItemId.contains("protected")) {
+                                            throw new io.grpc.StatusRuntimeException(INVALID_ARGUMENT);
+                                        }
+                                    })
                                     .map(mediaItemId -> checkNotNull(itemsById.get(mediaItemId), "unknown item id: %s", mediaItemId))
                                     .forEach(uploadedGoogleMediaItem -> uploadedGoogleMediaItem.addToAlbum(id));
                         }
@@ -250,6 +256,11 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                         synchronized (lock) {
                             simulateResourceExhaustion(ImmutableSet.of("removeMediaItemsByIds", list));
                             list.stream()
+                                    .peek(mediaItemId -> {
+                                        if (mediaItemId.contains("protected")) {
+                                            throw new io.grpc.StatusRuntimeException(INVALID_ARGUMENT);
+                                        }
+                                    })
                                     .map(mediaItemId -> checkNotNull(itemsById.get(mediaItemId), "unknown item id: %s", mediaItemId))
                                     .forEach(uploadedGoogleMediaItem -> uploadedGoogleMediaItem.removeFromAlbum(id));
                         }
