@@ -28,7 +28,7 @@ final class UploadPhotosModule extends BaseLifecycleComponentModule {
                 .toProvider(boundLifecycleComponent(BackpressuredExecutorServiceProvider.class))
                 .in(Singleton.class);
 
-        bind(DirectoryStructureSupplier.class).to(boundLifecycleComponent(DirectoryStructureSupplierImpl.class));
+        bind(DirectoryStructureSupplier.class).to(DirectoryStructureSupplierImpl.class);
 
         bindConstant().annotatedWith(BackOffProvider.InitialDelayMs.class).to(backOffInitialDelayMs);
         bind(BackOff.class).annotatedWith(BackingOffRemoteApiResultHandler.Dependency.class).toProvider(BackOffProvider.class);

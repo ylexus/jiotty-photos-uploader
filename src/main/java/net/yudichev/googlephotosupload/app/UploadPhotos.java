@@ -34,13 +34,14 @@ final class UploadPhotos extends BaseLifecycleComponent {
 
     @Override
     protected void doStart() {
-        logger.info("Starting to upload files");
-        directoryStructureSupplier.getAlbumDirectories().stream()
-                .flatMap(albumDirectory -> filesystemManager.listFiles(albumDirectory.path()).stream()
-                        .map(path -> uploader.uploadFile(albumDirectory.albumTitle().map(albumManager::albumForTitle), path)))
-                .collect(toFutureOfList())
-                .thenAccept(list -> logger.info("All done without errors, files uploaded: {}", list.size()))
-                .whenComplete(logErrorOnFailure(logger, "Failed to upload some file(s)"))
+        directoryStructureSupplier.listAlbumDirectories()
+                .thenCompose(albumDirectories -> albumManager.albumsByTitle(albumDirectories)
+                        .thenCompose(albumsByTitle -> albumDirectories.stream()
+                                .flatMap(albumDirectory -> filesystemManager.listFiles(albumDirectory.path()).stream()
+                                        .map(path -> uploader.uploadFile(albumDirectory.albumTitle().map(albumsByTitle::get), path)))
+                                .collect(toFutureOfList())
+                                .thenAccept(list -> logger.info("All done without errors, files uploaded: {}", list.size()))))
+                .whenComplete(logErrorOnFailure(logger, "Failed"))
                 .whenComplete((ignored1, ignored2) -> applicationLifecycleControl.initiateShutdown());
     }
 }

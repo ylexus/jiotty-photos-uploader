@@ -1,10 +1,7 @@
 package net.yudichev.googlephotosupload.app;
 
 import com.google.api.client.util.BackOff;
-import com.google.api.gax.rpc.AbortedException;
-import com.google.api.gax.rpc.DeadlineExceededException;
-import com.google.api.gax.rpc.ResourceExhaustedException;
-import com.google.api.gax.rpc.UnavailableException;
+import com.google.api.gax.rpc.*;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.BindingAnnotation;
 import org.slf4j.Logger;
@@ -31,7 +28,8 @@ final class BackingOffRemoteApiResultHandler implements RemoteApiResultHandler {
             ResourceExhaustedException.class,
             UnavailableException.class,
             DeadlineExceededException.class,
-            AbortedException.class);
+            AbortedException.class,
+            InternalException.class);
 
     @Inject
     BackingOffRemoteApiResultHandler(@Dependency BackOff backOff) {

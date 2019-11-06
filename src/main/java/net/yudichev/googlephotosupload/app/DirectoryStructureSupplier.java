@@ -1,7 +1,8 @@
 package net.yudichev.googlephotosupload.app;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 interface DirectoryStructureSupplier {
-    List<AlbumDirectory> getAlbumDirectories();
+    CompletableFuture<List<AlbumDirectory>> listAlbumDirectories();
 }

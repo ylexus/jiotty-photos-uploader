@@ -1,12 +1,14 @@
 package net.yudichev.googlephotosupload.app;
 
 import com.google.api.gax.grpc.GrpcStatusCode;
+import com.google.api.gax.rpc.InvalidArgumentException;
 import com.google.api.gax.rpc.ResourceExhaustedException;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.rpc.Code;
 import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
@@ -237,7 +239,10 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                             list.stream()
                                     .peek(mediaItemId -> {
                                         if (mediaItemId.contains("protected")) {
-                                            throw new io.grpc.StatusRuntimeException(INVALID_ARGUMENT);
+                                            throw new InvalidArgumentException(
+                                                    new StatusRuntimeException(INVALID_ARGUMENT),
+                                                    GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
+                                                    false);
                                         }
                                     })
                                     .map(mediaItemId -> checkNotNull(itemsById.get(mediaItemId), "unknown item id: %s", mediaItemId))
@@ -258,7 +263,10 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                             list.stream()
                                     .peek(mediaItemId -> {
                                         if (mediaItemId.contains("protected")) {
-                                            throw new io.grpc.StatusRuntimeException(INVALID_ARGUMENT);
+                                            throw new InvalidArgumentException(
+                                                    new StatusRuntimeException(INVALID_ARGUMENT),
+                                                    GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
+                                                    false);
                                         }
                                     })
                                     .map(mediaItemId -> checkNotNull(itemsById.get(mediaItemId), "unknown item id: %s", mediaItemId))

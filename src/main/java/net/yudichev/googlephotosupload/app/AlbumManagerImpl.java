@@ -1,7 +1,6 @@
 package net.yudichev.googlephotosupload.app;
 
-import com.google.common.base.Throwables;
-import io.grpc.StatusRuntimeException;
+import com.google.api.gax.rpc.InvalidArgumentException;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
@@ -25,11 +24,10 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Throwables.getCausalChain;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static io.grpc.Status.INVALID_ARGUMENT;
 import static java.lang.Math.min;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static net.yudichev.googlephotosupload.app.Bindings.Backoff;
@@ -43,58 +41,47 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
 
     private final GooglePhotosClient googlePhotosClient;
     private final RemoteApiResultHandler backOffHandler;
-    private final DirectoryStructureSupplier directoryStructureSupplier;
     private final Provider<ExecutorService> executorServiceProvider;
     private ExecutorService executorService;
-    private Map<String, GooglePhotosAlbum> albumsByTitle;
 
     @Inject
     AlbumManagerImpl(GooglePhotosClient googlePhotosClient,
                      @Backpressured Provider<ExecutorService> executorServiceProvider,
-                     @Backoff RemoteApiResultHandler backOffHandler,
-                     DirectoryStructureSupplier directoryStructureSupplier) {
+                     @Backoff RemoteApiResultHandler backOffHandler) {
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
         this.executorServiceProvider = checkNotNull(executorServiceProvider);
         this.backOffHandler = checkNotNull(backOffHandler);
-        this.directoryStructureSupplier = checkNotNull(directoryStructureSupplier);
     }
 
     @Override
-    public GooglePhotosAlbum albumForTitle(String albumTitle) {
-        GooglePhotosAlbum album = albumsByTitle.get(albumTitle);
-        checkArgument(album != null, "No known album for title {}", albumTitle);
-        return album;
+    public CompletableFuture<Map<String, GooglePhotosAlbum>> albumsByTitle(List<AlbumDirectory> albumDirectories) {
+        logger.info("Loading albums in cloud (may take several minutes)...");
+        return withBackOffAndRetry("get all albums", () -> googlePhotosClient.listAlbums(executorService))
+                .thenApply(albumsInCloud -> {
+                    logger.info("... loaded {} album(s) in cloud", albumsInCloud.size());
+                    Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle = new HashMap<>(albumsInCloud.size());
+                    albumsInCloud.forEach(googlePhotosAlbum ->
+                            cloudAlbumsByTitle.computeIfAbsent(googlePhotosAlbum.getTitle(), title -> new ArrayList<>()).add(googlePhotosAlbum));
+                    return cloudAlbumsByTitle;
+                })
+                .thenApply(cloudAlbumsByTitle -> {
+                    // TODO user option "in case of album name match reuse existing albums, do not create new ones"
+                    logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", albumDirectories.size());
+                    return albumDirectories.stream()
+                            .map(albumDirectory -> albumDirectory.albumTitle()
+                                    .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path())))
+                            .filter(Optional::isPresent)
+                            .map(Optional::get)
+                            .map(future -> getAsUnchecked(() -> future.get(1, TimeUnit.HOURS)))
+                            .collect(toImmutableMap(
+                                    GooglePhotosAlbum::getTitle,
+                                    Function.identity()));
+                });
     }
 
     @Override
     protected void doStart() {
         executorService = executorServiceProvider.get();
-        logger.info("Reconciling folders with Google Photos cloud");
-
-        logger.info("Loading albums in cloud (may take several minutes)...");
-        List<GooglePhotosAlbum> albumsInCloud = getAsUnchecked(() ->
-                withBackOffAndRetry("get all albums", () -> googlePhotosClient.listAlbums(executorService))
-                        .get(30, TimeUnit.MINUTES));
-        logger.info("... loaded {} album(s) in cloud", albumsInCloud.size());
-
-        Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle = new HashMap<>(albumsInCloud.size());
-        albumsInCloud.forEach(googlePhotosAlbum ->
-                cloudAlbumsByTitle.computeIfAbsent(googlePhotosAlbum.getTitle(), title -> new ArrayList<>()).add(googlePhotosAlbum));
-
-        List<AlbumDirectory> albumDirectories = directoryStructureSupplier.getAlbumDirectories();
-
-        // TODO user option "in case of album name match reuse existing albums, do not create new ones"
-        logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", albumDirectories.size());
-        albumsByTitle = albumDirectories.stream()
-                .map(albumDirectory -> albumDirectory.albumTitle()
-                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path())))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .map(future -> getAsUnchecked(() -> future.get(1, TimeUnit.HOURS)))
-                .collect(toImmutableMap(
-                        GooglePhotosAlbum::getTitle,
-                        Function.identity()));
-        logger.info("... done");
     }
 
     private CompletableFuture<GooglePhotosAlbum> reconcile(Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle,
@@ -202,11 +189,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     private static CompletableFuture<Void> withInvalidMediaItemErrorIgnored(String operationName, CompletableFuture<Void> action) {
         return action
                 .exceptionally(exception -> {
-                    boolean shouldIgnore = Throwables.getCausalChain(exception).stream()
-                            .filter(throwable -> throwable instanceof StatusRuntimeException)
-                            .map(throwable -> (StatusRuntimeException) throwable)
-                            .anyMatch(statusRuntimeException -> INVALID_ARGUMENT.equals(statusRuntimeException.getStatus()));
-                    if (shouldIgnore) {
+                    if (getCausalChain(exception).stream().anyMatch(throwable -> throwable instanceof InvalidArgumentException)) {
                         logger.warn("Ignoring INVALID_ARGUMENT failure, must be pre-existing media item that we have no access to; operation was '{}'", operationName);
                         return null;
                     } else {

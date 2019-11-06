@@ -40,9 +40,11 @@ final class FilesystemManagerImpl implements FilesystemManager {
     @Override
     public void walkDirectories(Consumer<Path> directoryHandler) {
         asUnchecked(() -> Files.walkFileTree(rootDir, new SimpleFileVisitor<Path>() {
-
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new RuntimeException("Interrupted");
+                }
                 if (EXCLUSION_PATTERNS.stream().anyMatch(pattern -> pattern.matcher(dir.getFileName().toString()).matches())) {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
