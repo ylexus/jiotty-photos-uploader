@@ -38,7 +38,10 @@ final class UploadPhotosModule extends BaseLifecycleComponentModule {
         bind(Path.class).annotatedWith(RootDir.class).toProvider(RootDirProvider.class);
         bind(FilesystemManager.class).to(FilesystemManagerImpl.class);
 
-        bind(AlbumManager.class).to(boundLifecycleComponent(AlbumManagerImpl.class));
+        bind(CloudOperationHelper.class).to(CloudOperationHelperImpl.class);
+        bind(CloudAlbumsProvider.class).to(CloudAlbumsProviderImpl.class);
+
+        bind(AlbumManager.class).to(AlbumManagerImpl.class);
 
         bind(GooglePhotosUploader.class).to(boundLifecycleComponent(GooglePhotosUploaderImpl.class));
 

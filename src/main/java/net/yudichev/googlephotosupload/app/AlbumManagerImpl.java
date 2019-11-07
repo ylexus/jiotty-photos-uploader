@@ -1,7 +1,6 @@
 package net.yudichev.googlephotosupload.app;
 
 import com.google.api.gax.rpc.InvalidArgumentException;
-import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
@@ -13,14 +12,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import javax.inject.Provider;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -30,58 +29,50 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.lang.Math.min;
 import static java.util.concurrent.CompletableFuture.completedFuture;
-import static net.yudichev.googlephotosupload.app.Bindings.Backoff;
 import static net.yudichev.googlephotosupload.app.Bindings.Backpressured;
-import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfList;
-import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
-final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumManager {
+@Immutable
+@PackagePrivateImmutablesStyle
+interface BaseRetryableFailure {
+    @Value.Parameter
+    Throwable exception();
+
+    @Value.Parameter
+    boolean shouldRetry();
+}
+
+final class AlbumManagerImpl implements AlbumManager {
     private static final Logger logger = LoggerFactory.getLogger(AlbumManagerImpl.class);
 
     private final GooglePhotosClient googlePhotosClient;
-    private final RemoteApiResultHandler backOffHandler;
-    private final Provider<ExecutorService> executorServiceProvider;
-    private ExecutorService executorService;
+    private final CloudOperationHelper cloudOperationHelper;
+    private final ExecutorService executorService;
 
     @Inject
     AlbumManagerImpl(GooglePhotosClient googlePhotosClient,
-                     @Backpressured Provider<ExecutorService> executorServiceProvider,
-                     @Backoff RemoteApiResultHandler backOffHandler) {
+                     @Backpressured ExecutorService executorService,
+                     CloudOperationHelper cloudOperationHelper) {
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
-        this.executorServiceProvider = checkNotNull(executorServiceProvider);
-        this.backOffHandler = checkNotNull(backOffHandler);
+        this.executorService = executorService;
+        this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
     }
 
     @Override
-    public CompletableFuture<Map<String, GooglePhotosAlbum>> albumsByTitle(List<AlbumDirectory> albumDirectories) {
-        logger.info("Loading albums in cloud (may take several minutes)...");
-        return withBackOffAndRetry("get all albums", () -> googlePhotosClient.listAlbums(executorService))
-                .thenApply(albumsInCloud -> {
-                    logger.info("... loaded {} album(s) in cloud", albumsInCloud.size());
-                    Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle = new HashMap<>(albumsInCloud.size());
-                    albumsInCloud.forEach(googlePhotosAlbum ->
-                            cloudAlbumsByTitle.computeIfAbsent(googlePhotosAlbum.getTitle(), title -> new ArrayList<>()).add(googlePhotosAlbum));
-                    return cloudAlbumsByTitle;
-                })
-                .thenApply(cloudAlbumsByTitle -> {
-                    // TODO user option "in case of album name match reuse existing albums, do not create new ones"
-                    logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", albumDirectories.size());
-                    return albumDirectories.stream()
-                            .map(albumDirectory -> albumDirectory.albumTitle()
-                                    .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path())))
-                            .filter(Optional::isPresent)
-                            .map(Optional::get)
-                            .map(future -> getAsUnchecked(() -> future.get(1, TimeUnit.HOURS)))
-                            .collect(toImmutableMap(
-                                    GooglePhotosAlbum::getTitle,
-                                    Function.identity()));
-                });
-    }
-
-    @Override
-    protected void doStart() {
-        executorService = executorServiceProvider.get();
+    public CompletableFuture<Map<String, GooglePhotosAlbum>> listAlbumsByTitle(List<AlbumDirectory> albumDirectories, Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle) {
+        // TODO emit (UI?) progress here
+        logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", albumDirectories.size());
+        // TODO user option "in case of album name match reuse existing albums, do not create new ones"
+        return albumDirectories.stream()
+                .map(albumDirectory -> albumDirectory.albumTitle()
+                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path())))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(toFutureOfList())
+                .thenApply(googlePhotosAlbums -> googlePhotosAlbums.stream()
+                        .collect(toImmutableMap(
+                                GooglePhotosAlbum::getTitle,
+                                Function.identity())));
     }
 
     private CompletableFuture<GooglePhotosAlbum> reconcile(Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle,
@@ -91,9 +82,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
         List<GooglePhotosAlbum> cloudAlbumsForThisTitle = cloudAlbumsByTitle.get(filesystemAlbumTitle);
         if (cloudAlbumsForThisTitle == null) {
             logger.info("Creating album [{}] for path [{}]", filesystemAlbumTitle, path);
-            albumFuture = withBackOffAndRetry(
-                    "create album " + filesystemAlbumTitle,
-                    () -> googlePhotosClient.createAlbum(filesystemAlbumTitle, executorService));
+            albumFuture = cloudOperationHelper.withBackOffAndRetry("create album " + filesystemAlbumTitle, () -> googlePhotosClient.createAlbum(filesystemAlbumTitle, executorService));
         } else if (cloudAlbumsForThisTitle.size() > 1) {
             List<GooglePhotosAlbum> nonEmptyCloudAlbumsForThisTitle = cloudAlbumsForThisTitle.stream()
                     .filter(googlePhotosAlbum -> googlePhotosAlbum.getMediaItemCount() > 0)
@@ -160,12 +149,12 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                                 }
                                 String addOperationName = "add " + itemsToAdd.size() + " items for " + sourceAlbum.getTitle() +
                                         " to album " + destinationAlbum.getId();
-                                addFuture = withBackOffAndRetry(addOperationName,
+                                addFuture = cloudOperationHelper.withBackOffAndRetry(addOperationName,
                                         () -> withInvalidMediaItemErrorIgnored(addOperationName, destinationAlbum.addMediaItems(itemsToAdd, executorService)));
                             }
                             String removeOperationName = "remove " + itemsInGroup.size() + " items for " + sourceAlbum.getTitle() +
                                     " from album " + sourceAlbum.getId();
-                            return addFuture.thenCompose(aVoid -> withBackOffAndRetry(removeOperationName,
+                            return addFuture.thenCompose(aVoid -> cloudOperationHelper.withBackOffAndRetry(removeOperationName,
                                     () -> withInvalidMediaItemErrorIgnored(removeOperationName, sourceAlbum.removeMediaItems(itemsInGroup, executorService))));
                         })
                         .collect(toFutureOfList())
@@ -177,7 +166,9 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     }
 
     private CompletableFuture<List<GoogleMediaItem>> getItemsInAlbum(GooglePhotosAlbum sourceAlbum) {
-        return withBackOffAndRetry("get media items in album " + sourceAlbum.getId(), () -> sourceAlbum.getMediaItems(executorService));
+        return cloudOperationHelper.withBackOffAndRetry(
+                "get media items in album " + sourceAlbum.getId(),
+                () -> sourceAlbum.getMediaItems(executorService));
     }
 
     private void removeAlbum(GooglePhotosAlbum albumToBeMerged) {
@@ -196,39 +187,5 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                         throw new RuntimeException(exception);
                     }
                 });
-    }
-
-    private <T> CompletableFuture<T> withBackOffAndRetry(String operationName, Supplier<CompletableFuture<T>> action) {
-        return action.get()
-                .thenApply(value -> {
-                    backOffHandler.reset();
-                    return Either.<T, RetryableFailure>left(value);
-                })
-                .exceptionally(exception -> {
-                    boolean shouldRetry = backOffHandler.handle(operationName, exception);
-                    return Either.right(RetryableFailure.of(exception, shouldRetry));
-                })
-                .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(
-                        CompletableFuture::completedFuture,
-                        retryableFailure -> {
-                            if (retryableFailure.shouldRetry()) {
-                                logger.debug("Retrying operation '{}'", operationName);
-                                return withBackOffAndRetry(operationName, action);
-                            } else {
-                                return CompletableFutures.failure(retryableFailure.exception());
-                            }
-                        }
-                ))
-                .whenComplete(logErrorOnFailure(logger, "Unhandled exception performing '%s'", operationName));
-    }
-
-    @Immutable
-    @PackagePrivateImmutablesStyle
-    interface BaseRetryableFailure {
-        @Value.Parameter
-        Throwable exception();
-
-        @Value.Parameter
-        boolean shouldRetry();
     }
 }

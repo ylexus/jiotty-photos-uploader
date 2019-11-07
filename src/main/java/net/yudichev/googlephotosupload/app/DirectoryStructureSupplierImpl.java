@@ -37,6 +37,7 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
     @Override
     public CompletableFuture<List<AlbumDirectory>> listAlbumDirectories() {
         return CompletableFuture.supplyAsync(() -> {
+            // TODO emit (UI?) progress here
             logger.info("Building album list from the file system...");
             ImmutableList.Builder<AlbumDirectory> listBuilder = ImmutableList.builder();
             filesystemManager.walkDirectories(path -> listBuilder.add(AlbumDirectory.of(path, toAlbumTitle(path))));
