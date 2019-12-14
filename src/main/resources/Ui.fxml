@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.*?>
+<AnchorPane xmlns:fx="http://javafx.com/fxml/1" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/10.0.2-internal"
+            fx:controller="net.yudichev.googlephotosupload.ui.FxController">
+    <children>
+        <VBox fx:id="folderSelector" alignment="CENTER" onDragDropped="#folderSelectorOnDragDropped" onDragEntered="#folderSelectorOnDragEnter"
+              onDragExited="#folderSelectorOnDragExit" onDragOver="#folderSelectorOnDragOver" prefHeight="400.0" prefWidth="600.0" AnchorPane.bottomAnchor="0.0"
+              AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <children>
+                <Label alignment="CENTER" contentDisplay="CENTER" text="Drag your folder with photos here or" textAlignment="CENTER" wrapText="true"/>
+                <Button mnemonicParsing="false" text="Browse..."/>
+            </children>
+        </VBox>
+        <GridPane fx:id="progressPane" prefHeight="400.0" prefWidth="600.0" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
+                  AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <columnConstraints>
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="100.0" prefWidth="100.0"/>
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="200.0"/>
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+            </rowConstraints>
+            <children>
+                <VBox fx:id="progressBox" prefHeight="200.0" prefWidth="100.0" GridPane.columnIndex="1"/>
+                <TextArea fx:id="logArea" prefHeight="200.0" prefWidth="200.0" text="Test"/>
+            </children>
+        </GridPane>
+    </children>
+</AnchorPane>
