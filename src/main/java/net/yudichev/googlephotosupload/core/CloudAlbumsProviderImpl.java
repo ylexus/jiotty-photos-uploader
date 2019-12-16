@@ -35,14 +35,15 @@ final class CloudAlbumsProviderImpl implements CloudAlbumsProvider {
     public CompletableFuture<Map<String, List<GooglePhotosAlbum>>> listCloudAlbums() {
         logger.info("Loading albums in cloud (may take several minutes)...");
         ProgressStatus progressStatus = progressStatusFactory.create("Loading albums in cloud", Optional.empty());
-        return cloudOperationHelper.withBackOffAndRetry("get all albums", () -> googlePhotosClient.listAlbums(
-                progressStatus::update, executorService))
+        return cloudOperationHelper.withBackOffAndRetry("get all albums",
+                () -> googlePhotosClient.listAlbums(progressStatus::update, executorService))
                 .thenApply(albumsInCloud -> {
                     logger.info("... loaded {} album(s) in cloud", albumsInCloud.size());
                     Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle = new HashMap<>(albumsInCloud.size());
                     albumsInCloud.forEach(googlePhotosAlbum ->
                             cloudAlbumsByTitle.computeIfAbsent(googlePhotosAlbum.getTitle(), title -> new ArrayList<>()).add(googlePhotosAlbum));
                     return cloudAlbumsByTitle;
-                });
+                })
+                .whenComplete((ignored, e) -> progressStatus.close());
     }
 }

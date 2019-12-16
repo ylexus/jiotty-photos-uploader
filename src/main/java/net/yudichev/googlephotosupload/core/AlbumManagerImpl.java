@@ -34,32 +34,40 @@ final class AlbumManagerImpl implements AlbumManager {
 
     private final GooglePhotosClient googlePhotosClient;
     private final CloudOperationHelper cloudOperationHelper;
+    private final ProgressStatusFactory progressStatusFactory;
     private final ExecutorService executorService;
 
     @Inject
     AlbumManagerImpl(GooglePhotosClient googlePhotosClient,
                      @Backpressured ExecutorService executorService,
-                     CloudOperationHelper cloudOperationHelper) {
+                     CloudOperationHelper cloudOperationHelper,
+                     ProgressStatusFactory progressStatusFactory) {
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
         this.executorService = executorService;
         this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
+        this.progressStatusFactory = checkNotNull(progressStatusFactory);
     }
 
     @Override
     public CompletableFuture<Map<String, GooglePhotosAlbum>> listAlbumsByTitle(List<AlbumDirectory> albumDirectories, Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle) {
-        // TODO emit (UI?) progress here
-        logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", albumDirectories.size());
+        int reconcilableAlbumCount = albumDirectories.size() - 1;
+        logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", reconcilableAlbumCount);
+        ProgressStatus progressStatus = progressStatusFactory.create(
+                String.format("Reconciling %s album(s) with Google Photos", reconcilableAlbumCount),
+                Optional.of(reconcilableAlbumCount)); // root directory is excluded from progress as it does not need to be reconciled
         // TODO user option "in case of album name match reuse existing albums, do not create new ones"
         return albumDirectories.stream()
                 .map(albumDirectory -> albumDirectory.albumTitle()
-                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path())))
+                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path())
+                                .whenComplete((album, e) -> progressStatus.increment())))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(toFutureOfList())
-                .thenApply(googlePhotosAlbums -> googlePhotosAlbums.stream()
+                .<Map<String, GooglePhotosAlbum>>thenApply(googlePhotosAlbums -> googlePhotosAlbums.stream()
                         .collect(toImmutableMap(
                                 GooglePhotosAlbum::getTitle,
-                                Function.identity())));
+                                Function.identity())))
+                .whenComplete((ignored, e) -> progressStatus.close());
     }
 
     private CompletableFuture<GooglePhotosAlbum> reconcile(Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle,

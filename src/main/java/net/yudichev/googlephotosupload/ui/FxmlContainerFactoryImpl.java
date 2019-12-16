@@ -2,7 +2,6 @@ package net.yudichev.googlephotosupload.ui;
 
 import com.google.inject.Injector;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
 
 import javax.inject.Inject;
 import java.io.InputStream;
@@ -20,13 +19,25 @@ final class FxmlContainerFactoryImpl implements FxmlContainerFactory {
     }
 
     @Override
-    public Parent create(String fxmlResourcePath) {
+    public FxmlContainer create(String fxmlResourcePath) {
         FXMLLoader fxmlLoader = new FXMLLoader();
         fxmlLoader.setControllerFactory(injector::getInstance);
         return getAsUnchecked(() -> {
             try (InputStream fxmlInputStream = ClassLoader.getSystemResourceAsStream(fxmlResourcePath)) {
                 checkArgument(fxmlInputStream != null, "Resource not found: %s", fxmlResourcePath);
-                return fxmlLoader.load(fxmlInputStream);
+                fxmlLoader.load(fxmlInputStream);
+
+                return new FxmlContainer() {
+                    @Override
+                    public <T> T root() {
+                        return fxmlLoader.getRoot();
+                    }
+
+                    @Override
+                    public <T> T controller() {
+                        return fxmlLoader.getController();
+                    }
+                };
             }
         });
     }

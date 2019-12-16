@@ -1,29 +1,25 @@
 package net.yudichev.googlephotosupload.ui;
 
-import javafx.application.Platform;
-import net.yudichev.googlephotosupload.core.ProgressStatus;
-import net.yudichev.googlephotosupload.core.ProgressStatusFactory;
-
 import javax.inject.Inject;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-final class UiProgressStatusFactory implements ProgressStatusFactory {
-    private final UiComponents uiComponents;
+final class UiProgressStatusFactory implements ProgressValueUpdaterFactory {
+    private final MainScreenController mainScreenController;
     private final ProgressStatusBarFactory progressStatusBarFactory;
 
     @Inject
-    UiProgressStatusFactory(UiComponents uiComponents,
+    UiProgressStatusFactory(MainScreenController mainScreenController,
                             ProgressStatusBarFactory progressStatusBarFactory) {
-        this.uiComponents = checkNotNull(uiComponents);
+        this.mainScreenController = checkNotNull(mainScreenController);
         this.progressStatusBarFactory = checkNotNull(progressStatusBarFactory);
     }
 
     @Override
-    public ProgressStatus create(String name, Optional<Integer> totalCount) {
+    public ProgressValueUpdater create(String name, Optional<Integer> totalCount) {
         ProgressStatusBar progressStatusBar = progressStatusBarFactory.create(name, totalCount);
-        Platform.runLater(() -> uiComponents.progressBox().getChildren().add(progressStatusBar.node()));
+        mainScreenController.addProgressBox(progressStatusBar.node());
         return progressStatusBar;
     }
 }

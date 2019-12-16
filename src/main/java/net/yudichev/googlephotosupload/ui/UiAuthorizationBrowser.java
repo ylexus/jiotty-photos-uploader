@@ -1,6 +1,5 @@
 package net.yudichev.googlephotosupload.ui;
 
-import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
@@ -14,6 +13,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static javafx.application.Platform.runLater;
 import static javafx.geometry.Pos.TOP_CENTER;
 import static net.yudichev.googlephotosupload.ui.Bindings.Primary;
 
@@ -23,19 +23,23 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     }
 
     private final Provider<Stage> primaryStageProvider;
-    private volatile Stage dialog;
+    private final MainScreenController mainScreenController;
+    private Stage dialog;
 
     @Inject
-    UiAuthorizationBrowser(@Primary Provider<Stage> primaryStageProvider) {
+    UiAuthorizationBrowser(@Primary Provider<Stage> primaryStageProvider,
+                           MainScreenController mainScreenController) {
         this.primaryStageProvider = checkNotNull(primaryStageProvider);
+        this.mainScreenController = checkNotNull(mainScreenController);
     }
 
     @Override
     public void browse(String url) {
-        Platform.runLater(() -> {
+        runLater(() -> {
             Stage primaryStage = primaryStageProvider.get();
 
-            Stage dialog = new Stage();
+            // TODO use FxmlContainerFactory
+            dialog = new Stage();
             WebView webView = new WebView();
             webView.getEngine().load(url);
             VBox vBox = new VBox(new Label("Please log in to Google"), webView);
@@ -45,15 +49,17 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
             dialog.initOwner(primaryStage);
             dialog.initModality(Modality.APPLICATION_MODAL);
             dialog.show();
-            this.dialog = dialog;
         });
     }
 
     @Override
     protected void doStart() {
-        Stage dialog = this.dialog;
-        if (dialog != null) {
-            Platform.runLater(dialog::close);
-        }
+        runLater(() -> {
+            if (dialog != null) {
+                dialog.close();
+                dialog = null;
+            }
+            mainScreenController.toFolderSelectionMode();
+        });
     }
 }

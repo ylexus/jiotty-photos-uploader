@@ -1,7 +1,8 @@
 package net.yudichev.googlephotosupload.core;
 
 import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
 
 public interface Uploader {
-    void start(Path rootDir);
+    CompletableFuture<Void> upload(Path rootDir);
 }

@@ -35,10 +35,9 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
     @Override
     public CompletableFuture<List<AlbumDirectory>> listAlbumDirectories(Path rootDir) {
         checkArgument(Files.isDirectory(rootDir), "Path is not a directory: %s", rootDir);
-        ProgressStatus progressStatus = progressStatusFactory.create("Scan directory structure", Optional.empty());
+        ProgressStatus progressStatus = progressStatusFactory.create("Scanning directory structure", Optional.empty());
         int rootNameCount = rootDir.getNameCount();
         return CompletableFuture.supplyAsync(() -> {
-            // TODO emit (UI?) progress here
             logger.info("Building album list from the file system...");
             ImmutableList.Builder<AlbumDirectory> listBuilder = ImmutableList.builder();
             filesystemManager.walkDirectories(rootDir, path -> {
