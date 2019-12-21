@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.api.gax.rpc.InvalidArgumentException;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
@@ -9,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,21 +31,22 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfList;
 
-final class AlbumManagerImpl implements AlbumManager {
+final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumManager {
     private static final Logger logger = LoggerFactory.getLogger(AlbumManagerImpl.class);
 
     private final GooglePhotosClient googlePhotosClient;
+    private final Provider<ExecutorService> executorServiceProvider;
     private final CloudOperationHelper cloudOperationHelper;
     private final ProgressStatusFactory progressStatusFactory;
-    private final ExecutorService executorService;
+    private ExecutorService executorService;
 
     @Inject
     AlbumManagerImpl(GooglePhotosClient googlePhotosClient,
-                     @Backpressured ExecutorService executorService,
+                     @Backpressured Provider<ExecutorService> executorServiceProvider,
                      CloudOperationHelper cloudOperationHelper,
                      ProgressStatusFactory progressStatusFactory) {
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
-        this.executorService = executorService;
+        this.executorServiceProvider = checkNotNull(executorServiceProvider);
         this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
         this.progressStatusFactory = checkNotNull(progressStatusFactory);
     }
@@ -59,7 +62,7 @@ final class AlbumManagerImpl implements AlbumManager {
         return albumDirectories.stream()
                 .map(albumDirectory -> albumDirectory.albumTitle()
                         .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path())
-                                .whenComplete((album, e) -> progressStatus.increment())))
+                                .whenComplete((album, e) -> progressStatus.incrementSuccess())))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(toFutureOfList())
@@ -68,6 +71,11 @@ final class AlbumManagerImpl implements AlbumManager {
                                 GooglePhotosAlbum::getTitle,
                                 Function.identity())))
                 .whenComplete((ignored, e) -> progressStatus.close());
+    }
+
+    @Override
+    protected void doStart() {
+        executorService = executorServiceProvider.get();
     }
 
     private CompletableFuture<GooglePhotosAlbum> reconcile(Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle,

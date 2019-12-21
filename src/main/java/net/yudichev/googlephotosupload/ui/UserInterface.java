@@ -1,7 +1,6 @@
 package net.yudichev.googlephotosupload.ui;
 
 import com.google.inject.BindingAnnotation;
-import javafx.application.Platform;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -44,26 +43,23 @@ final class UserInterface extends BaseLifecycleComponent implements Provider<Sta
 
     @Override
     protected void doStart() {
-        primaryStageHandler.accept(primaryStage -> {
-            Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
-                logger.error("Unhandled exception", throwable);
-                applicationLifecycleControl.initiateShutdown();
+        if (primaryStage == null) {
+            primaryStageHandler.accept(primaryStage -> {
+                Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+                    logger.error("Unhandled exception", throwable);
+                    applicationLifecycleControl.initiateShutdown();
+                });
+
+                this.primaryStage = primaryStage;
+
+                FxmlContainer fxmlContainer = fxmlContainerFactory.create("MainScreen.fxml");
+                Parent parent = fxmlContainer.root();
+                primaryStage.setScene(new Scene(parent));
+                primaryStage.setTitle("Google Photos Uploader");
+                primaryStage.show();
+                primaryStage.setOnCloseRequest(e -> applicationLifecycleControl.initiateShutdown());
             });
-
-            this.primaryStage = primaryStage;
-
-            FxmlContainer fxmlContainer = fxmlContainerFactory.create("Ui.fxml");
-            Parent parent = fxmlContainer.root();
-            primaryStage.setScene(new Scene(parent));
-            primaryStage.setTitle("Google Photos Uploader");
-            primaryStage.show();
-            primaryStage.setOnCloseRequest(e -> applicationLifecycleControl.initiateShutdown());
-        });
-    }
-
-    @Override
-    protected void doStop() {
-        Platform.exit();
+        }
     }
 
     @BindingAnnotation

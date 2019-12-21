@@ -37,9 +37,9 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
         bind(FilesystemManager.class).to(FilesystemManagerImpl.class);
 
         bind(CloudOperationHelper.class).to(CloudOperationHelperImpl.class);
-        bind(CloudAlbumsProvider.class).to(CloudAlbumsProviderImpl.class);
+        bind(CloudAlbumsProvider.class).to(boundLifecycleComponent(CloudAlbumsProviderImpl.class));
 
-        bind(AlbumManager.class).to(AlbumManagerImpl.class);
+        bind(AlbumManager.class).to(boundLifecycleComponent(AlbumManagerImpl.class));
 
         bind(GooglePhotosUploader.class).to(boundLifecycleComponent(GooglePhotosUploaderImpl.class));
 

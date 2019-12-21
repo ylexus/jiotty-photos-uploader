@@ -1,9 +1,6 @@
 package net.yudichev.googlephotosupload.ui;
 
 import javafx.scene.Scene;
-import javafx.scene.control.Label;
-import javafx.scene.layout.VBox;
-import javafx.scene.web.WebView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
@@ -14,7 +11,6 @@ import javax.inject.Provider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javafx.application.Platform.runLater;
-import static javafx.geometry.Pos.TOP_CENTER;
 import static net.yudichev.googlephotosupload.ui.Bindings.Primary;
 
 final class UiAuthorizationBrowser extends BaseLifecycleComponent implements AuthorizationBrowser {
@@ -24,42 +20,56 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
 
     private final Provider<Stage> primaryStageProvider;
     private final MainScreenController mainScreenController;
+    private final FxmlContainerFactory fxmlContainerFactory;
     private Stage dialog;
+    private FxmlContainer loginDialogFxmlContainer;
 
     @Inject
     UiAuthorizationBrowser(@Primary Provider<Stage> primaryStageProvider,
-                           MainScreenController mainScreenController) {
+                           MainScreenController mainScreenController,
+                           FxmlContainerFactory fxmlContainerFactory) {
         this.primaryStageProvider = checkNotNull(primaryStageProvider);
         this.mainScreenController = checkNotNull(mainScreenController);
+        this.fxmlContainerFactory = checkNotNull(fxmlContainerFactory);
     }
 
     @Override
     public void browse(String url) {
         runLater(() -> {
+            if (loginDialogFxmlContainer == null) {
+                loginDialogFxmlContainer = fxmlContainerFactory.create("LoginDialog.fxml");
+            }
+
             Stage primaryStage = primaryStageProvider.get();
 
-            // TODO use FxmlContainerFactory
             dialog = new Stage();
-            WebView webView = new WebView();
-            webView.getEngine().load(url);
-            VBox vBox = new VBox(new Label("Please log in to Google"), webView);
-            vBox.setAlignment(TOP_CENTER);
-            dialog.setScene(new Scene(vBox));
-
+            dialog.setScene(new Scene(loginDialogFxmlContainer.root()));
             dialog.initOwner(primaryStage);
             dialog.initModality(Modality.APPLICATION_MODAL);
             dialog.show();
+
+            LoginDialogFxController loginDialogFxController = loginDialogFxmlContainer.controller();
+            loginDialogFxController.load(url);
         });
     }
 
     @Override
     protected void doStart() {
         runLater(() -> {
-            if (dialog != null) {
-                dialog.close();
-                dialog = null;
-            }
+            closeDialog();
             mainScreenController.toFolderSelectionMode();
         });
+    }
+
+    @Override
+    protected void doStop() {
+        runLater(this::closeDialog);
+    }
+
+    private void closeDialog() {
+        if (dialog != null) {
+            dialog.close();
+            dialog = null;
+        }
     }
 }

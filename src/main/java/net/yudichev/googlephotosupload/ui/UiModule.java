@@ -26,11 +26,20 @@ final class UiModule extends BaseLifecycleComponentModule {
     protected void configure() {
         bind(new TypeLiteral<Consumer<Consumer<Stage>>>() {}).annotatedWith(UserInterface.PrimaryStageHandler.class).toInstance(primaryStageHandler);
 
-        bind(FxController.class).in(Singleton.class);
-        bind(MainScreenController.class).to(FxController.class);
+        bind(MainScreenControllerImpl.class).in(Singleton.class);
+        bind(MainScreenController.class).to(MainScreenControllerImpl.class);
+
+        bind(LoginDialogFxControllerImpl.class).in(Singleton.class);
+        bind(LoginDialogFxController.class).to(LoginDialogFxControllerImpl.class);
+
+        bind(FolderSelectorControllerImpl.class).in(Singleton.class);
+        bind(FolderSelectorController.class).to(FolderSelectorControllerImpl.class);
+
+        Key<UploadPaneControllerImpl> uploadPaneControllerKey = boundLifecycleComponent(UploadPaneControllerImpl.class);
+        bind(UploadPaneController.class).to(uploadPaneControllerKey);
 
         Key<Stage> stageKey = Key.get(Stage.class, Primary.class);
-        bind(stageKey).toProvider(boundLifecycleComponent(UserInterface.class));
+        bind(stageKey).toProvider(boundLifecycleComponent(UserInterface.class)).in(Singleton.class);
         expose(stageKey);
 
         bind(FxmlContainerFactory.class).to(FxmlContainerFactoryImpl.class);
@@ -45,7 +54,13 @@ final class UiModule extends BaseLifecycleComponentModule {
                 .implement(ProgressStatus.class, ThrottlingProgressStatus.class)
                 .build(ProgressStatusFactory.class));
         expose(ProgressStatusFactory.class);
-        expose(FxController.class); // needed for FxmlLoader to find it
+        expose(FxmlContainerFactory.class);
         expose(MainScreenController.class);
+
+        // needed for FxmlLoader to find them
+        expose(MainScreenControllerImpl.class);
+        expose(LoginDialogFxControllerImpl.class);
+        expose(FolderSelectorControllerImpl.class);
+        expose(uploadPaneControllerKey);
     }
 }

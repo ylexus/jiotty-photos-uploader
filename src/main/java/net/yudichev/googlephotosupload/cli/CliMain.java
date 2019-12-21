@@ -22,6 +22,8 @@ public final class CliMain {
                     .build());
 
     public static void main(String[] args) {
+        // TODO https://bugs.openjdk.java.net/browse/JDK-8221253, remove when moved to JDK13
+        System.setProperty("jdk.tls.client.protocols", "TLSv1,TLSv1.1,TLSv1.2");
         CommandLineParser parser = new DefaultParser();
         try {
             CommandLine commandLine = parser.parse(OPTIONS, args);

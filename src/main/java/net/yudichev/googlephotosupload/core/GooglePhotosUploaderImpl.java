@@ -27,7 +27,6 @@ import static java.util.stream.Collectors.toConcurrentMap;
 import static net.yudichev.googlephotosupload.core.Bindings.Backoff;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture;
-import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
 
 final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements GooglePhotosUploader {
     private static final Logger logger = LoggerFactory.getLogger(GooglePhotosUploaderImpl.class);
@@ -35,11 +34,12 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     private final VarStore varStore;
     private final GooglePhotosClient googlePhotosClient;
+    private final StateSaverFactory stateSaverFactory;
 
     private final Provider<ExecutorService> executorServiceProvider;
     private final RemoteApiResultHandler backOffHandler;
     private final RemoteApiResultHandler invalidMediaItemHandler;
-    private final StateSaver stateSaver;
+    private StateSaver stateSaver;
     private ExecutorService executorService;
     private Map<Path, CompletableFuture<ItemState>> uploadedItemStateByPath;
     private UploadState uploadState;
@@ -55,8 +55,8 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         this.executorServiceProvider = checkNotNull(executorServiceProvider);
         this.backOffHandler = checkNotNull(backOffHandler);
         this.invalidMediaItemHandler = checkNotNull(invalidMediaItemHandler);
-        stateSaver = stateSaverFactory.create("uploaded-items", this::saveState);
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
+        this.stateSaverFactory = checkNotNull(stateSaverFactory);
     }
 
     @Override
@@ -99,7 +99,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                                 CompletableFuture.completedFuture(ItemState.builder().build()));
                     }
                     if (!shouldRetry && !invalidMediaItem) {
-                        logger.error("failed operation '{}': {}", operationName, exception.getMessage());
+                        throw new RuntimeException(exception);
                     }
                     return shouldRetry;
                 })
@@ -109,13 +109,13 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                         return uploadFile(album, file);
                     }
                     return completedFuture();
-                })
-                .whenComplete(logErrorOnFailure(logger, "Unhandled exception uploading file %s", file));
+                });
     }
 
     @Override
     protected void doStart() {
         executorService = executorServiceProvider.get();
+        stateSaver = stateSaverFactory.create("uploaded-items", this::saveState);
         uploadState = varStore.readValue(UploadState.class, VAR_STORE_KEY).orElseGet(() -> UploadState.builder().build());
         uploadedItemStateByPath = uploadState.uploadedMediaItemIdByAbsolutePath().entrySet().stream()
                 .collect(toConcurrentMap(

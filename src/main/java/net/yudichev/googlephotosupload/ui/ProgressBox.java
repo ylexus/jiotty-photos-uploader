@@ -15,7 +15,8 @@ final class ProgressBox implements ProgressStatusBar {
     private final Parent root;
     private final ProgressBoxFxController controller;
     private final Lock lock = new ReentrantLock();
-    private int value;
+    private int successCount;
+    private int failureCount;
 
     @Inject
     ProgressBox(FxmlContainerFactory fxmlContainerFactory,
@@ -28,10 +29,18 @@ final class ProgressBox implements ProgressStatusBar {
     }
 
     @Override
-    public void update(int newValue) {
+    public void updateSuccess(int newValue) {
         inLock(lock, () -> {
-            value = newValue;
-            controller.updateValue(value);
+            successCount = newValue;
+            controller.updateSuccess(successCount);
+        });
+    }
+
+    @Override
+    public void updateFailure(int newValue) {
+        inLock(lock, () -> {
+            failureCount = newValue;
+            controller.updateFailure(failureCount);
         });
     }
 

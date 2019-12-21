@@ -42,7 +42,7 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
             ImmutableList.Builder<AlbumDirectory> listBuilder = ImmutableList.builder();
             filesystemManager.walkDirectories(rootDir, path -> {
                 listBuilder.add(AlbumDirectory.of(path, toAlbumTitle(path, rootNameCount)));
-                progressStatus.increment();
+                progressStatus.incrementSuccess();
             });
             List<AlbumDirectory> directoriesByAlbumTitle = listBuilder.build();
             logger.info("... done, {} directories found that will be used as albums", directoriesByAlbumTitle.size());

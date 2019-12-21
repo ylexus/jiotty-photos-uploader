@@ -52,17 +52,23 @@ final class UploaderImpl implements Uploader {
                                             progressStatusFactory.create("Uploading files", Optional.empty());
                                     return albumDirectories.stream()
                                             .flatMap(albumDirectory -> {
-                                                directoryProgressStatus.increment();
+                                                directoryProgressStatus.incrementSuccess();
                                                 return filesystemManager.listFiles(albumDirectory.path()).stream()
                                                         .map(path -> uploader.uploadFile(albumDirectory.albumTitle().map(albumsByTitle::get), path)
-                                                                .whenComplete((aVoid, e) -> fileProgressStatus.increment()));
+                                                                .whenComplete((aVoid, e) -> {
+                                                                    if (e != null) {
+                                                                        fileProgressStatus.incrementFailure();
+                                                                    } else {
+                                                                        fileProgressStatus.incrementSuccess();
+                                                                    }
+                                                                }));
                                             })
                                             .collect(toFutureOfList())
-                                            .thenAccept(list -> {
-                                                logger.info("All done without errors, files uploaded: {}", list.size());
+                                            .whenComplete((voids, throwable) -> {
                                                 directoryProgressStatus.close();
                                                 fileProgressStatus.close();
-                                            });
+                                            })
+                                            .thenAccept(list -> logger.info("All done without errors, files uploaded: {}", list.size()));
                                 })));
     }
 }

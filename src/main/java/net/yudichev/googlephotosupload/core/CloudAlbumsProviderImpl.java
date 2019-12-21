@@ -1,11 +1,13 @@
 package net.yudichev.googlephotosupload.core;
 
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -13,21 +15,22 @@ import java.util.concurrent.ExecutorService;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 
-final class CloudAlbumsProviderImpl implements CloudAlbumsProvider {
+final class CloudAlbumsProviderImpl extends BaseLifecycleComponent implements CloudAlbumsProvider {
     private static final Logger logger = LoggerFactory.getLogger(CloudAlbumsProviderImpl.class);
     private final CloudOperationHelper cloudOperationHelper;
     private final GooglePhotosClient googlePhotosClient;
-    private final ExecutorService executorService;
+    private final Provider<ExecutorService> executorServiceProvider;
     private final ProgressStatusFactory progressStatusFactory;
+    private ExecutorService executorService;
 
     @Inject
     CloudAlbumsProviderImpl(CloudOperationHelper cloudOperationHelper,
                             GooglePhotosClient googlePhotosClient,
-                            @Backpressured ExecutorService executorService,
+                            @Backpressured Provider<ExecutorService> executorServiceProvider,
                             ProgressStatusFactory progressStatusFactory) {
         this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
-        this.executorService = checkNotNull(executorService);
+        this.executorServiceProvider = executorServiceProvider;
         this.progressStatusFactory = checkNotNull(progressStatusFactory);
     }
 
@@ -36,7 +39,7 @@ final class CloudAlbumsProviderImpl implements CloudAlbumsProvider {
         logger.info("Loading albums in cloud (may take several minutes)...");
         ProgressStatus progressStatus = progressStatusFactory.create("Loading albums in cloud", Optional.empty());
         return cloudOperationHelper.withBackOffAndRetry("get all albums",
-                () -> googlePhotosClient.listAlbums(progressStatus::update, executorService))
+                () -> googlePhotosClient.listAlbums(progressStatus::updateSuccess, executorService))
                 .thenApply(albumsInCloud -> {
                     logger.info("... loaded {} album(s) in cloud", albumsInCloud.size());
                     Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle = new HashMap<>(albumsInCloud.size());
@@ -45,5 +48,10 @@ final class CloudAlbumsProviderImpl implements CloudAlbumsProvider {
                     return cloudAlbumsByTitle;
                 })
                 .whenComplete((ignored, e) -> progressStatus.close());
+    }
+
+    @Override
+    protected void doStart() {
+        executorService = executorServiceProvider.get();
     }
 }

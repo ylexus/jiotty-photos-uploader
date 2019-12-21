@@ -21,7 +21,8 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 final class ThrottlingProgressStatus implements ProgressStatus {
     private final ProgressValueUpdater delegate;
     private final Consumer<Runnable> eventSink;
-    private final AtomicInteger value = new AtomicInteger();
+    private final AtomicInteger successCount = new AtomicInteger();
+    private final AtomicInteger failureCount = new AtomicInteger();
     private final SchedulingExecutor executor;
 
     @Inject
@@ -35,20 +36,27 @@ final class ThrottlingProgressStatus implements ProgressStatus {
     }
 
     @Override
-    public void update(int newValue) {
-        value.set(newValue);
-        eventSink.accept(() -> delegate.update(value.get()));
+    public void updateSuccess(int newValue) {
+        successCount.set(newValue);
+        eventSink.accept(() -> delegate.updateSuccess(successCount.get()));
     }
 
     @Override
-    public void incrementBy(int increment) {
-        value.updateAndGet(operand -> operand + increment);
-        eventSink.accept(() -> delegate.update(value.get()));
+    public void incrementSuccessBy(int increment) {
+        successCount.updateAndGet(operand -> operand + increment);
+        eventSink.accept(() -> delegate.updateSuccess(successCount.get()));
+    }
+
+    @Override
+    public void incrementFailureBy(int increment) {
+        failureCount.updateAndGet(operand -> operand + increment);
+        eventSink.accept(() -> delegate.updateFailure(failureCount.get()));
     }
 
     @Override
     public void close() {
-        delegate.update(value.get());
+        delegate.updateSuccess(successCount.get());
+        delegate.updateFailure(failureCount.get());
         executor.close();
         delegate.close();
     }

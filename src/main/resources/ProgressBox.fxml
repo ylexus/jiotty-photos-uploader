@@ -4,26 +4,26 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.layout.*?>
-<GridPane xmlns:fx="http://javafx.com/fxml/1" hgap="10.0" prefHeight="70.0" styleClass="progress-box" stylesheets="@style.css"
+<GridPane xmlns:fx="http://javafx.com/fxml/1" hgap="10.0" prefHeight="70.0" prefWidth="200.0" styleClass="progress-box" stylesheets="@style.css"
           xmlns="http://javafx.com/javafx/10.0.2-internal" fx:controller="net.yudichev.googlephotosupload.ui.ProgressBoxFxController">
-   <columnConstraints>
-      <ColumnConstraints hgrow="NEVER" minWidth="55.0"/>
-      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>
-   </columnConstraints>
-   <rowConstraints>
-      <RowConstraints minHeight="10.0" vgrow="SOMETIMES"/>
-      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
-   </rowConstraints>
-   <children>
-      <ProgressIndicator fx:id="progressIndicator" GridPane.columnIndex="0" GridPane.halignment="CENTER" GridPane.rowIndex="0" GridPane.rowSpan="2"
-                         GridPane.valignment="CENTER"/>
-      <Label fx:id="nameLabel" text=" " GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-      <Label fx:id="valueLabel" text=" " GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-   </children>
-   <opaqueInsets>
-      <Insets/>
-   </opaqueInsets>
-   <padding>
-      <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
-   </padding>
+    <columnConstraints>
+        <ColumnConstraints hgrow="NEVER" minWidth="55.0"/>
+        <ColumnConstraints hgrow="NEVER" prefWidth="40.0"/>
+        <ColumnConstraints hgrow="SOMETIMES"/>
+    </columnConstraints>
+    <rowConstraints>
+        <RowConstraints minHeight="10.0" vgrow="SOMETIMES"/>
+        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES"/>
+    </rowConstraints>
+    <opaqueInsets>
+        <Insets/>
+    </opaqueInsets>
+    <padding>
+        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+    </padding>
+    <ProgressIndicator fx:id="progressIndicator" GridPane.columnIndex="0" GridPane.halignment="CENTER" GridPane.rowIndex="0" GridPane.rowSpan="2"
+                       GridPane.valignment="CENTER"/>
+    <Label fx:id="nameLabel" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="0"/>
+    <Label fx:id="valueLabel" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+    <Label fx:id="failureCountLabel" styleClass="failed-text" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
 </GridPane>
