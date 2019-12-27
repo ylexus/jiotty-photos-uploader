@@ -53,6 +53,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
 
     @Override
     public CompletableFuture<Map<String, GooglePhotosAlbum>> listAlbumsByTitle(List<AlbumDirectory> albumDirectories, Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle) {
+        checkStarted();
         int reconcilableAlbumCount = albumDirectories.size() - 1;
         logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", reconcilableAlbumCount);
         ProgressStatus progressStatus = progressStatusFactory.create(

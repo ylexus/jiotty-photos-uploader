@@ -61,6 +61,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     @Override
     public CompletableFuture<Void> uploadFile(Optional<GooglePhotosAlbum> album, Path file) {
+        checkStarted();
         return uploadedItemStateByPath.compute(file,
                 (theFile, currentFuture) -> {
                     if (currentFuture == null || currentFuture.isCompletedExceptionally()) {

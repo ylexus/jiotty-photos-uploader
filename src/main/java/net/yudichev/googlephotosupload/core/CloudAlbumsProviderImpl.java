@@ -36,6 +36,7 @@ final class CloudAlbumsProviderImpl extends BaseLifecycleComponent implements Cl
 
     @Override
     public CompletableFuture<Map<String, List<GooglePhotosAlbum>>> listCloudAlbums() {
+        checkStarted();
         logger.info("Loading albums in cloud (may take several minutes)...");
         ProgressStatus progressStatus = progressStatusFactory.create("Loading albums in cloud", Optional.empty());
         return cloudOperationHelper.withBackOffAndRetry("get all albums",

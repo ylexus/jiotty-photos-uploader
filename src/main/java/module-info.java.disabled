@@ -1,0 +1,22 @@
+module net.yudichev.googlephotosupload {
+    requires com.google.guice;
+    requires javax.inject;
+    requires javafx.fxml;
+    requires com.google.common;
+    requires jiotty.common;
+    requires javafx.web;
+    requires com.google.guice.extensions.assistedinject;
+    requires jiotty.connector.google.common;
+    requires slf4j.api;
+    requires jiotty.connector.google.photos;
+    requires gax;
+    requires jsr305;
+    requires commons.cli;
+    requires static org.immutables.value;
+    requires com.google.api.client;
+    requires com.fasterxml.jackson.databind;
+    requires proto.google.common.protos;
+    requires error.prone.annotations;
+    requires jackson.annotations;
+    requires org.apache.logging.log4j;
+}

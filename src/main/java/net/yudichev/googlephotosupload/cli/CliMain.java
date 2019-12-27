@@ -29,8 +29,8 @@ public final class CliMain {
             CommandLine commandLine = parser.parse(OPTIONS, args);
             Application.builder()
                     .addModule(DependenciesModule::new)
-                    .addModule(() -> new CliStarterModule(commandLine))
                     .addModule(() -> new UploadPhotosModule(1000))
+                    .addModule(() -> new CliStarterModule(commandLine))
                     .build()
                     .run();
         } catch (ParseException e) {

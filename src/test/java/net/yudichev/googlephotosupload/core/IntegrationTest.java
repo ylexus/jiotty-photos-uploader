@@ -438,11 +438,11 @@ final class IntegrationTest {
         CountDownLatch applicationExitedLatch = new CountDownLatch(1);
         new Thread(() -> {
             Application.builder()
-                    .addModule(() -> new CliStarterModule(commandLine))
                     .addModule(ExecutorModule::new)
                     .addModule(() -> new VarStoreModule(varStoreAppName))
                     .addModule(() -> new MockGooglePhotosModule(googlePhotosClient))
                     .addModule(() -> new UploadPhotosModule(1))
+                    .addModule(() -> new CliStarterModule(commandLine))
                     .build()
                     .run();
             applicationExitedLatch.countDown();
