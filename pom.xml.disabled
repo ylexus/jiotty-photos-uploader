@@ -10,7 +10,6 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>12.0.2</javafx.version>
-        <org.immutables.version>2.8.3</org.immutables.version>
     </properties>
 
     <dependencyManagement>
@@ -23,27 +22,6 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>automator-app</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>google-photos-uploader</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.google.inject</groupId>
-                <artifactId>guice</artifactId>
-                <version>4.2.2</version>
-            </dependency>
-            <dependency>
-                <groupId>org.immutables</groupId>
-                <artifactId>value</artifactId>
-                <version>${org.immutables.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-jcl</artifactId>
                 <version>2.12.1</version>
@@ -53,12 +31,6 @@
                 <groupId>javax.activation</groupId>
                 <artifactId>activation</artifactId>
                 <version>1.1.1</version>
-            </dependency>
-            <dependency>
-                <groupId>com.spotify</groupId>
-                <artifactId>hamcrest-optional</artifactId>
-                <version>1.1.4</version>
-                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.openjfx</groupId>
@@ -74,6 +46,12 @@
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-fxml</artifactId>
                 <version>${javafx.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.spotify</groupId>
+                <artifactId>hamcrest-optional</artifactId>
+                <version>1.1.4</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="MavenProjectsManager">
-    <option name="originalFiles">
-      <list>
-        <option value="$PROJECT_DIR$/pom.xml" />
-      </list>
-    </option>
-  </component>
+  <component name="ExternalStorageConfigurationManager" enabled="true" />
   <component name="NullableNotNullManager">
     <option name="myDefaultNullable" value="javax.annotation.Nullable" />
     <option name="myDefaultNotNull" value="javax.annotation.Nonnull" />
