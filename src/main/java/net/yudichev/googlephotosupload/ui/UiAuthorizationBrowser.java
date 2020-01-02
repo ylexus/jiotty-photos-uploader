@@ -19,17 +19,17 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     }
 
     private final Provider<Stage> primaryStageProvider;
-    private final MainScreenController mainScreenController;
+    private final Provider<MainScreenController> mainScreenControllerProvider;
     private final FxmlContainerFactory fxmlContainerFactory;
     private Stage dialog;
     private FxmlContainer loginDialogFxmlContainer;
 
     @Inject
     UiAuthorizationBrowser(@Primary Provider<Stage> primaryStageProvider,
-                           MainScreenController mainScreenController,
+                           Provider<MainScreenController> mainScreenControllerProvider,
                            FxmlContainerFactory fxmlContainerFactory) {
         this.primaryStageProvider = checkNotNull(primaryStageProvider);
-        this.mainScreenController = checkNotNull(mainScreenController);
+        this.mainScreenControllerProvider = checkNotNull(mainScreenControllerProvider);
         this.fxmlContainerFactory = checkNotNull(fxmlContainerFactory);
     }
 
@@ -38,18 +38,17 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
         runLater(() -> {
             if (loginDialogFxmlContainer == null) {
                 loginDialogFxmlContainer = fxmlContainerFactory.create("LoginDialog.fxml");
+                Stage primaryStage = primaryStageProvider.get();
+
+                dialog = new Stage();
+                dialog.setScene(new Scene(loginDialogFxmlContainer.root()));
+                dialog.initOwner(primaryStage);
+                dialog.initModality(Modality.APPLICATION_MODAL);
             }
 
-            Stage primaryStage = primaryStageProvider.get();
-
-            dialog = new Stage();
-            dialog.setScene(new Scene(loginDialogFxmlContainer.root()));
-            dialog.initOwner(primaryStage);
-            dialog.initModality(Modality.APPLICATION_MODAL);
             dialog.show();
 
-            LoginDialogFxController loginDialogFxController = loginDialogFxmlContainer.controller();
-            loginDialogFxController.load(url);
+            loginDialogFxmlContainer.<LoginDialogFxController>controller().load(url);
         });
     }
 
@@ -57,7 +56,7 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     protected void doStart() {
         runLater(() -> {
             closeDialog();
-            mainScreenController.toFolderSelectionMode();
+            mainScreenControllerProvider.get().toFolderSelectionMode();
         });
     }
 
@@ -69,7 +68,6 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     private void closeDialog() {
         if (dialog != null) {
             dialog.close();
-            dialog = null;
         }
     }
 }

@@ -13,11 +13,15 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class UserInterface extends BaseLifecycleComponent implements Provider<Stage> {
     private static final Logger logger = LoggerFactory.getLogger(UserInterface.class);
@@ -44,6 +48,7 @@ final class UserInterface extends BaseLifecycleComponent implements Provider<Sta
     @Override
     protected void doStart() {
         if (primaryStage == null) {
+            CountDownLatch initLatch = new CountDownLatch(1);
             primaryStageHandler.accept(primaryStage -> {
                 Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
                     logger.error("Unhandled exception", throwable);
@@ -58,7 +63,10 @@ final class UserInterface extends BaseLifecycleComponent implements Provider<Sta
                 primaryStage.setTitle("Google Photos Uploader");
                 primaryStage.show();
                 primaryStage.setOnCloseRequest(e -> applicationLifecycleControl.initiateShutdown());
+                initLatch.countDown();
             });
+            logger.info("Waiting for 10 seconds until UI is initialized");
+            checkState(getAsUnchecked(() -> initLatch.await(10, TimeUnit.SECONDS)), "UI was not initialized in 10 seconds");
         }
     }
 

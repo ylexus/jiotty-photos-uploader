@@ -1,23 +1,34 @@
 Configuration:
   name: Automator
   shutdownHook: disable
+  properties:
+    property:
+      name: filename
+      value: ${sys:user.home}/.googlephotosuploader/log/automator.log
   appenders:
-    Console:
-      name: STDOUT
+    RollingFile:
+      name: FILE
+      fileName: ${filename}
+      filePattern: ${filename}.%d{yyyy-MM-dd-hh-mm}
       PatternLayout:
         Pattern: "%d %p [%t] %C{1.} %m%n"
+      Policies:
+        SizeBasedTriggeringPolicy:
+          size: 10 MB
+        OnStartupTriggeringPolicy: {}
+      DefaultRollOverStrategy:
+        max: 10
 
   Loggers:
-    #    TODO remove
-    logger:
-      - name: net.yudichev.jiotty.connector.google.photos
-        level: debug
-        includeLocation: true
-      - name: net.yudichev.googlephotosupload.app
-        level: debug
-        includeLocation: true
+    #    logger:
+    #      - name: net.yudichev.jiotty.connector.google.photos
+    #        level: debug
+    #        includeLocation: true
+    #      - name: net.yudichev.googlephotosupload.app
+    #        level: debug
+    #        includeLocation: true
     Root:
       level: info
       includeLocation: true
       AppenderRef:
-        - ref: STDOUT
+        - ref: FILE

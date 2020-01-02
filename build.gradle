@@ -3,22 +3,22 @@
  */
 
 plugins {
-    id 'java'
-    id 'maven-publish'
+    id 'application'
     id 'org.openjfx.javafxplugin' version '0.0.8'
+    id 'org.beryx.runtime' version '1.8.0'
     // TODO add equivalent of maven dependency plugin
     // TODO until https://github.com/wfhartford/gradle-dependency-analyze/issues/39 is done, this plugin is useless
 //    id "ca.cutterslade.analyze" version "1.3.3"
 }
 
-repositories {
-    mavenLocal()
-    mavenCentral()
-}
+group = 'net.yudichev'
+version = '1.0-SNAPSHOT'
+//noinspection GroovyUnusedAssignment
+sourceCompatibility = '12'
 
-javafx {
-    version = '12.0.2'
-    modules = ['javafx.controls', 'javafx.fxml', 'javafx.web']
+application {
+    mainClassName = 'net.yudichev.googlephotosupload.ui.Launcher'
+    applicationName = 'Google Photos Uploader'
 }
 
 dependencies {
@@ -36,19 +36,19 @@ dependencies {
     implementation "net.yudichev.jiotty:jiotty-connector-google-photos"
     implementation "org.slf4j:slf4j-api"
     implementation "org.apache.logging.log4j:log4j-api"
-    implementation "com.fasterxml.jackson.core:jackson-databind:2.9.9"
     implementation "com.google.inject:guice"
     implementation "javax.inject:javax.inject"
     implementation "com.google.guava:guava"
     implementation "com.google.code.findbugs:jsr305"
     implementation "com.google.errorprone:error_prone_annotations"
     implementation "com.fasterxml.jackson.core:jackson-annotations"
-    implementation "commons-cli:commons-cli:1.4"
     implementation "com.google.api:gax"
     implementation "com.google.api:gax-grpc"
     implementation "com.google.inject.extensions:guice-assistedinject"
     implementation "com.google.http-client:google-http-client"
     implementation "io.grpc:grpc-api"
+    implementation "commons-cli:commons-cli:1.4"
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.9.9"
     // This is to test dependency analyser
     //implementation "org.apache.commons:commons-skin:4.2"
     compileOnly "org.immutables:value:$orgImmutablesVersion"
@@ -59,7 +59,7 @@ dependencies {
 
     testImplementation "net.yudichev.jiotty:jiotty-common"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$orgJunitJupiterVersion"
-    testImplementation "org.junit.jupiter:junit-jupiter-engine:$orgJunitJupiterVersion"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$orgJunitJupiterVersion"
     testImplementation "org.mockito:mockito-core:$orgMockitoVersion"
     testImplementation "org.mockito:mockito-junit-jupiter:$orgMockitoVersion"
     testImplementation "org.hamcrest:hamcrest:2.1"
@@ -67,11 +67,33 @@ dependencies {
     testCompileOnly "org.immutables:value:$orgImmutablesVersion"
 }
 
-group = 'net.yudichev'
-version = '1.0-SNAPSHOT'
-//noinspection GroovyUnusedAssignment
-sourceCompatibility = '12'
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
 
-tasks.withType(JavaCompile) {
-    options.encoding = 'UTF-8'
+javafx {
+    version = '12.0.2'
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.web']
+}
+
+test {
+    useJUnitPlatform()
+}
+
+runtime {
+    //noinspection GroovyAssignabilityCheck
+    options = ['--strip-debug',
+               '--compress', '2',
+               '--no-header-files',
+               '--no-man-pages']
+    jpackage {
+        jpackageHome = '/Library/Java/JavaVirtualMachines/jdk-14.jdk/Contents/Home'
+        jvmArgs = ['-Dprism.verbose=true']
+        installerType = 'dmg'
+//        if(org.gradle.internal.os.OperatingSystem.current().windows) {
+        // imageOptions = ['--win-console']
+//            installerOptions = ['--win-per-user-install', '--win-dir-chooser', '--win-menu', '--win-shortcut']
+//        }
+    }
 }
