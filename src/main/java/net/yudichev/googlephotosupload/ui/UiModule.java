@@ -4,6 +4,7 @@ import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import javafx.stage.Stage;
+import net.yudichev.googlephotosupload.core.PreferencesSupplier;
 import net.yudichev.googlephotosupload.core.ProgressStatus;
 import net.yudichev.googlephotosupload.core.ProgressStatusFactory;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
@@ -26,6 +27,10 @@ final class UiModule extends BaseLifecycleComponentModule {
     protected void configure() {
         bind(new TypeLiteral<Consumer<Consumer<Stage>>>() {}).annotatedWith(UserInterface.PrimaryStageHandler.class).toInstance(primaryStageHandler);
 
+        install(new FactoryModuleBuilder()
+                .implement(ModalDialog.class, ModalDialogImpl.class)
+                .build(ModalDialogFactory.class));
+
         bind(MainScreenControllerImpl.class).in(Singleton.class);
         bind(MainScreenController.class).to(MainScreenControllerImpl.class);
 
@@ -34,6 +39,9 @@ final class UiModule extends BaseLifecycleComponentModule {
 
         bind(FolderSelectorControllerImpl.class).in(Singleton.class);
         bind(FolderSelectorController.class).to(FolderSelectorControllerImpl.class);
+
+        bind(PreferencesDialogFxController.class).in(Singleton.class);
+        bind(PreferencesSupplier.class).to(PreferencesDialogFxController.class);
 
         Key<UploadPaneControllerImpl> uploadPaneControllerKey = boundLifecycleComponent(UploadPaneControllerImpl.class);
         bind(UploadPaneController.class).to(uploadPaneControllerKey);
@@ -61,6 +69,9 @@ final class UiModule extends BaseLifecycleComponentModule {
         expose(MainScreenControllerImpl.class);
         expose(LoginDialogFxControllerImpl.class);
         expose(FolderSelectorControllerImpl.class);
+        expose(PreferencesDialogFxController.class);
         expose(uploadPaneControllerKey);
+        expose(PreferencesSupplier.class);
+        expose(ModalDialogFactory.class);
     }
 }

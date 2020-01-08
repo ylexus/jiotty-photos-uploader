@@ -1,5 +1,6 @@
 *.iml
 build/**
+out/**
 .gradle/**
 /.idea/libraries/**
 /.idea/compiler.xml
@@ -7,5 +8,4 @@ build/**
 /.idea/encodings.xml
 /.idea/workspace.xml
 /.idea/jarRepositories.xml
-**/dependency-reduced-pom.xml
 /.idea/$PRODUCT_WORKSPACE_FILE$

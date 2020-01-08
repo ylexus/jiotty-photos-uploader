@@ -10,6 +10,8 @@
     </padding>
     <MenuBar fx:id="menuBar" useSystemMenuBar="true" VBox.vgrow="NEVER">
         <Menu mnemonicParsing="false" text="Actions">
+            <!-- TODO Preferences should be on app title menu on Mac and on File menu on Windows -->
+            <MenuItem fx:id="menuItemPreferences" mnemonicParsing="false" onAction="#onPreferences" text="Preferences..."/>
             <MenuItem fx:id="menuItemStopUpload" disable="true" mnemonicParsing="false" onAction="#onStopUpload" text="Stop Upload"/>
             <MenuItem fx:id="menuItemLogout" disable="true" mnemonicParsing="false" onAction="#onMenuActionLogout" text="Logout"/>
             <SeparatorMenuItem mnemonicParsing="false"/>

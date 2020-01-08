@@ -1,4 +1,4 @@
-FROM maven:3.6.2-jdk-8 AS build
+FROM gradle:6.0.1-jdk13 AS build
 COPY . /
 WORKDIR /
-RUN mvn -T1C clean package
+RUN gradle test

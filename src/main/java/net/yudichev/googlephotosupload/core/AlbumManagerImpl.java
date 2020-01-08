@@ -59,7 +59,6 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
         ProgressStatus progressStatus = progressStatusFactory.create(
                 String.format("Reconciling %s album(s) with Google Photos", reconcilableAlbumCount),
                 Optional.of(reconcilableAlbumCount)); // root directory is excluded from progress as it does not need to be reconciled
-        // TODO user option "in case of album name match reuse existing albums, do not create new ones"
         return albumDirectories.stream()
                 .map(albumDirectory -> albumDirectory.albumTitle()
                         .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path())
@@ -176,10 +175,8 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     }
 
     private void removeAlbum(GooglePhotosAlbum albumToBeMerged) {
-        // TODO if case of ignored INVALID_MEDIA_ID failures, this album may not be empty, so the phrasing below
-        //  would be incorrect
         // remove this album - CAN'T DO THIS :-(, so flagging to user
-        logger.info("MANUAL ACTION NEEDED: remove empty album '{}': {}",
+        logger.warn("Google Photos API deficiency: album '{}' with URL {} may now be empty and will require manual deletion",
                 albumToBeMerged.getTitle(), albumToBeMerged.getAlbumUrl());
     }
 

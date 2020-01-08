@@ -18,6 +18,7 @@ import static javafx.application.Platform.runLater;
 public final class MainScreenControllerImpl implements MainScreenController {
     private final ApplicationLifecycleControl applicationLifecycleControl;
     private final Restarter restarter;
+    private final ModalDialogFactory modalDialogFactory;
     private final Node folderSelectionPane;
     private final UploadPaneController uploadPaneController;
     private final Node uploadPane;
@@ -26,13 +27,17 @@ public final class MainScreenControllerImpl implements MainScreenController {
     public MenuItem menuItemLogout;
     public MenuItem menuItemStopUpload;
     public VBox root;
+    public MenuItem menuItemPreferences;
+    private ModalDialog preferencesDialog;
 
     @Inject
     public MainScreenControllerImpl(ApplicationLifecycleControl applicationLifecycleControl,
                                     FxmlContainerFactory fxmlContainerFactory,
-                                    Restarter restarter) {
+                                    Restarter restarter,
+                                    ModalDialogFactory modalDialogFactory) {
         this.applicationLifecycleControl = checkNotNull(applicationLifecycleControl);
         this.restarter = checkNotNull(restarter);
+        this.modalDialogFactory = checkNotNull(modalDialogFactory);
 
         FxmlContainer folderSelectorFxmlContainer = fxmlContainerFactory.create("FolderSelector.fxml");
         FolderSelectorController folderSelectorController = folderSelectorFxmlContainer.controller();
@@ -73,6 +78,14 @@ public final class MainScreenControllerImpl implements MainScreenController {
     public void onStopUpload(ActionEvent actionEvent) {
         menuItemStopUpload.setDisable(true);
         uploadPaneController.stopUpload();
+        actionEvent.consume();
+    }
+
+    public void onPreferences(ActionEvent actionEvent) {
+        if (preferencesDialog == null) {
+            preferencesDialog = modalDialogFactory.create("Preferences", "PreferencesDialog.fxml");
+        }
+        preferencesDialog.show();
         actionEvent.consume();
     }
 

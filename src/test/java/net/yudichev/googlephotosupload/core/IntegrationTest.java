@@ -3,7 +3,7 @@ package net.yudichev.googlephotosupload.core;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
-import net.yudichev.googlephotosupload.cli.CliStarterModule;
+import net.yudichev.googlephotosupload.cli.CliModule;
 import net.yudichev.googlephotosupload.core.RecordingGooglePhotosClient.CreatedGooglePhotosAlbum;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.async.ExecutorModule;
@@ -442,7 +442,7 @@ final class IntegrationTest {
                     .addModule(() -> new VarStoreModule(varStoreAppName))
                     .addModule(() -> new MockGooglePhotosModule(googlePhotosClient))
                     .addModule(() -> new UploadPhotosModule(1))
-                    .addModule(() -> new CliStarterModule(commandLine))
+                    .addModule(() -> new CliModule(commandLine))
                     .build()
                     .run();
             applicationExitedLatch.countDown();

@@ -30,7 +30,7 @@ public final class CliMain {
             Application.builder()
                     .addModule(DependenciesModule::new)
                     .addModule(() -> new UploadPhotosModule(1000))
-                    .addModule(() -> new CliStarterModule(commandLine))
+                    .addModule(() -> new CliModule(commandLine))
                     .build()
                     .run();
         } catch (ParseException e) {
