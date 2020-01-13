@@ -23,6 +23,8 @@ final class ModalDialogImpl implements ModalDialog {
         fxController = preferencesDialogFxContainer.controller();
         Stage primaryStage = primaryStageProvider.get();
         dialog = new Stage();
+        dialog.setMinHeight(500);
+        dialog.setMinWidth(500);
         dialog.setTitle(title);
         dialog.setScene(new Scene(preferencesDialogFxContainer.root()));
         dialog.initOwner(primaryStage);

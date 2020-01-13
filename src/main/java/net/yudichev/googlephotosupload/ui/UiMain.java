@@ -34,6 +34,8 @@ public final class UiMain extends javafx.application.Application {
 
     @Override
     public void start(Stage primaryStage) {
+        primaryStage.setMinWidth(500);
+        primaryStage.setMinHeight(500);
         primaryStageHandler.get().accept(primaryStage);
     }
 }

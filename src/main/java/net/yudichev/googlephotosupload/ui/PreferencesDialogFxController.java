@@ -8,6 +8,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.cell.TextFieldListCell;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.util.converter.DefaultStringConverter;
 import net.yudichev.googlephotosupload.core.Preferences;
 import net.yudichev.googlephotosupload.core.PreferencesSupplier;
@@ -79,9 +81,20 @@ public final class PreferencesDialogFxController implements PreferencesSupplier,
     }
 
     public void onMinusButtonAction(ActionEvent actionEvent) {
+        deleteSelectedItems();
+        actionEvent.consume();
+    }
+
+    public void onKeyReleased(KeyEvent keyEvent) {
+        if (keyEvent.getCode() == KeyCode.DELETE || (keyEvent.getCode() == KeyCode.BACK_SPACE && keyEvent.isMetaDown())) {
+            deleteSelectedItems();
+        }
+        keyEvent.consume();
+    }
+
+    private void deleteSelectedItems() {
         ObservableList<String> selectedItems = listView.getSelectionModel().getSelectedItems();
         listView.getItems().removeAll(selectedItems);
-        actionEvent.consume();
     }
 
     private void onListChange(ListChangeListener.Change<? extends String> change) {

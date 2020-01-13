@@ -6,21 +6,19 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.VBox?>
-<FlowPane xmlns:fx="http://javafx.com/fxml/1" stylesheets="@style.css" xmlns="http://javafx.com/javafx/10.0.2-internal"
-          fx:controller="net.yudichev.googlephotosupload.ui.PreferencesDialogFxController">
-   <VBox>
-      <padding>
-         <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
-      </padding>
-      <Label text="Ignore these files or folders"/>
-      <ListView fx:id="listView" editable="true" prefHeight="600.0" prefWidth="400.0">
-         <padding>
+<VBox xmlns:fx="http://javafx.com/fxml/1" stylesheets="@style.css" xmlns="http://javafx.com/javafx/10.0.2-internal"
+      fx:controller="net.yudichev.googlephotosupload.ui.PreferencesDialogFxController">
+    <padding>
+        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+    </padding>
+    <Label text="Ignore these files or folders"/>
+    <ListView fx:id="listView" editable="true" onKeyReleased="#onKeyReleased" prefHeight="600.0" prefWidth="400.0">
+        <padding>
             <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
-         </padding>
-      </ListView>
-      <FlowPane>
-         <Button fx:id="plusButton" mnemonicParsing="false" onAction="#onPlusButtonAction" text="+"/>
-         <Button fx:id="minusButton" disable="true" mnemonicParsing="false" onAction="#onMinusButtonAction" text="-"/>
-      </FlowPane>
-   </VBox>
-</FlowPane>
+        </padding>
+    </ListView>
+    <FlowPane>
+        <Button fx:id="plusButton" mnemonicParsing="false" onAction="#onPlusButtonAction" text="+"/>
+        <Button fx:id="minusButton" disable="true" mnemonicParsing="false" onAction="#onMinusButtonAction" text="-"/>
+    </FlowPane>
+</VBox>
