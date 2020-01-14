@@ -33,7 +33,7 @@ dependencies {
     annotationProcessor "org.immutables:value:$orgImmutablesVersion"
     testAnnotationProcessor "org.immutables:value:$orgImmutablesVersion"
 
-    implementation platform("net.yudichev.jiotty:jiotty-bom:1.2-SNAPSHOT")
+    implementation platform("net.yudichev.jiotty:jiotty-bom:1.2.1-SNAPSHOT")
     implementation platform("com.google.inject:guice-bom:4.2.2")
 
     // This is needed as we depend on no_aop guice instead (regular Guice does not work on Java 13)
