@@ -19,6 +19,7 @@ public final class MainScreenControllerImpl implements MainScreenController {
     private final ApplicationLifecycleControl applicationLifecycleControl;
     private final Restarter restarter;
     private final ModalDialogFactory modalDialogFactory;
+    private final PlatformSpecificMenu platformSpecificMenu;
     private final Node folderSelectionPane;
     private final UploadPaneController uploadPaneController;
     private final Node uploadPane;
@@ -34,10 +35,12 @@ public final class MainScreenControllerImpl implements MainScreenController {
     public MainScreenControllerImpl(ApplicationLifecycleControl applicationLifecycleControl,
                                     FxmlContainerFactory fxmlContainerFactory,
                                     Restarter restarter,
-                                    ModalDialogFactory modalDialogFactory) {
+                                    ModalDialogFactory modalDialogFactory,
+                                    PlatformSpecificMenu platformSpecificMenu) {
         this.applicationLifecycleControl = checkNotNull(applicationLifecycleControl);
         this.restarter = checkNotNull(restarter);
         this.modalDialogFactory = checkNotNull(modalDialogFactory);
+        this.platformSpecificMenu = checkNotNull(platformSpecificMenu);
 
         FxmlContainer folderSelectorFxmlContainer = fxmlContainerFactory.create("FolderSelector.fxml");
         FolderSelectorController folderSelectorController = folderSelectorFxmlContainer.controller();
@@ -49,10 +52,10 @@ public final class MainScreenControllerImpl implements MainScreenController {
         uploadPane = uploadPaneFxmlContainer.root();
     }
 
-    public void onMenuClose(ActionEvent actionEvent) {
-        menuBar.setDisable(true);
-        applicationLifecycleControl.initiateShutdown();
-        actionEvent.consume();
+    public void initialize() {
+        platformSpecificMenu.initialize(menuBar);
+        platformSpecificMenu.onExitAction(this::onMenuExit);
+        platformSpecificMenu.onPreferencesAction(this::onPreferences);
     }
 
     public void onMenuActionLogout(ActionEvent actionEvent) {
@@ -81,7 +84,12 @@ public final class MainScreenControllerImpl implements MainScreenController {
         actionEvent.consume();
     }
 
-    public void onPreferences(ActionEvent actionEvent) {
+    private void onMenuExit(ActionEvent actionEvent) {
+        applicationLifecycleControl.initiateShutdown();
+        actionEvent.consume();
+    }
+
+    private void onPreferences(ActionEvent actionEvent) {
         if (preferencesDialog == null) {
             preferencesDialog = modalDialogFactory.create("Preferences", "PreferencesDialog.fxml");
         }

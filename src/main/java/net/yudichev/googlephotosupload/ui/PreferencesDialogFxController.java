@@ -3,7 +3,6 @@ package net.yudichev.googlephotosupload.ui;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MultipleSelectionModel;
@@ -16,15 +15,13 @@ import net.yudichev.googlephotosupload.core.PreferencesSupplier;
 import net.yudichev.jiotty.common.varstore.VarStore;
 
 import javax.inject.Inject;
-import java.net.URL;
-import java.util.ResourceBundle;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javafx.scene.control.SelectionMode.MULTIPLE;
 
-public final class PreferencesDialogFxController implements PreferencesSupplier, Initializable {
+public final class PreferencesDialogFxController implements PreferencesSupplier {
     private static final String VAR_STORE_KEY = "preferences";
     private final VarStore varStore;
     public ListView<String> listView;
@@ -38,8 +35,7 @@ public final class PreferencesDialogFxController implements PreferencesSupplier,
         preferences = varStore.readValue(Preferences.class, VAR_STORE_KEY).orElseGet(() -> Preferences.builder().build());
     }
 
-    @Override
-    public void initialize(URL location, ResourceBundle resources) {
+    public void initialize() {
         listView.getItems().addAll(preferences.scanExclusionPatterns());
         MultipleSelectionModel<String> selectionModel = listView.getSelectionModel();
         selectionModel.setSelectionMode(MULTIPLE);

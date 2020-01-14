@@ -15,6 +15,8 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.googlephotosupload.ui.Bindings.Primary;
+import static net.yudichev.googlephotosupload.ui.OperatingSystemDetection.OSType.MacOS;
+import static net.yudichev.googlephotosupload.ui.OperatingSystemDetection.getOperatingSystemType;
 
 final class UiModule extends BaseLifecycleComponentModule {
     private final Consumer<Consumer<Stage>> primaryStageHandler;
@@ -31,6 +33,7 @@ final class UiModule extends BaseLifecycleComponentModule {
                 .implement(ModalDialog.class, ModalDialogImpl.class)
                 .build(ModalDialogFactory.class));
 
+        bind(PlatformSpecificMenu.class).to(getOperatingSystemType() == MacOS ? MacPlatformSpecificMenu.class : DefaultPlatformSpecificMenu.class);
         bind(MainScreenControllerImpl.class).in(Singleton.class);
         bind(MainScreenController.class).to(MainScreenControllerImpl.class);
 
