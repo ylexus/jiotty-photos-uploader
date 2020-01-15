@@ -107,6 +107,7 @@ runtime {
     jpackage {
         jpackageHome = System.getProperty("JPACKAGE_HOME", System.getenv("JPACKAGE_HOME"))
         jvmArgs = ['-Dprism.verbose=true']
+        // TODO scan https://openjdk.java.net/jeps/343 - do we need more options like copyright etc?
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             installerType = 'dmg'
         }

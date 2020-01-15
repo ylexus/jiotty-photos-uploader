@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.ui;
 
-import javafx.event.Event;
+import javafx.stage.Stage;
+import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.connector.google.common.AuthorizationBrowser;
 
@@ -16,21 +17,24 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     }
 
     private final Provider<MainScreenController> mainScreenControllerProvider;
+    private final ApplicationLifecycleControl applicationLifecycleControl;
     private final ModalDialogFactory modalDialogFactory;
     private ModalDialog dialog;
 
     @Inject
     UiAuthorizationBrowser(Provider<MainScreenController> mainScreenControllerProvider,
-                           ModalDialogFactory modalDialogFactory) {
+                           ModalDialogFactory modalDialogFactory,
+                           ApplicationLifecycleControl applicationLifecycleControl) {
         this.modalDialogFactory = checkNotNull(modalDialogFactory);
         this.mainScreenControllerProvider = checkNotNull(mainScreenControllerProvider);
+        this.applicationLifecycleControl = checkNotNull(applicationLifecycleControl);
     }
 
     @Override
     public void browse(String url) {
         runLater(() -> {
             if (dialog == null) {
-                dialog = modalDialogFactory.create("Login to Google", "LoginDialog.fxml", stage -> stage.setOnCloseRequest(Event::consume));
+                dialog = modalDialogFactory.create("Login to Google", "LoginDialog.fxml", this::customizeLoginDialog);
             }
 
             dialog.show();
@@ -49,6 +53,13 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     @Override
     protected void doStop() {
         runLater(this::closeDialog);
+    }
+
+    private void customizeLoginDialog(Stage stage) {
+        stage.setOnCloseRequest(event -> {
+            applicationLifecycleControl.initiateShutdown();
+            event.consume();
+        });
     }
 
     private void closeDialog() {
