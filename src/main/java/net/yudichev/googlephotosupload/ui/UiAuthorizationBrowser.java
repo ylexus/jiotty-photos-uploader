@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.ui;
 
+import javafx.event.Event;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.connector.google.common.AuthorizationBrowser;
 
@@ -29,7 +30,7 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     public void browse(String url) {
         runLater(() -> {
             if (dialog == null) {
-                dialog = modalDialogFactory.create("Login to Google", "LoginDialog.fxml");
+                dialog = modalDialogFactory.create("Login to Google", "LoginDialog.fxml", stage -> stage.setOnCloseRequest(Event::consume));
             }
 
             dialog.show();

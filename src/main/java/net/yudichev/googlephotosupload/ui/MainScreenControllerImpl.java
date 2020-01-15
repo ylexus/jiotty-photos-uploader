@@ -91,7 +91,7 @@ public final class MainScreenControllerImpl implements MainScreenController {
 
     private void onPreferences(ActionEvent actionEvent) {
         if (preferencesDialog == null) {
-            preferencesDialog = modalDialogFactory.create("Preferences", "PreferencesDialog.fxml");
+            preferencesDialog = modalDialogFactory.create("Preferences", "PreferencesDialog.fxml", stage -> {});
         }
         preferencesDialog.show();
         actionEvent.consume();
