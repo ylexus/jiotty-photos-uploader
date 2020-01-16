@@ -104,12 +104,23 @@ runtime {
                '--compress', '2',
                '--no-header-files',
                '--no-man-pages']
+
+    // required by httpclient, missed by default when building and running on Windows
+    modules = ['java.naming']
+    additive = true
+
     jpackage {
         jpackageHome = System.getProperty("JPACKAGE_HOME", System.getenv("JPACKAGE_HOME"))
         jvmArgs = ['-Dprism.verbose=true']
         // TODO scan https://openjdk.java.net/jeps/343 - do we need more options like copyright etc?
+        // TODO Draw Icon!
+        // TODO Google verify application
+        // TODO Apple verify application
+        imageOptions = ['--verbose']
+        installerOptions = ['--verbose']
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             installerType = 'dmg'
+            resourceDir = file("$rootDir/src/main/ui-resources/macOS/out")
         }
         if (org.gradle.internal.os.OperatingSystem.current().windows) {
             installerType = 'exe'
