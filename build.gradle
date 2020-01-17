@@ -25,6 +25,10 @@ application {
     applicationName = 'Google Photos Uploader'
 }
 
+processResources {
+    from(System.getProperty("CLIENT_SECRET_PATH", System.getenv("CLIENT_SECRET_PATH")))
+}
+
 dependencies {
     ext.orgJunitJupiterVersion = '5.5.0'
     ext.orgMockitoVersion = '2.28.2'
@@ -113,7 +117,6 @@ runtime {
         jpackageHome = System.getProperty("JPACKAGE_HOME", System.getenv("JPACKAGE_HOME"))
         jvmArgs = ['-Dprism.verbose=true']
         // TODO scan https://openjdk.java.net/jeps/343 - do we need more options like copyright etc?
-        // TODO Draw Icon!
         // TODO Google verify application
         // TODO Apple verify application
         imageOptions = ['--verbose']
