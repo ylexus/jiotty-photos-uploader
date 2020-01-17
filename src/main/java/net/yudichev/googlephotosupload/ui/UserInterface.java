@@ -60,7 +60,7 @@ final class UserInterface extends BaseLifecycleComponent implements Provider<Sta
                 FxmlContainer fxmlContainer = fxmlContainerFactory.create("MainScreen.fxml");
                 Parent parent = fxmlContainer.root();
                 primaryStage.setScene(new Scene(parent));
-                primaryStage.setTitle("Google Photos Uploader");
+                primaryStage.setTitle("Jiotty Photos Uploader");
                 primaryStage.show();
                 primaryStage.setOnCloseRequest(e -> applicationLifecycleControl.initiateShutdown());
                 initLatch.countDown();

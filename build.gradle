@@ -22,11 +22,11 @@ sourceCompatibility = '13'
 
 application {
     mainClassName = 'net.yudichev.googlephotosupload.ui.Launcher'
-    applicationName = 'Google Photos Uploader'
+    applicationName = 'Jiotty Photos Uploader'
 }
 
 processResources {
-    from(System.getProperty("CLIENT_SECRET_PATH", System.getenv("CLIENT_SECRET_PATH")))
+    from(readEnv('CLIENT_SECRET_PATH'))
 }
 
 dependencies {
@@ -114,7 +114,7 @@ runtime {
     additive = true
 
     jpackage {
-        jpackageHome = System.getProperty("JPACKAGE_HOME", System.getenv("JPACKAGE_HOME"))
+        jpackageHome = readEnv('JPACKAGE_HOME')
         jvmArgs = ['-Dprism.verbose=true']
         // TODO scan https://openjdk.java.net/jeps/343 - do we need more options like copyright etc?
         // TODO Google verify application
@@ -130,4 +130,12 @@ runtime {
             installerOptions = ['--win-per-user-install', '--win-menu']
         }
     }
+}
+
+private readEnv(String variableName) {
+    System.getProperty(variableName, System.getenv(variableName)) ?: fail(variableName)
+}
+
+private fail(String variableName) {
+    throw new GradleException("Missing system property or environment variable $variableName")
 }

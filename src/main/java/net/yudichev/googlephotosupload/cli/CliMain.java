@@ -47,7 +47,7 @@ public final class CliMain {
         StringWriter sw = new StringWriter();
         PrintWriter pw = new PrintWriter(sw);
         helpFormatter.printHelp(pw, helpFormatter.getWidth(),
-                "Google Photos Uploader",
+                "Jiotty Photos Uploader",
                 null,
                 OPTIONS,
                 helpFormatter.getLeftPadding(),

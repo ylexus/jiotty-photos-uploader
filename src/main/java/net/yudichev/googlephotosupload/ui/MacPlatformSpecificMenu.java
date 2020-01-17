@@ -19,7 +19,7 @@ final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
     public void initialize(MenuBar menuBar) {
         MenuToolkit tk = MenuToolkit.toolkit();
         // TODO deduplicate application name - this is now in multiple places
-        Menu defaultApplicationMenu = tk.createDefaultApplicationMenu("Google Photos Uploader");
+        Menu defaultApplicationMenu = tk.createDefaultApplicationMenu("Jiotty Photos Uploader");
         preferencesMenuItem = new MenuItem("Preferences...");
         preferencesMenuItem.setAccelerator(new KeyCodeCombination(COMMA, META_DOWN));
         defaultApplicationMenu.getItems().add(2, new SeparatorMenuItem());
