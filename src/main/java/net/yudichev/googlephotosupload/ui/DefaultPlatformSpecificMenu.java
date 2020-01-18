@@ -21,7 +21,7 @@ final class DefaultPlatformSpecificMenu implements PlatformSpecificMenu {
         fileMenuItems.add(preferencesMenuItem);
         fileMenuItems.add(new SeparatorMenuItem());
         fileMenuItems.add(exitMenuItem);
-        menuBar.getMenus().add(fileMenu);
+        menuBar.getMenus().add(0, fileMenu);
     }
 
     @Override

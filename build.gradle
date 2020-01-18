@@ -128,6 +128,7 @@ runtime {
         if (org.gradle.internal.os.OperatingSystem.current().windows) {
             installerType = 'exe'
             installerOptions = ['--win-per-user-install', '--win-menu']
+            resourceDir = file("$rootDir/src/main/ui-resources/windows")
         }
     }
 }
