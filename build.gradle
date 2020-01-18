@@ -25,19 +25,23 @@ application {
     applicationName = 'Jiotty Photos Uploader'
 }
 
-processResources {
-    from(readEnv('CLIENT_SECRET_PATH'))
+def clientSecretPath = readEnvOrNull('CLIENT_SECRET_PATH')
+if (clientSecretPath) {
+    processResources {
+        from(clientSecretPath)
+    }
 }
 
 dependencies {
     ext.orgJunitJupiterVersion = '5.5.0'
     ext.orgMockitoVersion = '2.28.2'
     ext.orgImmutablesVersion = '2.8.3'
+    ext.netYudichevJiottyVersion = '1.2.1-SNAPSHOT'
 
     annotationProcessor "org.immutables:value:$orgImmutablesVersion"
     testAnnotationProcessor "org.immutables:value:$orgImmutablesVersion"
 
-    implementation platform("net.yudichev.jiotty:jiotty-bom:1.2.1-SNAPSHOT")
+    implementation platform("net.yudichev.jiotty:jiotty-bom:$netYudichevJiottyVersion")
     implementation platform("com.google.inject:guice-bom:4.2.2")
 
     // This is needed as we depend on no_aop guice instead (regular Guice does not work on Java 13)
@@ -134,7 +138,11 @@ runtime {
 }
 
 private readEnv(String variableName) {
-    System.getProperty(variableName, System.getenv(variableName)) ?: fail(variableName)
+    readEnvOrNull(variableName) ?: fail(variableName)
+}
+
+private readEnvOrNull(String variableName) {
+    System.getProperty(variableName, System.getenv(variableName))
 }
 
 private fail(String variableName) {
