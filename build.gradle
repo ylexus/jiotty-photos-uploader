@@ -118,7 +118,7 @@ runtime {
     additive = true
 
     jpackage {
-        jpackageHome = readEnv('JPACKAGE_HOME')
+        jpackageHome = readEnvOrNull('JPACKAGE_HOME')
         jvmArgs = ['-Dprism.verbose=true']
         // TODO scan https://openjdk.java.net/jeps/343 - do we need more options like copyright etc?
         // TODO Google verify application
@@ -137,14 +137,6 @@ runtime {
     }
 }
 
-private readEnv(String variableName) {
-    readEnvOrNull(variableName) ?: fail(variableName)
-}
-
 private readEnvOrNull(String variableName) {
     System.getProperty(variableName, System.getenv(variableName))
-}
-
-private fail(String variableName) {
-    throw new GradleException("Missing system property or environment variable $variableName")
 }
