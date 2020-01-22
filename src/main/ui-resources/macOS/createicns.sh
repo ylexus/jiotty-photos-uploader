@@ -10,5 +10,5 @@ sips -z 256 256 ../Icon1024.png --out MyIcon.iconset/icon_256x256.png
 sips -z 512 512 ../Icon1024.png --out MyIcon.iconset/icon_256x256@2x.png
 sips -z 512 512 ../Icon1024.png --out MyIcon.iconset/icon_512x512.png
 cp ../Icon1024.png MyIcon.iconset/icon_512x512@2x.png
-iconutil -c icns "out/Jiotty Photos Uploader.icns"
+iconutil -c icns MyIcon.iconset -o "out/Jiotty Photos Uploader.icns"
 rm -R MyIcon.iconset

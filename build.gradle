@@ -16,7 +16,7 @@ plugins {
 }
 
 group = 'net.yudichev'
-version = '1.0.0'
+version = readEnvOrNull('VERSION')
 //noinspection GroovyUnusedAssignment
 sourceCompatibility = '13'
 
@@ -123,16 +123,43 @@ runtime {
         // TODO scan https://openjdk.java.net/jeps/343 - do we need more options like copyright etc?
         // TODO Google verify application
         // TODO Apple verify application
-        imageOptions = ['--verbose']
         installerOptions = ['--verbose']
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             installerType = 'dmg'
+            imageOptions = ['--verbose', '--mac-sign', '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)']
             resourceDir = file("$rootDir/src/main/ui-resources/macOS/out")
         }
         if (org.gradle.internal.os.OperatingSystem.current().windows) {
             installerType = 'exe'
+            imageOptions = ['--verbose']
             installerOptions = ['--win-per-user-install', '--win-menu']
             resourceDir = file("$rootDir/src/main/ui-resources/windows")
+        }
+        if (org.gradle.internal.os.OperatingSystem.current().linux) {
+            installerType = 'app-image'
+            imageOptions = ['--verbose']
+            /*
+  --linux-package-name <package name>
+          Name for Linux package, defaults to the application name
+  --linux-deb-maintainer <email address>
+          Maintainer for .deb package
+  --linux-menu-group <menu-group-name>
+          Menu group this application is placed in
+  --linux-package-deps
+          Required packages or capabilities for the application
+  --linux-rpm-license-type <type string>
+          Type of the license ("License: <value>" of the RPM .spec)
+  --linux-app-release <release value>
+          Release value of the RPM <name>.spec file or
+          Debian revision value of the DEB control file.
+  --linux-app-category <category value>
+          Group value of the RPM <name>.spec file or
+          Section value of DEB control file.
+  --linux-shortcut
+          Creates a shortcut for the application
+            */
+            installerOptions = ['--linux-shortcut']
+//            resourceDir = file("$rootDir/src/main/ui-resources/linux")
         }
     }
 }
