@@ -123,16 +123,16 @@ runtime {
         // TODO scan https://openjdk.java.net/jeps/343 - do we need more options like copyright etc?
         // TODO Google verify application
         // TODO Apple verify application
-        installerOptions = ['--verbose']
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             installerType = 'dmg'
             imageOptions = ['--verbose', '--mac-sign', '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)']
+            installerOptions = ['--verbose']
             resourceDir = file("$rootDir/src/main/ui-resources/macOS/out")
         }
         if (org.gradle.internal.os.OperatingSystem.current().windows) {
             installerType = 'exe'
             imageOptions = ['--verbose']
-            installerOptions = ['--win-per-user-install', '--win-menu']
+            installerOptions = ['--verbose', '--win-per-user-install', '--win-menu']
             resourceDir = file("$rootDir/src/main/ui-resources/windows")
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
@@ -158,7 +158,7 @@ runtime {
   --linux-shortcut
           Creates a shortcut for the application
             */
-            installerOptions = ['--linux-shortcut']
+            installerOptions = ['--verbose', '--linux-shortcut']
 //            resourceDir = file("$rootDir/src/main/ui-resources/linux")
         }
     }
