@@ -28,8 +28,8 @@ application {
 def clientSecretPath = readEnvOrNull('CLIENT_SECRET_PATH')
 if (clientSecretPath) {
     processResources {
-        from(clientSecretPath)
-        rename { 'client_secret_641898159424-0tmk9ngs1aog13ef0v4bg1njtnndj1c3.apps.googleusercontent.com.json' }
+        from file(clientSecretPath)
+        rename (clientSecretPath, 'client_secret_641898159424-0tmk9ngs1aog13ef0v4bg1njtnndj1c3.apps.googleusercontent.com.json')
     }
 }
 
