@@ -4,7 +4,7 @@ Configuration:
   properties:
     property:
       name: filename
-      value: ${sys:user.home}/.googlephotosuploader/log/automator.log
+      value: ${sys:user.home}/.jiottyphotosuploader/log/main.log
   appenders:
     RollingFile:
       name: FILE

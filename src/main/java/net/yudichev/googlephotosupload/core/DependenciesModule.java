@@ -14,7 +14,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.io.Resources.getResource;
 
 public final class DependenciesModule extends AbstractModule {
-    private static final String APPLICATION_NAME = "googlephotosuploader";
+    private static final String APPLICATION_NAME = "jiottyphotosuploader";
     private final Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser;
 
     public DependenciesModule() {
