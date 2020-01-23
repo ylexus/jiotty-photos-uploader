@@ -160,7 +160,7 @@ runtime {
           Creates a shortcut for the application
             */
             installerOptions = ['--verbose', '--linux-shortcut']
-//            resourceDir = file("$rootDir/src/main/ui-resources/linux")
+            resourceDir = file("$rootDir/src/main/ui-resources/linux")
         }
     }
 }
