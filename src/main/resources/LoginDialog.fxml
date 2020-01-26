@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.web.WebView?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" alignment="TOP_CENTER" prefHeight="800.0" prefWidth="600.0" spacing="4.0" stylesheets="@style.css"
@@ -11,5 +11,6 @@
         <Insets top="4.0"/>
     </padding>
     <Label text="Please log in to Google"/>
+    <TextField fx:id="urlTextField" editable="false" styleClass="url-bar"/>
     <WebView fx:id="webView" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS"/>
 </VBox>

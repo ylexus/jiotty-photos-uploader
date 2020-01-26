@@ -36,3 +36,7 @@
 .failed-background {
     -fx-background-color: #4a1b18;
 }
+
+.url-bar {
+    -fx-font-size: 12pt;
+}
