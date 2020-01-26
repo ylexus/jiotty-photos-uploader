@@ -21,7 +21,7 @@ application {
     applicationName = 'Jiotty Photos Uploader'
 }
 
-def clientSecretPath = readEnvOrNull('CLIENT_SECRET_PATH')
+String clientSecretPath = readEnvOrNull('CLIENT_SECRET_PATH')
 if (clientSecretPath) {
     processResources {
         from file(clientSecretPath)
