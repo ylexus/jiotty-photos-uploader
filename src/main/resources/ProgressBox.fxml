@@ -8,7 +8,7 @@
           xmlns="http://javafx.com/javafx/10.0.2-internal" fx:controller="net.yudichev.googlephotosupload.ui.ProgressBoxFxController">
     <columnConstraints>
         <ColumnConstraints hgrow="NEVER" minWidth="55.0"/>
-        <ColumnConstraints hgrow="NEVER" prefWidth="40.0"/>
+        <ColumnConstraints hgrow="SOMETIMES" prefWidth="40.0"/>
         <ColumnConstraints hgrow="SOMETIMES"/>
     </columnConstraints>
     <rowConstraints>

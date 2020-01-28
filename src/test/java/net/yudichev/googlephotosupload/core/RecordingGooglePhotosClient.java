@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntConsumer;
 
 import static com.google.common.base.Preconditions.*;
@@ -54,9 +55,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                 }
                 simulateResourceExhaustion(ImmutableSet.of("uploadMediaItem", path));
                 UploadedGoogleMediaItem item = new UploadedGoogleMediaItem(path, albumId);
-                UploadedGoogleMediaItem existingItem = itemsById.putIfAbsent(item.getId(), item);
-                checkArgument(existingItem == null, "item with such ID already exists: %s", existingItem);
-                return item;
+                return itemsById.compute(item.getId(), (ignored, existingItem) -> existingItem == null ? item : existingItem.withUploadCountIncremented());
             }
         }, executor);
     }
@@ -151,6 +150,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         private final Set<String> albumIds = new HashSet<>();
         private final Path file;
         private final Object stateLock = new Object();
+        private final AtomicInteger uploadCount = new AtomicInteger(1);
 
         UploadedGoogleMediaItem(Path file, Optional<String> albumId) {
             this.file = checkNotNull(file);
@@ -163,6 +163,10 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
             return id;
         }
 
+        public int getUploadCount() {
+            return uploadCount.get();
+        }
+
         @Override
         public String toString() {
             synchronized (stateLock) {
@@ -172,6 +176,11 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                         .add("albumIds", albumIds)
                         .toString();
             }
+        }
+
+        UploadedGoogleMediaItem withUploadCountIncremented() {
+            uploadCount.incrementAndGet();
+            return this;
         }
 
         void addToAlbum(String albumId) {

@@ -58,10 +58,10 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     }
 
     @Override
-    public CompletableFuture<Void> startUpload(Path path) {
-        runLater(() -> stopButton.setDisable(false));
+    public CompletableFuture<Void> startUpload(Path path, boolean resume) {
         checkStarted();
-        return uploader.upload(path)
+        stopButton.setDisable(false);
+        return uploader.upload(path, resume)
                 .whenComplete((aVoid, e) -> runLater(() -> {
                     if (isStarted()) {
                         stopButton.setVisible(false);

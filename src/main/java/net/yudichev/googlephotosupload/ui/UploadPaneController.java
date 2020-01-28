@@ -10,7 +10,7 @@ interface UploadPaneController {
 
     void reset();
 
-    CompletableFuture<Void> startUpload(Path path);
+    CompletableFuture<Void> startUpload(Path path, boolean resume);
 
     void stopUpload();
 }

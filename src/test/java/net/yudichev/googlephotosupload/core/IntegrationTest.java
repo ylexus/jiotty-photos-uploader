@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import net.yudichev.googlephotosupload.cli.CliModule;
@@ -13,7 +14,9 @@ import net.yudichev.jiotty.common.varstore.VarStore;
 import net.yudichev.jiotty.common.varstore.VarStoreModule;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
@@ -41,9 +44,9 @@ import java.util.stream.IntStream;
 import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-import static com.spotify.hamcrest.optional.OptionalMatchers.optionalWithValue;
 import static java.nio.file.FileVisitResult.CONTINUE;
 import static java.util.stream.Collectors.toList;
+import static net.yudichev.googlephotosupload.cli.CliOptions.OPTIONS;
 import static net.yudichev.googlephotosupload.core.RecordingGooglePhotosClient.UploadedGoogleMediaItem;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
@@ -101,42 +104,6 @@ final class IntegrationTest {
     void testHandlesResourceExhaustedExceptionsCorrectly() throws IOException, InterruptedException {
         googlePhotosClient.enableResourceExhaustedExceptions();
         doUploadTest();
-    }
-
-    @Test
-    void testHandlesInvalidMediaIdExceptionsCorrectly() throws IOException, InterruptedException {
-        VarStore varStore = Guice.createInjector(new VarStoreModule(varStoreAppName)).getInstance(VarStore.class);
-        String photosUploaderKey = "photosUploader";
-        String outerAlbumPhotoAbsolutePath = outerAlbumPhoto.toAbsolutePath().toString();
-        varStore.saveValue(photosUploaderKey, UploadState.builder()
-                .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath,
-                        ItemState.of(Optional.of("some-unknown-media-item-id"), Optional.empty()))
-                .build());
-
-        doUploadTest();
-
-        Optional<UploadState> newUploadState = varStore.readValue(UploadState.class, photosUploaderKey);
-        assertThat(newUploadState, is(optionalWithValue()));
-        //noinspection OptionalGetWithoutIsPresent
-        assertThat(newUploadState.get().uploadedMediaItemIdByAbsolutePath().get(outerAlbumPhotoAbsolutePath),
-                is(ItemState.of(Optional.of(outerAlbumPhotoAbsolutePath), Optional.of("outer-album"))));
-    }
-
-    @Test
-    void reUploadsIfSavedStateShowsNoAlbum() throws IOException, InterruptedException {
-        VarStore varStore = Guice.createInjector(new VarStoreModule(varStoreAppName)).getInstance(VarStore.class);
-        String photosUploaderKey = "photosUploader";
-        String outerAlbumPhotoAbsolutePath = outerAlbumPhoto.toAbsolutePath().toString();
-        varStore.saveValue(photosUploaderKey, UploadState.builder()
-                .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath,
-                        ItemState.of(Optional.of(outerAlbumPhotoAbsolutePath), Optional.empty()))
-                .build());
-
-        doUploadTest();
-
-        VarStoreData varStoreData = readVarStoreDirectly();
-        assertThat(varStoreData.photosUploader().uploadedMediaItemIdByAbsolutePath().get(outerAlbumPhotoAbsolutePath),
-                is(ItemState.of(Optional.of(outerAlbumPhotoAbsolutePath), Optional.of("outer-album"))));
     }
 
     @Test
@@ -369,6 +336,14 @@ final class IntegrationTest {
         assertThat(googlePhotosClient.getAllItems(), is(empty()));
     }
 
+    @Test
+    void noResumeReUploadsExistingFile() throws IOException, InterruptedException {
+        doUploadTest();
+
+        doUploadTest("-no-resume");
+        googlePhotosClient.getAllItems().forEach(uploadedGoogleMediaItem -> assertThat(uploadedGoogleMediaItem.getUploadCount(), is(2)));
+    }
+
     private Path uploadPhoto(GooglePhotosAlbum album, String fileName) throws IOException, InterruptedException, ExecutionException, TimeoutException {
         Path path = null;
         try {
@@ -399,8 +374,8 @@ final class IntegrationTest {
         assertThat(uploadedMediaItemIdByAbsolutePath.get(outerPhotoPath), is(ItemState.of(Optional.of(outerPhotoPath), Optional.of("outer-album"))));
     }
 
-    private void doUploadTest() throws InterruptedException, IOException {
-        doExecuteUpload();
+    private void doUploadTest(String... additionalCommandLineOptions) throws InterruptedException, IOException {
+        doExecuteUpload(additionalCommandLineOptions);
 
         doVerifyGoogleClientState();
 
@@ -427,14 +402,13 @@ final class IntegrationTest {
                 allOf(itemForFile(innerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album: inner-album")))));
     }
 
-    private void doExecuteUpload() throws InterruptedException {
-        Options options = new Options()
-                .addOption(Option.builder("r")
-                        .hasArg()
-                        .required()
-                        .build());
+    private void doExecuteUpload(String... additionalCommandLineOptions) throws InterruptedException {
         CommandLineParser parser = new DefaultParser();
-        CommandLine commandLine = getAsUnchecked(() -> parser.parse(options, new String[]{"-r", root.toString()}));
+        CommandLine commandLine = getAsUnchecked(() -> parser.parse(OPTIONS, ImmutableList.<String>builder()
+                .add("-r", root.toString())
+                .add(additionalCommandLineOptions)
+                .build()
+                .toArray(String[]::new)));
         CountDownLatch applicationExitedLatch = new CountDownLatch(1);
         new Thread(() -> {
             Application.builder()

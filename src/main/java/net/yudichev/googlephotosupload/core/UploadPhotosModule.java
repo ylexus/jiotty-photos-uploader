@@ -41,6 +41,7 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
 
         bind(AlbumManager.class).to(boundLifecycleComponent(AlbumManagerImpl.class));
 
+        bind(UploadStateManager.class).to(UploadStateManagerImpl.class).in(Singleton.class);
         bind(GooglePhotosUploader.class).to(boundLifecycleComponent(GooglePhotosUploaderImpl.class));
 
         bind(getExposedKey()).to(UploaderImpl.class);

@@ -1,26 +1,42 @@
 package net.yudichev.googlephotosupload.ui;
 
 import javafx.event.ActionEvent;
+import javafx.scene.control.CheckBox;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
+import net.yudichev.googlephotosupload.core.Uploader;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.nio.file.Path;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 public final class FolderSelectorControllerImpl implements FolderSelectorController {
+    private final Uploader uploader;
     public VBox folderSelector;
-    private Consumer<Path> folderSelectionListener;
+    public CheckBox resumeCheckbox;
+    private BiConsumer<Path, Boolean> folderSelectionListener;
+
+    @Inject
+    FolderSelectorControllerImpl(Uploader uploader) {
+        this.uploader = checkNotNull(uploader);
+    }
+
+    public void initialize() {
+        if (uploader.canResume()) {
+            resumeCheckbox.setVisible(true);
+        }
+    }
 
     @Override
-    public void setFolderSelectedAction(Consumer<Path> folderSelectionListener) {
+    public void setFolderSelectedAction(BiConsumer<Path, Boolean> folderSelectionListener) {
         checkState(this.folderSelectionListener == null);
         this.folderSelectionListener = checkNotNull(folderSelectionListener);
     }
@@ -69,7 +85,7 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
     }
 
     private void notifyListener(File file) {
-        folderSelectionListener.accept(file.toPath());
+        folderSelectionListener.accept(file.toPath(), resumeCheckbox.isSelected());
     }
 
     private boolean isSingleFolder(Dragboard dragboard) {

@@ -28,7 +28,6 @@ public final class MainScreenControllerImpl implements MainScreenController {
     public MenuItem menuItemLogout;
     public MenuItem menuItemStopUpload;
     public VBox root;
-    public MenuItem menuItemPreferences;
     private ModalDialog preferencesDialog;
 
     @Inject
@@ -97,13 +96,13 @@ public final class MainScreenControllerImpl implements MainScreenController {
         actionEvent.consume();
     }
 
-    private void onFolderSelected(Path path) {
+    private void onFolderSelected(Path path, boolean resume) {
         ObservableList<Node> children = root.getChildren();
         children.remove(folderSelectionPane);
         children.add(uploadPane);
 
         menuItemStopUpload.setDisable(false);
-        uploadPaneController.startUpload(path)
+        uploadPaneController.startUpload(path, resume)
                 .whenComplete((v, e) -> runLater(() -> menuItemStopUpload.setDisable(true)));
     }
 }

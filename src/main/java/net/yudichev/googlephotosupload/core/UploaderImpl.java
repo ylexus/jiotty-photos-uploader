@@ -17,7 +17,7 @@ import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfList;
 final class UploaderImpl implements Uploader {
     private static final Logger logger = LoggerFactory.getLogger(UploaderImpl.class);
     private final FilesystemManager filesystemManager;
-    private final GooglePhotosUploader uploader;
+    private final GooglePhotosUploader googlePhotosUploader;
     private final DirectoryStructureSupplier directoryStructureSupplier;
     private final AlbumManager albumManager;
     private final CloudAlbumsProvider cloudAlbumsProvider;
@@ -25,13 +25,13 @@ final class UploaderImpl implements Uploader {
 
     @Inject
     UploaderImpl(FilesystemManager filesystemManager,
-                 GooglePhotosUploader uploader,
+                 GooglePhotosUploader googlePhotosUploader,
                  DirectoryStructureSupplier directoryStructureSupplier,
                  AlbumManager albumManager,
                  CloudAlbumsProvider cloudAlbumsProvider,
                  ProgressStatusFactory progressStatusFactory) {
         this.filesystemManager = checkNotNull(filesystemManager);
-        this.uploader = checkNotNull(uploader);
+        this.googlePhotosUploader = checkNotNull(googlePhotosUploader);
         this.directoryStructureSupplier = checkNotNull(directoryStructureSupplier);
         this.albumManager = checkNotNull(albumManager);
         this.cloudAlbumsProvider = checkNotNull(cloudAlbumsProvider);
@@ -39,7 +39,10 @@ final class UploaderImpl implements Uploader {
     }
 
     @Override
-    public CompletableFuture<Void> upload(Path rootDir) {
+    public CompletableFuture<Void> upload(Path rootDir, boolean resume) {
+        if (!resume) {
+            googlePhotosUploader.doNotResume();
+        }
         CompletableFuture<List<AlbumDirectory>> albumDirectoriesFuture = directoryStructureSupplier.listAlbumDirectories(rootDir);
         CompletableFuture<Map<String, List<GooglePhotosAlbum>>> cloudAlbumsByTitleFuture = cloudAlbumsProvider.listCloudAlbums();
         return albumDirectoriesFuture
@@ -48,13 +51,12 @@ final class UploaderImpl implements Uploader {
                                 .thenCompose(albumsByTitle -> {
                                     ProgressStatus directoryProgressStatus =
                                             progressStatusFactory.create("Folders uploaded", Optional.of(albumDirectories.size() - 1));
-                                    ProgressStatus fileProgressStatus =
-                                            progressStatusFactory.create("Uploading files", Optional.empty());
+                                    ProgressStatus fileProgressStatus = progressStatusFactory.create("Uploading files", Optional.empty());
                                     return albumDirectories.stream()
                                             .flatMap(albumDirectory -> {
                                                 directoryProgressStatus.incrementSuccess();
                                                 return filesystemManager.listFiles(albumDirectory.path()).stream()
-                                                        .map(path -> uploader.uploadFile(albumDirectory.albumTitle().map(albumsByTitle::get), path)
+                                                        .map(path -> googlePhotosUploader.uploadFile(albumDirectory.albumTitle().map(albumsByTitle::get), path)
                                                                 .whenComplete((aVoid, e) -> {
                                                                     if (e != null) {
                                                                         fileProgressStatus.incrementFailure();
@@ -70,5 +72,10 @@ final class UploaderImpl implements Uploader {
                                             })
                                             .thenAccept(list -> logger.info("All done without errors, files uploaded: {}", list.size()));
                                 })));
+    }
+
+    @Override
+    public boolean canResume() {
+        return googlePhotosUploader.canResume();
     }
 }

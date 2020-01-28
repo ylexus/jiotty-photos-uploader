@@ -2,7 +2,6 @@ package net.yudichev.googlephotosupload.core;
 
 import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import net.yudichev.jiotty.common.varstore.VarStore;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
 import org.slf4j.Logger;
@@ -30,11 +29,10 @@ import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture
 
 final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements GooglePhotosUploader {
     private static final Logger logger = LoggerFactory.getLogger(GooglePhotosUploaderImpl.class);
-    private static final String VAR_STORE_KEY = "photosUploader";
 
-    private final VarStore varStore;
     private final GooglePhotosClient googlePhotosClient;
     private final StateSaverFactory stateSaverFactory;
+    private final UploadStateManager uploadStateManager;
 
     private final Provider<ExecutorService> executorServiceProvider;
     private final RemoteApiResultHandler backOffHandler;
@@ -45,18 +43,18 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     private UploadState uploadState;
 
     @Inject
-    GooglePhotosUploaderImpl(VarStore varStore,
-                             GooglePhotosClient googlePhotosClient,
+    GooglePhotosUploaderImpl(GooglePhotosClient googlePhotosClient,
                              @Backpressured Provider<ExecutorService> executorServiceProvider,
                              @Backoff RemoteApiResultHandler backOffHandler,
                              @InvalidMediaItem RemoteApiResultHandler invalidMediaItemHandler,
-                             StateSaverFactory stateSaverFactory) {
-        this.varStore = checkNotNull(varStore);
+                             StateSaverFactory stateSaverFactory,
+                             UploadStateManager uploadStateManager) {
         this.executorServiceProvider = checkNotNull(executorServiceProvider);
         this.backOffHandler = checkNotNull(backOffHandler);
         this.invalidMediaItemHandler = checkNotNull(invalidMediaItemHandler);
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
         this.stateSaverFactory = checkNotNull(stateSaverFactory);
+        this.uploadStateManager = checkNotNull(uploadStateManager);
     }
 
     @Override
@@ -72,11 +70,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                             ItemState currentItemState = currentFuture.getNow(null);
                             if (currentItemState.mediaId().isEmpty()) {
                                 logger.info("Permanently failed before, skipping: {}", file);
-                            } else if (currentItemState.albumId().isEmpty()) {
-                                // TODO completely remove this condition, only possible with my broken data
-                                //  otherwise it'll fail on items in root dir and will keep uploading them
-                                logger.info("Previously uploaded, but not in album, uploading again: {}", file);
-                                currentFuture = doUpload(album, theFile);
                             } else {
                                 logger.info("Already uploaded, skipping: {}", file);
                             }
@@ -114,10 +107,23 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     }
 
     @Override
+    public void doNotResume() {
+        logger.info("Requested not to resume, forgetting {} previously uploaded item(s)", uploadedItemStateByPath.size());
+        uploadState = UploadState.builder().build();
+        uploadStateManager.save(uploadState);
+        uploadedItemStateByPath.clear();
+    }
+
+    @Override
+    public boolean canResume() {
+        return !uploadStateManager.get().uploadedMediaItemIdByAbsolutePath().isEmpty();
+    }
+
+    @Override
     protected void doStart() {
         executorService = executorServiceProvider.get();
         stateSaver = stateSaverFactory.create("uploaded-items", this::saveState);
-        uploadState = varStore.readValue(UploadState.class, VAR_STORE_KEY).orElseGet(() -> UploadState.builder().build());
+        uploadState = uploadStateManager.get();
         uploadedItemStateByPath = uploadState.uploadedMediaItemIdByAbsolutePath().entrySet().stream()
                 .collect(toConcurrentMap(
                         entry -> Paths.get(entry.getKey()),
@@ -151,7 +157,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                                 entry -> entry.getValue().getNow(null))));
         if (!newUploadState.equals(uploadState)) {
             uploadState = newUploadState;
-            varStore.saveValue(VAR_STORE_KEY, uploadState);
+            uploadStateManager.save(uploadState);
         }
     }
 

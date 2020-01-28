@@ -8,4 +8,8 @@ import java.util.concurrent.CompletableFuture;
 
 interface GooglePhotosUploader {
     CompletableFuture<Void> uploadFile(Optional<GooglePhotosAlbum> album, Path file);
+
+    void doNotResume();
+
+    boolean canResume();
 }

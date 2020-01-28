@@ -19,19 +19,21 @@ final class CliStarter extends BaseLifecycleComponent {
     private final Path rootDir;
     private final Uploader uploader;
     private final ApplicationLifecycleControl applicationLifecycleControl;
+    private final boolean resume;
 
     @Inject
     CliStarter(CommandLine commandLine,
                Uploader uploader,
                ApplicationLifecycleControl applicationLifecycleControl) {
         rootDir = Paths.get(commandLine.getOptionValue('r'));
+        resume = !commandLine.hasOption('n');
         this.uploader = checkNotNull(uploader);
         this.applicationLifecycleControl = checkNotNull(applicationLifecycleControl);
     }
 
     @Override
     protected void doStart() {
-        uploader.upload(rootDir)
+        uploader.upload(rootDir, resume)
                 .whenComplete(logErrorOnFailure(logger, "Failed"))
                 .whenComplete((ignored1, ignored2) -> applicationLifecycleControl.initiateShutdown());
     }

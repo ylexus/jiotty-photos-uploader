@@ -12,19 +12,10 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 public final class CliMain {
-    private static final Options OPTIONS = new Options()
-            .addOption(Option.builder("r")
-                    .longOpt("root-dir")
-                    .hasArg()
-                    .argName("PATH")
-                    .desc("Path to root directory to scan")
-                    .required()
-                    .build());
-
     public static void main(String[] args) {
         CommandLineParser parser = new DefaultParser();
         try {
-            CommandLine commandLine = parser.parse(OPTIONS, args);
+            CommandLine commandLine = parser.parse(CliOptions.OPTIONS, args);
             Application.builder()
                     .addModule(DependenciesModule::new)
                     .addModule(() -> new UploadPhotosModule(1000))
@@ -47,7 +38,7 @@ public final class CliMain {
         helpFormatter.printHelp(pw, helpFormatter.getWidth(),
                 "Jiotty Photos Uploader",
                 null,
-                OPTIONS,
+                CliOptions.OPTIONS,
                 helpFormatter.getLeftPadding(),
                 helpFormatter.getDescPadding(),
                 null,
