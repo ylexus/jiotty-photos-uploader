@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -26,6 +28,7 @@ import static java.util.stream.Collectors.toConcurrentMap;
 import static net.yudichev.googlephotosupload.core.Bindings.Backoff;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture;
+import static net.yudichev.jiotty.common.lang.Locks.inLock;
 
 final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements GooglePhotosUploader {
     private static final Logger logger = LoggerFactory.getLogger(GooglePhotosUploaderImpl.class);
@@ -37,6 +40,8 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     private final Provider<ExecutorService> executorServiceProvider;
     private final RemoteApiResultHandler backOffHandler;
     private final RemoteApiResultHandler invalidMediaItemHandler;
+    private final Lock stateLock = new ReentrantLock();
+
     private StateSaver stateSaver;
     private ExecutorService executorService;
     private Map<Path, CompletableFuture<ItemState>> uploadedItemStateByPath;
@@ -60,7 +65,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     @Override
     public CompletableFuture<Void> uploadFile(Optional<GooglePhotosAlbum> album, Path file) {
         checkStarted();
-        return uploadedItemStateByPath.compute(file,
+        return inLock(stateLock, () -> uploadedItemStateByPath.compute(file,
                 (theFile, currentFuture) -> {
                     if (currentFuture == null || currentFuture.isCompletedExceptionally()) {
                         logger.info("Scheduling upload of {}", file);
@@ -103,36 +108,40 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                         return uploadFile(album, file);
                     }
                     return completedFuture();
-                });
+                }));
     }
 
     @Override
     public void doNotResume() {
-        logger.info("Requested not to resume, forgetting {} previously uploaded item(s)", uploadedItemStateByPath.size());
-        uploadState = UploadState.builder().build();
-        uploadStateManager.save(uploadState);
-        uploadedItemStateByPath.clear();
+        inLock(stateLock, () -> {
+            logger.info("Requested not to resume, forgetting {} previously uploaded item(s)", uploadedItemStateByPath.size());
+            uploadState = UploadState.builder().build();
+            uploadStateManager.save(uploadState);
+            uploadedItemStateByPath.clear();
+        });
     }
 
     @Override
-    public boolean canResume() {
-        return !uploadStateManager.get().uploadedMediaItemIdByAbsolutePath().isEmpty();
+    public int canResume() {
+        return uploadStateManager.get().uploadedMediaItemIdByAbsolutePath().size();
     }
 
     @Override
     protected void doStart() {
-        executorService = executorServiceProvider.get();
-        stateSaver = stateSaverFactory.create("uploaded-items", this::saveState);
-        uploadState = uploadStateManager.get();
-        uploadedItemStateByPath = uploadState.uploadedMediaItemIdByAbsolutePath().entrySet().stream()
-                .collect(toConcurrentMap(
-                        entry -> Paths.get(entry.getKey()),
-                        entry -> CompletableFuture.completedFuture(entry.getValue())));
+        inLock(stateLock, () -> {
+            executorService = executorServiceProvider.get();
+            stateSaver = stateSaverFactory.create("uploaded-items", this::saveState);
+            uploadState = uploadStateManager.get();
+            uploadedItemStateByPath = uploadState.uploadedMediaItemIdByAbsolutePath().entrySet().stream()
+                    .collect(toConcurrentMap(
+                            entry -> Paths.get(entry.getKey()),
+                            entry -> CompletableFuture.completedFuture(entry.getValue())));
+        });
     }
 
     @Override
     protected void doStop() {
-        stateSaver.close();
+        inLock(stateLock, () -> stateSaver.close());
     }
 
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")

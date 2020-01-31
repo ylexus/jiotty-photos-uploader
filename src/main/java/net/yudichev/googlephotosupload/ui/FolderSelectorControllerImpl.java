@@ -2,10 +2,12 @@ package net.yudichev.googlephotosupload.ui;
 
 import javafx.event.ActionEvent;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import net.yudichev.googlephotosupload.core.Uploader;
@@ -22,6 +24,8 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
     private final Uploader uploader;
     public VBox folderSelector;
     public CheckBox resumeCheckbox;
+    public FlowPane resumePane;
+    public Label alreadyUploadedLabel;
     private BiConsumer<Path, Boolean> folderSelectionListener;
 
     @Inject
@@ -30,8 +34,12 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
     }
 
     public void initialize() {
-        if (uploader.canResume()) {
-            resumeCheckbox.setVisible(true);
+        int numberOfUploadedItems = uploader.numberOfUploadedItems();
+        if (numberOfUploadedItems > 0) {
+            alreadyUploadedLabel.setText(String.format("(already uploaded: %s)", numberOfUploadedItems));
+            resumePane.setVisible(true);
+        } else {
+            resumePane.setVisible(false);
         }
     }
 

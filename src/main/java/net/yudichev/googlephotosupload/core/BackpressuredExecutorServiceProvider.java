@@ -11,6 +11,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.util.concurrent.MoreExecutors.shutdownAndAwaitTermination;
 
 final class BackpressuredExecutorServiceProvider extends BaseLifecycleComponent implements Provider<ExecutorService> {
@@ -20,8 +21,7 @@ final class BackpressuredExecutorServiceProvider extends BaseLifecycleComponent 
 
     @Override
     public ExecutorService get() {
-        checkStarted();
-        return executor;
+        return whenStartedAndNotLifecycling(() -> executor);
     }
 
     @Override
@@ -35,7 +35,7 @@ final class BackpressuredExecutorServiceProvider extends BaseLifecycleComponent 
                         .setNameFormat("upload-pool-%s")
                         .setDaemon(true)
                         .build(),
-                new ThreadPoolExecutor.CallerRunsPolicy());
+                this::rejectedExecution);
     }
 
     @Override
@@ -43,5 +43,11 @@ final class BackpressuredExecutorServiceProvider extends BaseLifecycleComponent 
         if (!shutdownAndAwaitTermination(executor, 3, TimeUnit.SECONDS)) {
             logger.warn("Failed to shutdown upload thread pool in 3 seconds");
         }
+        executor = null;
+    }
+
+    private void rejectedExecution(Runnable task, ThreadPoolExecutor executor) {
+        checkState(!executor.isShutdown(), "Executor shut down: %s", executor);
+        task.run();
     }
 }

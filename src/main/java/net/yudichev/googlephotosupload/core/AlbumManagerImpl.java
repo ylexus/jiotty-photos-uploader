@@ -38,7 +38,8 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     private final Provider<ExecutorService> executorServiceProvider;
     private final CloudOperationHelper cloudOperationHelper;
     private final ProgressStatusFactory progressStatusFactory;
-    private ExecutorService executorService;
+
+    private volatile ExecutorService executorService;
 
     @Inject
     AlbumManagerImpl(GooglePhotosClient googlePhotosClient,

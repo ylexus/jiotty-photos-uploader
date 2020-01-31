@@ -21,7 +21,8 @@ final class CloudAlbumsProviderImpl extends BaseLifecycleComponent implements Cl
     private final GooglePhotosClient googlePhotosClient;
     private final Provider<ExecutorService> executorServiceProvider;
     private final ProgressStatusFactory progressStatusFactory;
-    private ExecutorService executorService;
+
+    private volatile ExecutorService executorService;
 
     @Inject
     CloudAlbumsProviderImpl(CloudOperationHelper cloudOperationHelper,

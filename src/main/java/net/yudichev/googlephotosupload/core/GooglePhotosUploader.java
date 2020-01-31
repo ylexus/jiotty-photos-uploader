@@ -11,5 +11,5 @@ interface GooglePhotosUploader {
 
     void doNotResume();
 
-    boolean canResume();
+    int canResume();
 }

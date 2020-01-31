@@ -6,5 +6,5 @@ import java.util.concurrent.CompletableFuture;
 public interface Uploader {
     CompletableFuture<Void> upload(Path rootDir, boolean resume);
 
-    boolean canResume();
+    int numberOfUploadedItems();
 }

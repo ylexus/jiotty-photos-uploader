@@ -75,7 +75,7 @@ final class UploaderImpl implements Uploader {
     }
 
     @Override
-    public boolean canResume() {
+    public int numberOfUploadedItems() {
         return googlePhotosUploader.canResume();
     }
 }

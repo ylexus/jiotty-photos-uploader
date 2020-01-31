@@ -3,15 +3,18 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.*?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="folderSelector" alignment="CENTER" onDragDropped="#folderSelectorOnDragDropped"
       onDragEntered="#folderSelectorOnDragEnter" onDragExited="#folderSelectorOnDragExit" onDragOver="#folderSelectorOnDragOver" spacing="10.0"
       stylesheets="@style.css"
       VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/10.0.2-internal"
       fx:controller="net.yudichev.googlephotosupload.ui.FolderSelectorControllerImpl">
-    <VBox alignment="CENTER" VBox.vgrow="ALWAYS" spacing="10.0">
+    <VBox alignment="CENTER" spacing="10.0" VBox.vgrow="ALWAYS">
         <Label alignment="CENTER" contentDisplay="CENTER" text="Drag your folder with photos here or" textAlignment="CENTER" wrapText="true"/>
         <Button alignment="CENTER" mnemonicParsing="false" onAction="#onBrowseButtonClick" text="Browse..."/>
     </VBox>
-    <CheckBox fx:id="resumeCheckbox" alignment="BOTTOM_CENTER" mnemonicParsing="false" selected="true" text="Resume from last attempt" visible="false"/>
+    <FlowPane fx:id="resumePane" alignment="BOTTOM_CENTER" hgap="4.0" visible="false">
+        <CheckBox fx:id="resumeCheckbox" mnemonicParsing="false" selected="true" text="Resume from last attempt"/>
+        <Label fx:id="alreadyUploadedLabel"/>
+    </FlowPane>
 </VBox>

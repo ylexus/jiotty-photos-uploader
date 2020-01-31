@@ -24,8 +24,7 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
                 .build(StateSaverFactory.class));
 
         bind(ExecutorService.class).annotatedWith(Backpressured.class)
-                .toProvider(boundLifecycleComponent(BackpressuredExecutorServiceProvider.class))
-                .in(Singleton.class);
+                .toProvider(boundLifecycleComponent(BackpressuredExecutorServiceProvider.class));
 
         bind(DirectoryStructureSupplier.class).to(DirectoryStructureSupplierImpl.class);
 
