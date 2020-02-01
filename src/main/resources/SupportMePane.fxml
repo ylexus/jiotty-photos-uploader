@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.FlowPane?>
+<FlowPane xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER" hgap="4.0" styleClass="support-me" stylesheets="@style.css"
+          xmlns="http://javafx.com/javafx/10.0.2-internal" fx:controller="net.yudichev.googlephotosupload.ui.SupportMePaneFxController">
+    <Label text="I develop this app in my free time. "/>
+    <Hyperlink onAction="#onSupportLinkAction" text="Please support the project!"/>
+</FlowPane>

@@ -6,8 +6,9 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Text?>
 <?import javafx.scene.text.TextFlow?>
-<VBox xmlns:fx="http://javafx.com/fxml/1" layoutX="4.0" layoutY="4.0" prefWidth="600.0" spacing="4.0" stylesheets="@style.css" VBox.vgrow="ALWAYS"
-      xmlns="http://javafx.com/javafx/10.0.2-internal" fx:controller="net.yudichev.googlephotosupload.ui.UploadPaneControllerImpl">
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="topVBox" layoutX="4.0" layoutY="4.0" prefWidth="600.0" spacing="4.0" stylesheets="@style.css"
+      VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/10.0.2-internal"
+      fx:controller="net.yudichev.googlephotosupload.ui.UploadPaneControllerImpl">
     <padding>
         <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
     </padding>

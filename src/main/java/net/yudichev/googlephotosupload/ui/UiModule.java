@@ -3,7 +3,6 @@ package net.yudichev.googlephotosupload.ui;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
-import javafx.stage.Stage;
 import net.yudichev.googlephotosupload.core.PreferencesSupplier;
 import net.yudichev.googlephotosupload.core.ProgressStatus;
 import net.yudichev.googlephotosupload.core.ProgressStatusFactory;
@@ -14,20 +13,19 @@ import javax.inject.Singleton;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.yudichev.googlephotosupload.ui.Bindings.Primary;
 import static net.yudichev.googlephotosupload.ui.OperatingSystemDetection.OSType.MacOS;
 import static net.yudichev.googlephotosupload.ui.OperatingSystemDetection.getOperatingSystemType;
 
 final class UiModule extends BaseLifecycleComponentModule {
-    private final Consumer<Consumer<Stage>> primaryStageHandler;
+    private final Consumer<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler;
 
-    UiModule(Consumer<Consumer<Stage>> primaryStageHandler) {
-        this.primaryStageHandler = checkNotNull(primaryStageHandler);
+    UiModule(Consumer<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler) {
+        this.javafxApplicationResourcesHandler = checkNotNull(javafxApplicationResourcesHandler);
     }
 
     @Override
     protected void configure() {
-        bind(new TypeLiteral<Consumer<Consumer<Stage>>>() {}).annotatedWith(UserInterface.PrimaryStageHandler.class).toInstance(primaryStageHandler);
+        bind(new TypeLiteral<Consumer<Consumer<JavafxApplicationResources>>>() {}).toInstance(javafxApplicationResourcesHandler);
 
         install(new FactoryModuleBuilder()
                 .implement(ModalDialog.class, ModalDialogImpl.class)
@@ -49,9 +47,10 @@ final class UiModule extends BaseLifecycleComponentModule {
         Key<UploadPaneControllerImpl> uploadPaneControllerKey = boundLifecycleComponent(UploadPaneControllerImpl.class);
         bind(UploadPaneController.class).to(uploadPaneControllerKey);
 
-        Key<Stage> stageKey = Key.get(Stage.class, Primary.class);
-        bind(stageKey).toProvider(boundLifecycleComponent(UserInterface.class)).in(Singleton.class);
-        expose(stageKey);
+        bind(SupportMePaneFxController.class).in(Singleton.class);
+
+        bind(JavafxApplicationResources.class).toProvider(boundLifecycleComponent(UserInterface.class)).in(Singleton.class);
+        expose(JavafxApplicationResources.class);
 
         bind(FxmlContainerFactory.class).to(FxmlContainerFactoryImpl.class);
 
@@ -73,6 +72,7 @@ final class UiModule extends BaseLifecycleComponentModule {
         expose(LoginDialogFxControllerImpl.class);
         expose(FolderSelectorControllerImpl.class);
         expose(PreferencesDialogFxController.class);
+        expose(SupportMePaneFxController.class);
         expose(uploadPaneControllerKey);
         expose(PreferencesSupplier.class);
         expose(ModalDialogFactory.class);

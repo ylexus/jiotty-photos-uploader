@@ -40,3 +40,7 @@
 .url-bar {
     -fx-font-size: 12pt;
 }
+
+.support-me {
+    -fx-font-size: 0.8em;
+}

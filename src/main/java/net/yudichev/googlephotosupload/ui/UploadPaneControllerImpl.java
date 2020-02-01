@@ -4,6 +4,7 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -26,15 +27,24 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
 
     private final Uploader uploader;
     private final Restarter restarter;
+    private final FxmlContainerFactory fxmlContainerFactory;
     public VBox progressBox;
     public TextFlow logArea;
     public Button stopButton;
+    public VBox topVBox;
 
     @Inject
     UploadPaneControllerImpl(Uploader uploader,
-                             Restarter restarter) {
+                             Restarter restarter,
+                             FxmlContainerFactory fxmlContainerFactory) {
         this.uploader = checkNotNull(uploader);
         this.restarter = checkNotNull(restarter);
+        this.fxmlContainerFactory = checkNotNull(fxmlContainerFactory);
+    }
+
+    public void initialize() {
+        Pane supportMePane = fxmlContainerFactory.create("SupportMePane.fxml").root();
+        topVBox.getChildren().add(supportMePane);
     }
 
     @Override

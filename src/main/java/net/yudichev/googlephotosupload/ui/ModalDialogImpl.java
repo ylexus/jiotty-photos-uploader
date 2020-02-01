@@ -9,21 +9,19 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import java.util.function.Consumer;
 
-import static net.yudichev.googlephotosupload.ui.Bindings.Primary;
-
 final class ModalDialogImpl implements ModalDialog {
     private final Object fxController;
     private final Stage dialog;
 
     @Inject
-    ModalDialogImpl(@Primary Provider<Stage> primaryStageProvider,
+    ModalDialogImpl(Provider<JavafxApplicationResources> primaryStageProvider,
                     FxmlContainerFactory fxmlContainerFactory,
                     @Assisted("title") String title,
                     @Assisted("fxmlPath") String fxmlPath,
                     @Assisted Consumer<Stage> customizer) {
         FxmlContainer preferencesDialogFxContainer = fxmlContainerFactory.create(fxmlPath);
         fxController = preferencesDialogFxContainer.controller();
-        Stage primaryStage = primaryStageProvider.get();
+        Stage primaryStage = primaryStageProvider.get().primaryStage();
         dialog = new Stage();
         dialog.setMinHeight(500);
         dialog.setMinWidth(500);

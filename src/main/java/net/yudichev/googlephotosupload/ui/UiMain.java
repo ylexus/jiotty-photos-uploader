@@ -14,14 +14,14 @@ import static com.google.common.base.Preconditions.checkState;
 import static net.yudichev.jiotty.common.inject.BindingSpec.annotatedWith;
 
 public final class UiMain extends javafx.application.Application {
-    private static final AtomicReference<Consumer<Stage>> primaryStageHandler = new AtomicReference<>();
+    private static final AtomicReference<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler = new AtomicReference<>();
 
     public static void main(String[] args) {
         // TODO https://bugs.openjdk.java.net/browse/JDK-8221253, remove when moved to JDK13
         System.setProperty("jdk.tls.client.protocols", "TLSv1,TLSv1.1,TLSv1.2");
         Application.builder()
-                .addModule(() -> new UiModule(primaryStageHandler -> {
-                    checkState(UiMain.primaryStageHandler.compareAndSet(null, primaryStageHandler), "can only launch once");
+                .addModule(() -> new UiModule(javafxApplicationResourcesHandler -> {
+                    checkState(UiMain.javafxApplicationResourcesHandler.compareAndSet(null, javafxApplicationResourcesHandler), "can only launch once");
                     new Thread(() -> launch(args)).start();
                 }))
                 .addModule(() -> new UploadPhotosModule(1000))
@@ -36,6 +36,9 @@ public final class UiMain extends javafx.application.Application {
     public void start(Stage primaryStage) {
         primaryStage.setMinWidth(500);
         primaryStage.setMinHeight(500);
-        primaryStageHandler.get().accept(primaryStage);
+        javafxApplicationResourcesHandler.get().accept(JavafxApplicationResources.builder()
+                .setHostServices(getHostServices())
+                .setPrimaryStage(primaryStage)
+                .build());
     }
 }

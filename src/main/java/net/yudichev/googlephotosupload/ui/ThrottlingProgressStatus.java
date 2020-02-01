@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
@@ -24,6 +25,8 @@ final class ThrottlingProgressStatus implements ProgressStatus {
     private final AtomicInteger successCount = new AtomicInteger();
     private final AtomicInteger failureCount = new AtomicInteger();
     private final SchedulingExecutor executor;
+
+    private volatile boolean closed;
 
     @Inject
     ThrottlingProgressStatus(@Delegate ProgressValueUpdaterFactory delegateFactory,
@@ -37,28 +40,36 @@ final class ThrottlingProgressStatus implements ProgressStatus {
 
     @Override
     public void updateSuccess(int newValue) {
+        ensureNotClosed();
         successCount.set(newValue);
         eventSink.accept(() -> delegate.updateSuccess(successCount.get()));
     }
 
     @Override
     public void incrementSuccessBy(int increment) {
+        ensureNotClosed();
         successCount.updateAndGet(operand -> operand + increment);
         eventSink.accept(() -> delegate.updateSuccess(successCount.get()));
     }
 
     @Override
     public void incrementFailureBy(int increment) {
+        ensureNotClosed();
         failureCount.updateAndGet(operand -> operand + increment);
         eventSink.accept(() -> delegate.updateFailure(failureCount.get()));
     }
 
     @Override
     public void close() {
+        closed = true;
         delegate.updateSuccess(successCount.get());
         delegate.updateFailure(failureCount.get());
         executor.close();
         delegate.close();
+    }
+
+    private void ensureNotClosed() {
+        checkState(!closed, "closed");
     }
 
     @BindingAnnotation
