@@ -134,7 +134,11 @@ runtime {
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
             installerType = 'deb'
+            imageName = 'JiottyPhotosUploader'  // cannot have spaces in Debian resource names
+            installerName = 'JiottyPhotosUploader' // cannot have spaces in Debian resource names
             imageOptions = ['--verbose']
+            installerOptions = ['--verbose', '--linux-shortcut']
+            resourceDir = file("$rootDir/src/main/ui-resources/linux")
             /*
   --linux-package-name <package name>
           Name for Linux package, defaults to the application name
@@ -154,9 +158,16 @@ runtime {
           Section value of DEB control file.
   --linux-shortcut
           Creates a shortcut for the application
+
+Using default package resource template.desktop [Menu shortcut descriptor] (add Jiotty Photos Uploader.desktop to the resource-dir to customize).
+Using default package resource template.control [DEB control file] (add control to the resource-dir to customize).
+Using default package resource template.preinst [DEB preinstall script] (add preinst to the resource-dir to customize).
+Using default package resource template.prerm [DEB prerm script] (add prerm to the resource-dir to customize).
+Using default package resource template.postinst [DEB postinstall script] (add postinst to the resource-dir to customize).
+Using default package resource template.postrm [DEB postrm script] (add postrm to the resource-dir to customize).
+Using default package resource template.copyright [Copyright file] (add copyright to the resource-dir to customize).
+
             */
-            installerOptions = ['--verbose', '--linux-shortcut']
-            resourceDir = file("$rootDir/src/main/ui-resources/linux")
         }
     }
 }
