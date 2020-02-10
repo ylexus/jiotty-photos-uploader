@@ -8,7 +8,7 @@ plugins {
 
     // TODO add equivalent of maven dependency plugin
     // TODO until https://github.com/wfhartford/gradle-dependency-analyze/issues/39 is done, this plugin is useless
-//    id "ca.cutterslade.analyze" version "1.3.3"
+//    id "ca.cutterslade.analyze" version "1.4.0-SNAPSHOT"
 }
 
 group = 'net.yudichev'
@@ -33,7 +33,7 @@ dependencies {
     ext.orgJunitJupiterVersion = '5.5.0'
     ext.orgMockitoVersion = '2.28.2'
     ext.orgImmutablesVersion = '2.8.3'
-    ext.netYudichevJiottyVersion = '1.3-SNAPSHOT'
+    ext.netYudichevJiottyVersion = '1.3.0'
 
     annotationProcessor "org.immutables:value:$orgImmutablesVersion"
     testAnnotationProcessor "org.immutables:value:$orgImmutablesVersion"
@@ -47,6 +47,7 @@ dependencies {
     }
 
     implementation "net.yudichev.jiotty:jiotty-common", withoutGuice
+    implementation "net.yudichev.jiotty:jiotty-connector-google-common", withoutGuice
     implementation "net.yudichev.jiotty:jiotty-connector-google-photos", withoutGuice
     implementation "com.google.inject.extensions:guice-assistedinject", withoutGuice
     implementation "org.slf4j:slf4j-api"
@@ -58,9 +59,8 @@ dependencies {
     implementation "com.google.errorprone:error_prone_annotations"
     implementation "com.fasterxml.jackson.core:jackson-annotations"
     implementation "com.google.api:gax"
-    implementation "com.google.api:gax-grpc"
+//    implementation "com.google.api:gax-grpc"
     implementation "com.google.http-client:google-http-client"
-    implementation "io.grpc:grpc-api"
     implementation "commons-cli:commons-cli:1.4"
     implementation "com.fasterxml.jackson.core:jackson-databind:2.9.9"
     implementation "de.codecentric.centerdevice:centerdevice-nsmenufx:2.1.6"
@@ -74,6 +74,7 @@ dependencies {
     runtimeOnly "com.lmax:disruptor:3.4.2"
 
     testImplementation "net.yudichev.jiotty:jiotty-common"
+    testImplementation "io.grpc:grpc-api"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$orgJunitJupiterVersion"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$orgJunitJupiterVersion"
     testImplementation "org.mockito:mockito-core:$orgMockitoVersion"
