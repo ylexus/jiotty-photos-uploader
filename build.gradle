@@ -59,7 +59,6 @@ dependencies {
     implementation "com.google.errorprone:error_prone_annotations"
     implementation "com.fasterxml.jackson.core:jackson-annotations"
     implementation "com.google.api:gax"
-//    implementation "com.google.api:gax-grpc"
     implementation "com.google.http-client:google-http-client"
     implementation "commons-cli:commons-cli:1.4"
     implementation "com.fasterxml.jackson.core:jackson-databind:2.9.9"
@@ -96,7 +95,7 @@ repositories {
 }
 
 javafx {
-    version = '13.0.1'
+    version = '13.0.2'
     modules = ['javafx.controls', 'javafx.fxml', 'javafx.web']
 }
 
@@ -134,11 +133,10 @@ runtime {
             resourceDir = file("$rootDir/src/main/ui-resources/windows")
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
-            installerType = 'deb'
             imageName = 'JiottyPhotosUploader'  // cannot have spaces in Debian resource names
             installerName = 'JiottyPhotosUploader' // cannot have spaces in Debian resource names
             imageOptions = ['--verbose']
-            installerOptions = ['--verbose', '--linux-shortcut']
+            installerOptions = ['--verbose', '--linux-shortcut', '--linux-package-name', 'jiotty-photos-uploader']
             resourceDir = file("$rootDir/src/main/ui-resources/linux")
             /*
   --linux-package-name <package name>
