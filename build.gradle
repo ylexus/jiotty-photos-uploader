@@ -25,7 +25,7 @@ String clientSecretPath = readEnvOrNull('CLIENT_SECRET_PATH')
 if (clientSecretPath) {
     processResources {
         from file(clientSecretPath)
-        rename (clientSecretPath, 'client_secret_641898159424-0tmk9ngs1aog13ef0v4bg1njtnndj1c3.apps.googleusercontent.com.json')
+        rename(clientSecretPath, 'client_secret_641898159424-0tmk9ngs1aog13ef0v4bg1njtnndj1c3.apps.googleusercontent.com.json')
     }
 }
 
@@ -118,9 +118,6 @@ runtime {
     jpackage {
         jpackageHome = readEnvOrNull('JPACKAGE_HOME')
         jvmArgs = ['-Dprism.verbose=true']
-        // TODO scan https://openjdk.java.net/jeps/343 - do we need more options like copyright etc?
-        // TODO Google verify application
-        // TODO Apple verify application
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             installerType = 'dmg'
             imageOptions = ['--verbose', '--mac-sign', '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)']
@@ -137,7 +134,6 @@ runtime {
             imageName = 'JiottyPhotosUploader'  // cannot have spaces in Debian resource names
             installerName = 'JiottyPhotosUploader' // cannot have spaces in Debian resource names
             imageOptions = ['--verbose']
-            installerOptions = ['--verbose', '--linux-shortcut', '--linux-package-name', 'jiotty-photos-uploader']
             resourceDir = file("$rootDir/src/main/ui-resources/linux")
             /*
   --linux-package-name <package name>
@@ -158,16 +154,8 @@ runtime {
           Section value of DEB control file.
   --linux-shortcut
           Creates a shortcut for the application
-
-Using default package resource template.desktop [Menu shortcut descriptor] (add Jiotty Photos Uploader.desktop to the resource-dir to customize).
-Using default package resource template.control [DEB control file] (add control to the resource-dir to customize).
-Using default package resource template.preinst [DEB preinstall script] (add preinst to the resource-dir to customize).
-Using default package resource template.prerm [DEB prerm script] (add prerm to the resource-dir to customize).
-Using default package resource template.postinst [DEB postinstall script] (add postinst to the resource-dir to customize).
-Using default package resource template.postrm [DEB postrm script] (add postrm to the resource-dir to customize).
-Using default package resource template.copyright [Copyright file] (add copyright to the resource-dir to customize).
-
             */
+            installerOptions = ['--verbose', '--linux-shortcut', '--linux-package-name', 'jiotty-photos-uploader']
         }
     }
 }
