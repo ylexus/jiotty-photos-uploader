@@ -7,14 +7,13 @@ plugins {
     // TODO no good alternative to maven duplicate finder
     // id "net.idlestate.gradle-duplicate-classes-check" version "1.0.2"
 
-    // TODO add equivalent of maven dependency plugin
-    // TODO until https://github.com/wfhartford/gradle-dependency-analyze/issues/39 is done, this plugin is useless
-//    id "ca.cutterslade.analyze" version "1.4.0-SNAPSHOT"
+    id "ca.cutterslade.analyze" version "1.4.0-SNAPSHOT"
 }
 
 version = readEnvOrNull('VERSION')
 //noinspection GroovyUnusedAssignment
 sourceCompatibility = '13'
+ext.javafxVersion  = '13.0.2'
 
 application {
     mainClassName = 'net.yudichev.googlephotosupload.ui.Launcher'
@@ -27,6 +26,11 @@ if (clientSecretPath) {
         from file(clientSecretPath)
         rename(clientSecretPath, 'client_secret_641898159424-0tmk9ngs1aog13ef0v4bg1njtnndj1c3.apps.googleusercontent.com.json')
     }
+}
+
+javafx {
+    version = "$javafxVersion"
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.web']
 }
 
 dependencies {
@@ -77,11 +81,16 @@ dependencies {
     testImplementation "io.grpc:grpc-api"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$orgJunitJupiterVersion"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$orgJunitJupiterVersion"
-    testImplementation "org.mockito:mockito-core:$orgMockitoVersion"
     testImplementation "org.mockito:mockito-junit-jupiter:$orgMockitoVersion"
     testImplementation "org.hamcrest:hamcrest:2.1"
-    testImplementation "com.spotify:hamcrest-optional:1.1.4"
     testCompileOnly "org.immutables:value:$orgImmutablesVersion"
+
+    // these are added by the javafx plugin
+    permitUnusedDeclared "org.openjfx:javafx-base:$javafxVersion"
+    permitUnusedDeclared "org.openjfx:javafx-controls:$javafxVersion"
+    permitUnusedDeclared "org.openjfx:javafx-graphics:$javafxVersion"
+    permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion"
+    permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:mac"
 }
 
 repositories {
@@ -93,11 +102,6 @@ repositories {
         }
     }
     mavenLocal()
-}
-
-javafx {
-    version = '13.0.2'
-    modules = ['javafx.controls', 'javafx.fxml', 'javafx.web']
 }
 
 test {
