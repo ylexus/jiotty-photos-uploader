@@ -13,7 +13,7 @@ plugins {
 version = readEnvOrNull('VERSION')
 //noinspection GroovyUnusedAssignment
 sourceCompatibility = '13'
-ext.javafxVersion  = '13.0.2'
+ext.javafxVersion = '13.0.2'
 
 application {
     mainClassName = 'net.yudichev.googlephotosupload.ui.Launcher'
