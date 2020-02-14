@@ -14,6 +14,7 @@ import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
@@ -72,26 +73,29 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
         checkStarted();
         stopButton.setDisable(false);
         return uploader.upload(path, resume)
-                .whenComplete((aVoid, e) -> runLater(() -> {
-                    if (isStarted()) {
-                        stopButton.setVisible(false);
-                        //TODO where do we put warnings about empty albums?
-                        ObservableList<Node> logAreaChildren = logArea.getChildren();
-                        if (e == null) {
-                            logArea.getStyleClass().add("success-background");
-                            logAreaChildren.add(new Text("Total success, ladies and gentlemen!"));
-                        } else {
-                            logger.error("Upload failed", e);
-                            logArea.getStyleClass().add("failed-background");
-                            logAreaChildren.add(new Text("Something went wrong: "));
-                            Text failureText = new Text(humanReadableMessage(e));
-                            failureText.getStyleClass().add("failed-text");
-                            logAreaChildren.add(failureText);
-                        }
-                    } else if (e != null) {
-                        logger.info("Upload failed after stop", e);
-                    }
-                }));
+                .whenComplete((aVoid, e) -> onUploadComplete(e));
+    }
+
+    private void onUploadComplete(@Nullable Throwable exception) {
+        runLater(() -> {
+            if (isStarted()) {
+                stopButton.setVisible(false);
+                ObservableList<Node> logAreaChildren = logArea.getChildren();
+                if (exception == null) {
+                    logArea.getStyleClass().add("success-background");
+                    logAreaChildren.add(new Text("Total success, ladies and gentlemen!"));
+                } else {
+                    logger.error("Upload failed", exception);
+                    logArea.getStyleClass().add("failed-background");
+                    logAreaChildren.add(new Text("Something went wrong: "));
+                    Text failureText = new Text(humanReadableMessage(exception));
+                    failureText.getStyleClass().add("failed-text");
+                    logAreaChildren.add(failureText);
+                }
+            } else if (exception != null) {
+                logger.info("Upload failed after stop", exception);
+            }
+        });
     }
 
     @Override
