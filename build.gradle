@@ -126,19 +126,19 @@ runtime {
             installerType = 'dmg'
             imageOptions = ['--verbose', '--mac-sign', '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)']
             installerOptions = ['--verbose']
-            resourceDir = file("$rootDir/src/main/ui-resources/macOS/out")
+            resourceDir = file("$rootDir/src/main/packaging-resources/macOS/out")
         }
         if (org.gradle.internal.os.OperatingSystem.current().windows) {
             installerType = 'exe'
             imageOptions = ['--verbose']
             installerOptions = ['--verbose', '--win-per-user-install', '--win-menu']
-            resourceDir = file("$rootDir/src/main/ui-resources/windows")
+            resourceDir = file("$rootDir/src/main/packaging-resources/windows")
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
             imageName = 'JiottyPhotosUploader'  // cannot have spaces in Debian resource names
             installerName = 'JiottyPhotosUploader' // cannot have spaces in Debian resource names
             imageOptions = ['--verbose']
-            resourceDir = file("$rootDir/src/main/ui-resources/linux")
+            resourceDir = file("$rootDir/src/main/packaging-resources/linux")
             /*
   --linux-package-name <package name>
           Name for Linux package, defaults to the application name
