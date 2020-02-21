@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 
@@ -29,18 +30,22 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     private final Uploader uploader;
     private final Restarter restarter;
     private final FxmlContainerFactory fxmlContainerFactory;
+    private final Provider<MainScreenController> mainScreenControllerProvider;
     public VBox progressBox;
     public TextFlow logArea;
     public Button stopButton;
     public VBox topVBox;
+    public Button uploadMoreButton;
 
     @Inject
     UploadPaneControllerImpl(Uploader uploader,
                              Restarter restarter,
-                             FxmlContainerFactory fxmlContainerFactory) {
+                             FxmlContainerFactory fxmlContainerFactory,
+                             Provider<MainScreenController> mainScreenControllerProvider) {
         this.uploader = checkNotNull(uploader);
         this.restarter = checkNotNull(restarter);
         this.fxmlContainerFactory = checkNotNull(fxmlContainerFactory);
+        this.mainScreenControllerProvider = checkNotNull(mainScreenControllerProvider);
     }
 
     public void initialize() {
@@ -60,11 +65,12 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
             logArea.getStyleClass().remove("failed-background");
             ObservableList<Node> logAreaChildren = logArea.getChildren();
             logAreaChildren.clear();
+            logArea.setVisible(false);
 
             progressBox.getChildren().clear();
 
-            stopButton.setVisible(true);
             stopButton.setDisable(true);
+            uploadMoreButton.setDisable(true);
         });
     }
 
@@ -76,10 +82,17 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
                 .whenComplete((aVoid, e) -> onUploadComplete(e));
     }
 
+    public void onUploadMoreButtonPressed(ActionEvent actionEvent) {
+        mainScreenControllerProvider.get().toFolderSelectionMode();
+        actionEvent.consume();
+    }
+
     private void onUploadComplete(@Nullable Throwable exception) {
         runLater(() -> {
             if (isStarted()) {
-                stopButton.setVisible(false);
+                stopButton.setDisable(true);
+                uploadMoreButton.setDisable(false);
+                logArea.setVisible(true);
                 ObservableList<Node> logAreaChildren = logArea.getChildren();
                 if (exception == null) {
                     logArea.getStyleClass().add("success-background");
