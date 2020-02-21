@@ -13,7 +13,6 @@ import java.lang.annotation.Target;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.annotation.ElementType.*;
@@ -21,7 +20,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 final class ThrottlingProgressStatus implements ProgressStatus {
     private final ProgressValueUpdater delegate;
-    private final Consumer<Runnable> eventSink;
+    private final ThrottlingConsumer<Runnable> eventSink;
     private final AtomicInteger successCount = new AtomicInteger();
     private final AtomicInteger failureCount = new AtomicInteger();
     private final SchedulingExecutor executor;
@@ -64,6 +63,7 @@ final class ThrottlingProgressStatus implements ProgressStatus {
         closed = true;
         delegate.updateSuccess(successCount.get());
         delegate.updateFailure(failureCount.get());
+        eventSink.close();
         executor.close();
         delegate.close();
     }
