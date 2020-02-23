@@ -6,33 +6,39 @@ BUILD_DIR="${PROJECT_DIR}/build"
 CODESIGN_IDENTITY="Developer ID Application: Alexey Yudichev (J4R72JZQ9P)"
 APP_NAME="${1}"
 VERSION="${2}"
-[[ -z "${APP_NAME}" ]] && { echo "app name missing" ; exit 1; }
-[[ -z "${VERSION}" ]] && { echo "version missing" ; exit 1; }
+[[ -z "${APP_NAME}" ]] && {
+  echo "app name missing"
+  exit 1
+}
+[[ -z "${VERSION}" ]] && {
+  echo "version missing"
+  exit 1
+}
 
 echo "Signing and notarizing $1 version $2"
 
 function sign_jar_internals() {
-    local jar_path="$1"
-    local tmp_unpacked_path="${BUILD_DIR}/tmp/${jar_path}_unpacked"
-    rm -rf "${tmp_unpacked_path}"
-    mkdir -p "${tmp_unpacked_path}"
-    unzip -q "${jar_path}" -d "${tmp_unpacked_path}"
-    find "${tmp_unpacked_path}" \
-      -type f \
-      -name "*lib" \
-      -exec codesign \
-      -f \
-      --timestamp \
-      --entitlements "${PROJECT_DIR}/src/main/packaging-resources/macOS/entitlements.plist" \
-      -s "${CODESIGN_IDENTITY}"\
-      --prefix net.yudichev.googlephotosupload.ui.\
-      --options runtime \
-      -vvvv \
-      {} \;
+  local jar_path="$1"
+  local tmp_unpacked_path="${BUILD_DIR}/tmp/${jar_path}_unpacked"
+  rm -rf "${tmp_unpacked_path}"
+  mkdir -p "${tmp_unpacked_path}"
+  unzip -q "${jar_path}" -d "${tmp_unpacked_path}"
+  find "${tmp_unpacked_path}" \
+    -type f \
+    -name "*lib" \
+    -exec codesign \
+    -f \
+    --timestamp \
+    --entitlements "${PROJECT_DIR}/src/main/packaging-resources/macOS/entitlements.plist" \
+    -s "${CODESIGN_IDENTITY}" \
+    --prefix net.yudichev.googlephotosupload.ui. \
+    --options runtime \
+    -vvvv \
+    {} \;
 
-    rm -f "${jar_path}"
-    (cd "${tmp_unpacked_path}" && zip -q -r "${jar_path}" ./*)
-    echo "signed ${jar_path}"
+  rm -f "${jar_path}"
+  (cd "${tmp_unpacked_path}" && zip -q -r "${jar_path}" ./*)
+  echo "signed ${jar_path}"
 }
 
 sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/grpc-netty-shaded-1.21.0.jar"
@@ -47,8 +53,8 @@ find "${BUILD_DIR}/jpackage/${APP_NAME}.app" -type f \
   -exec codesign \
   --timestamp \
   --entitlements "src/main/packaging-resources/macOS/entitlements.plist" \
-  -s "${CODESIGN_IDENTITY}"\
-  --prefix net.yudichev.googlephotosupload.ui.\
+  -s "${CODESIGN_IDENTITY}" \
+  --prefix net.yudichev.googlephotosupload.ui. \
   --options runtime \
   -vvvv \
   {} \;
