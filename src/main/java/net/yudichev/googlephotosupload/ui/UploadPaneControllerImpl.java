@@ -89,7 +89,7 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
 
     private void onUploadComplete(@Nullable Throwable exception) {
         runLater(() -> {
-            if (isStarted()) {
+            if (isStarted() && !stopButton.isDisabled()) {
                 stopButton.setDisable(true);
                 uploadMoreButton.setDisable(false);
                 logArea.setVisible(true);
