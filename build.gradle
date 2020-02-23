@@ -124,7 +124,7 @@ runtime {
         jvmArgs = ['-Dprism.verbose=true']
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             installerType = 'dmg'
-            imageOptions = ['--verbose', '--mac-sign', '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)']
+            imageOptions = ['--verbose', /*'--mac-sign',*/ '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)']
             installerOptions = ['--verbose']
             resourceDir = file("$rootDir/src/main/packaging-resources/macOS/out")
         }
@@ -161,6 +161,12 @@ runtime {
             */
             installerOptions = ['--verbose', '--linux-shortcut', '--linux-package-name', 'jiotty-photos-uploader']
         }
+    }
+}
+
+if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+    task macos_notarize(type: Exec, dependsOn: jpackage) {
+        commandLine "$projectDir/macos_notarize_dmg.sh", "$project.name", "$version"
     }
 }
 
