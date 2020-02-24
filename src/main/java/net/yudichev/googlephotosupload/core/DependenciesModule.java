@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.io.Resources.getResource;
+import static net.yudichev.googlephotosupload.core.AppName.APP_TITLE;
 
 public final class DependenciesModule extends AbstractModule {
     private static final String APPLICATION_NAME = "jiottyphotosuploader";
@@ -36,7 +37,7 @@ public final class DependenciesModule extends AbstractModule {
 
         GoogleApiAuthSettings.Builder googleApiSettingsBuilder = GoogleApiAuthSettings.builder()
                 .setAuthDataStoreRootDir(authDataStoreRootDir)
-                .setApplicationName("Jiotty Photos Uploader")
+                .setApplicationName(APP_TITLE)
                 .setCredentialsUrl(getResource("client_secret_641898159424-0tmk9ngs1aog13ef0v4bg1njtnndj1c3.apps.googleusercontent.com.json"));
         googleApiSettingsCustomiser.accept(googleApiSettingsBuilder);
         install(GooglePhotosModule.builder()

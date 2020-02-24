@@ -7,10 +7,10 @@ plugins {
     // TODO no good alternative to maven duplicate finder
     // id "net.idlestate.gradle-duplicate-classes-check" version "1.0.2"
 
-    id "ca.cutterslade.analyze" version "1.4.0-SNAPSHOT"
+    id "ca.cutterslade.analyze" version "1.4.0"
 }
 
-version = readEnvOrNull('VERSION')
+version = readEnvOrDefault('VERSION', 'DEVELOPMENT')
 //noinspection GroovyUnusedAssignment
 sourceCompatibility = '13'
 ext.javafxVersion = '13.0.2'
@@ -31,6 +31,13 @@ if (clientSecretPath) {
 javafx {
     version = "$javafxVersion"
     modules = ['javafx.controls', 'javafx.fxml', 'javafx.web']
+}
+
+jar {
+    manifest {
+        attributes 'Implementation-Title': project.name,
+                'Implementation-Version': archiveVersion
+    }
 }
 
 dependencies {
@@ -67,7 +74,7 @@ dependencies {
     implementation "com.google.http-client:google-http-client"
     implementation "commons-cli:commons-cli:1.4"
     implementation "com.fasterxml.jackson.core:jackson-databind:2.9.9"
-    implementation "de.codecentric.centerdevice:centerdevice-nsmenufx:2.1.6"
+    implementation "de.codecentric.centerdevice:centerdevice-nsmenufx:2.1.7"
 
     // This is to test dependency analyser
     //implementation "org.apache.commons:commons-skin:4.2"
@@ -172,4 +179,8 @@ if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
 
 private static readEnvOrNull(String variableName) {
     System.getProperty(variableName, System.getenv(variableName))
+}
+
+private static readEnvOrDefault(String variableName, String defaultValue) {
+    readEnvOrNull(variableName) ?: defaultValue
 }

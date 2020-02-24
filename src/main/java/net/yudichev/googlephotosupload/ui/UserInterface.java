@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static net.yudichev.googlephotosupload.core.AppName.APP_TITLE;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class UserInterface extends BaseLifecycleComponent implements Provider<JavafxApplicationResources> {
@@ -56,9 +57,9 @@ final class UserInterface extends BaseLifecycleComponent implements Provider<Jav
                 FxmlContainer fxmlContainer = fxmlContainerFactory.create("MainScreen.fxml");
                 Parent parent = fxmlContainer.root();
                 primaryStage.setScene(new Scene(parent));
-                primaryStage.setTitle("Jiotty Photos Uploader");
+                primaryStage.setTitle(APP_TITLE);
                 primaryStage.show();
-                primaryStage.setOnCloseRequest(e -> applicationLifecycleControl.initiateShutdown());
+                primaryStage.setOnHiding(e -> applicationLifecycleControl.initiateShutdown());
                 initLatch.countDown();
             });
             logger.info("Waiting for 10 seconds until UI is initialized");

@@ -11,9 +11,11 @@ import javafx.scene.input.KeyCodeCombination;
 
 import static javafx.scene.input.KeyCode.COMMA;
 import static javafx.scene.input.KeyCombination.META_DOWN;
+import static net.yudichev.googlephotosupload.core.AppName.APP_TITLE;
 
 final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
     private MenuItem preferencesMenuItem;
+    private MenuItem aboutMenuItem;
 
     @Override
     public void initialize(MenuBar menuBar) {
@@ -35,5 +37,10 @@ final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
     @Override
     public void onPreferencesAction(EventHandler<ActionEvent> onPreferencesEventHandler) {
         preferencesMenuItem.setOnAction(onPreferencesEventHandler);
+    }
+
+    @Override
+    public void setOnAboutAction(EventHandler<ActionEvent> onAboutAction) {
+        aboutMenuItem.setOnAction(onAboutAction);
     }
 }

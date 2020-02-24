@@ -44,3 +44,9 @@
 .support-me {
     -fx-font-size: 0.8em;
 }
+
+.copyable-label, .copyable-label:focused {
+    -fx-background-color: transparent ;
+    -fx-background-insets: 0px ;
+    -fx-padding: 0;
+}

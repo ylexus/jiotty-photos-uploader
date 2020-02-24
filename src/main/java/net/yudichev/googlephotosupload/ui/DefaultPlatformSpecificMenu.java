@@ -11,15 +11,22 @@ import javafx.scene.control.SeparatorMenuItem;
 final class DefaultPlatformSpecificMenu implements PlatformSpecificMenu {
     private MenuItem exitMenuItem;
     private MenuItem preferencesMenuItem;
+    private MenuItem aboutMenuItem;
 
     @Override
     public void initialize(MenuBar menuBar) {
         Menu fileMenu = new Menu("File");
         ObservableList<MenuItem> fileMenuItems = fileMenu.getItems();
+
+        aboutMenuItem = new MenuItem("About...");
+        fileMenuItems.add(aboutMenuItem);
+
         preferencesMenuItem = new MenuItem("Settings...");
-        exitMenuItem = new MenuItem("Exit");
         fileMenuItems.add(preferencesMenuItem);
+
         fileMenuItems.add(new SeparatorMenuItem());
+        exitMenuItem = new MenuItem("Exit");
+
         fileMenuItems.add(exitMenuItem);
         menuBar.getMenus().add(0, fileMenu);
     }
@@ -32,5 +39,10 @@ final class DefaultPlatformSpecificMenu implements PlatformSpecificMenu {
     @Override
     public void onPreferencesAction(EventHandler<ActionEvent> onPreferencesEventHandler) {
         preferencesMenuItem.setOnAction(onPreferencesEventHandler);
+    }
+
+    @Override
+    public void setOnAboutAction(EventHandler<ActionEvent> onAboutAction) {
+        aboutMenuItem.setOnAction(onAboutAction);
     }
 }

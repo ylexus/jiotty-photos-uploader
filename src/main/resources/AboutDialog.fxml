@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<GridPane xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER" hgap="4.0" stylesheets="@style.css" vgap="4.0" xmlns="http://javafx.com/javafx/10.0.2-internal"
+          fx:controller="net.yudichev.googlephotosupload.ui.AboutDialogFxController">
+    <ImageView fitWidth="100.0" preserveRatio="true" GridPane.rowSpan="2">
+        <Image url="@Icon1024.png"/>
+    </ImageView>
+    <Label fx:id="titleLabel" GridPane.columnIndex="1"/>
+    <HBox GridPane.columnIndex="1" GridPane.rowIndex="1">
+        <Label text="Version "/>
+        <TextField fx:id="versionLabel" editable="false" focusTraversable="false" styleClass="copyable-label" text="1.0.1"/>
+    </HBox>
+    <Pane fx:id="supportMePane" GridPane.columnSpan="2" GridPane.rowIndex="2"/>
+    <padding>
+        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
+    </padding>
+    <columnConstraints>
+        <ColumnConstraints/>
+        <ColumnConstraints/>
+    </columnConstraints>
+    <rowConstraints>
+        <RowConstraints/>
+        <RowConstraints/>
+        <RowConstraints/>
+    </rowConstraints>
+</GridPane>

@@ -55,8 +55,10 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
         runLater(this::closeDialog);
     }
 
-    private void customizeLoginDialog(Stage stage) {
-        stage.setOnCloseRequest(event -> {
+    private void customizeLoginDialog(Stage dialog) {
+        dialog.setMinHeight(500);
+        dialog.setMinWidth(500);
+        dialog.setOnCloseRequest(event -> {
             applicationLifecycleControl.initiateShutdown();
             event.consume();
         });

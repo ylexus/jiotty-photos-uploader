@@ -29,6 +29,7 @@ public final class MainScreenControllerImpl implements MainScreenController {
     public MenuItem menuItemStopUpload;
     public VBox root;
     private ModalDialog preferencesDialog;
+    private ModalDialog aboutDialog;
 
     @Inject
     public MainScreenControllerImpl(ApplicationLifecycleControl applicationLifecycleControl,
@@ -57,12 +58,6 @@ public final class MainScreenControllerImpl implements MainScreenController {
         platformSpecificMenu.onPreferencesAction(this::onPreferences);
     }
 
-    public void onMenuActionLogout(ActionEvent actionEvent) {
-        restarter.initiateLogoutAndRestart();
-        menuItemLogout.setDisable(true);
-        actionEvent.consume();
-    }
-
     @Override
     public void toFolderSelectionMode() {
         runLater(() -> {
@@ -83,6 +78,15 @@ public final class MainScreenControllerImpl implements MainScreenController {
         actionEvent.consume();
     }
 
+    private void onAbout(ActionEvent actionEvent) {
+        if (aboutDialog == null) {
+            aboutDialog = modalDialogFactory.create("About", "AboutDialog.fxml", stage -> {});
+        }
+        aboutDialog.show();
+        actionEvent.consume();
+
+    }
+
     private void onMenuExit(ActionEvent actionEvent) {
         applicationLifecycleControl.initiateShutdown();
         actionEvent.consume();
@@ -90,7 +94,10 @@ public final class MainScreenControllerImpl implements MainScreenController {
 
     private void onPreferences(ActionEvent actionEvent) {
         if (preferencesDialog == null) {
-            preferencesDialog = modalDialogFactory.create("Preferences", "PreferencesDialog.fxml", stage -> {});
+            preferencesDialog = modalDialogFactory.create("Preferences", "PreferencesDialog.fxml", dialog -> {
+                dialog.setMinHeight(500);
+                dialog.setMinWidth(500);
+            });
         }
         preferencesDialog.show();
         actionEvent.consume();
