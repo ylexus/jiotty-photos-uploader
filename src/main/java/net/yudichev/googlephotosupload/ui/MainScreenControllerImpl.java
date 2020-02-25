@@ -54,8 +54,15 @@ public final class MainScreenControllerImpl implements MainScreenController {
 
     public void initialize() {
         platformSpecificMenu.initialize(menuBar);
-        platformSpecificMenu.onExitAction(this::onMenuExit);
-        platformSpecificMenu.onPreferencesAction(this::onPreferences);
+        platformSpecificMenu.setOnExitAction(this::onMenuExit);
+        platformSpecificMenu.setOnPreferencesAction(this::onPreferences);
+        platformSpecificMenu.setOnAboutAction(this::onAbout);
+    }
+
+    public void onMenuActionLogout(ActionEvent actionEvent) {
+        restarter.initiateLogoutAndRestart();
+        menuItemLogout.setDisable(true);
+        actionEvent.consume();
     }
 
     @Override

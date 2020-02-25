@@ -7,7 +7,9 @@ import javafx.scene.control.MenuBar;
 interface PlatformSpecificMenu {
     void initialize(MenuBar menuBar);
 
-    void onExitAction(EventHandler<ActionEvent> onExitEventHandler);
+    void setOnExitAction(EventHandler<ActionEvent> onExitEventHandler);
 
-    void onPreferencesAction(EventHandler<ActionEvent> onPreferencesEventHandler);
+    void setOnPreferencesAction(EventHandler<ActionEvent> onPreferencesEventHandler);
+
+    void setOnAboutAction(EventHandler<ActionEvent> onAboutAction);
 }

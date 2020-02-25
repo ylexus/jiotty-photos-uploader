@@ -32,12 +32,12 @@ final class DefaultPlatformSpecificMenu implements PlatformSpecificMenu {
     }
 
     @Override
-    public void onExitAction(EventHandler<ActionEvent> onExitEventHandler) {
+    public void setOnExitAction(EventHandler<ActionEvent> onExitEventHandler) {
         exitMenuItem.setOnAction(onExitEventHandler);
     }
 
     @Override
-    public void onPreferencesAction(EventHandler<ActionEvent> onPreferencesEventHandler) {
+    public void setOnPreferencesAction(EventHandler<ActionEvent> onPreferencesEventHandler) {
         preferencesMenuItem.setOnAction(onPreferencesEventHandler);
     }
 
