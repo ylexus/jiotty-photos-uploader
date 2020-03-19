@@ -103,6 +103,9 @@ dependencies {
 repositories {
     mavenCentral()
     maven {
+        url "https://maven.google.com"
+    }
+    maven {
         url "https://oss.sonatype.org/content/repositories/snapshots"
         mavenContent {
             snapshotsOnly()
@@ -123,7 +126,11 @@ runtime {
                '--no-man-pages']
 
     // required by httpclient, missed by default when building and running on Windows
-    modules = ['java.naming']
+    modules = [
+            // required by httpclient, missed by default when building and running on Windows
+            'java.naming',
+            // required to establish an SSL connection
+            'jdk.crypto.ec']
     additive = true
 
     jpackage {
@@ -171,9 +178,14 @@ runtime {
     }
 }
 
-if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
-    task macos_notarize(type: Exec, dependsOn: jpackage) {
-        commandLine "$projectDir/macos_notarize_dmg.sh", "$project.name", "$version"
+task fullpackage {
+    dependsOn jpackage
+    doLast {
+        if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+            exec {
+                commandLine "$projectDir/macos_notarize_dmg.sh", "$project.name", "$version"
+            }
+        }
     }
 }
 

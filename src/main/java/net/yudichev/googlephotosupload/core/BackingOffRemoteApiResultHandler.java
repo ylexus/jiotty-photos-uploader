@@ -43,7 +43,7 @@ final class BackingOffRemoteApiResultHandler implements RemoteApiResultHandler {
                 .findFirst()
                 .map(throwable -> {
                     long backOffMs = getAsUnchecked(backOff::nextBackOffMillis);
-                    logger.debug("Retryable exception performing operation '{}', backing off by waiting for {}ms ({})", operationName, backOffMs, throwable);
+                    logger.debug("Retryable exception performing operation '{}', backing off by waiting for {}ms", operationName, backOffMs, throwable);
                     asUnchecked(() -> Thread.sleep(backOffMs));
                     return TRUE;
                 })

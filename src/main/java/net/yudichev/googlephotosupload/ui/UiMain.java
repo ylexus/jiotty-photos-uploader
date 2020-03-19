@@ -17,8 +17,6 @@ public final class UiMain extends javafx.application.Application {
     private static final AtomicReference<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler = new AtomicReference<>();
 
     public static void main(String[] args) {
-        // TODO https://bugs.openjdk.java.net/browse/JDK-8221253, remove when moved to JDK13
-        System.setProperty("jdk.tls.client.protocols", "TLSv1,TLSv1.1,TLSv1.2");
         Application.builder()
                 .addModule(() -> new UiModule(javafxApplicationResourcesHandler -> {
                     checkState(UiMain.javafxApplicationResourcesHandler.compareAndSet(null, javafxApplicationResourcesHandler), "can only launch once");

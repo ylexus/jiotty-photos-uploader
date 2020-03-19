@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+NOTARIZATION_TIMEOUT_SEC=600
+NOTARIZATION_TIME_INCREMENT_SEC=5
 PROJECT_DIR="$PWD"
 BUILD_DIR="${PROJECT_DIR}/build"
 CODESIGN_IDENTITY="Developer ID Application: Alexey Yudichev (J4R72JZQ9P)"
@@ -52,7 +54,7 @@ find "${BUILD_DIR}/jpackage/${APP_NAME}.app" -type f \
   -not -path "*libapplauncher.dylib" \
   -exec codesign \
   --timestamp \
-  --entitlements "src/main/packaging-resources/macOS/entitlements.plist" \
+  --entitlements "${PROJECT_DIR}/src/main/packaging-resources/macOS/entitlements.plist" \
   -s "${CODESIGN_IDENTITY}" \
   --prefix net.yudichev.googlephotosupload.ui. \
   --options runtime \
@@ -65,7 +67,7 @@ find "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/runtime" -type f \
   -exec codesign \
   -f \
   --timestamp \
-  --entitlements "src/main/packaging-resources/macOS/entitlements.plist" \
+  --entitlements "${PROJECT_DIR}/src/main/packaging-resources/macOS/entitlements.plist" \
   -s "${CODESIGN_IDENTITY}" \
   --prefix net.yudichev.googlephotosupload.ui. \
   --options runtime \
@@ -75,7 +77,7 @@ find "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/runtime" -type f \
 codesign \
   -f \
   --timestamp \
-  --entitlements "src/main/packaging-resources/macOS/entitlements.plist" \
+  --entitlements "${PROJECT_DIR}/src/main/packaging-resources/macOS/entitlements.plist" \
   -s "${CODESIGN_IDENTITY}" \
   --prefix net.yudichev.googlephotosupload.ui. \
   --options runtime \
@@ -85,7 +87,7 @@ codesign \
 codesign \
   -f \
   --timestamp \
-  --entitlements "src/main/packaging-resources/macOS/entitlements.plist" \
+  --entitlements "${PROJECT_DIR}/src/main/packaging-resources/macOS/entitlements.plist" \
   -s "${CODESIGN_IDENTITY}" \
   --prefix net.yudichev.googlephotosupload.ui. \
   --options runtime \
@@ -100,8 +102,39 @@ codesign \
   --app-image "${BUILD_DIR}/jpackage/${APP_NAME}.app" \
   --resource-dir "${PROJECT_DIR}/src/main/packaging-resources/macOS/out"
 
-xcrun altool \
+echo "Uploading package for notarization..."
+notarize_output="$(xcrun altool \
   --notarize-app \
   --primary-bundle-id "net.yudichev.jiottyphotosupload.dmg" \
   --username "a@yudichev.net" --password "@keychain:Apple Notarization Tool App Password" \
-  --file "${BUILD_DIR}/jpackage/${APP_NAME}-${VERSION}.dmg"
+  --file "${BUILD_DIR}/jpackage/${APP_NAME}-${VERSION}.dmg")"
+
+request_uuid="$(echo "${notarize_output}"  | grep "RequestUUID = " | awk '{print $3}')"
+if [[ -z "${request_uuid}" ]]; then
+  >&2 echo "Notarization command failed, output was:"
+  echo "${notarize_output}"
+  exit 1;
+fi
+echo "Notarization command success, request ID ${request_uuid}, full output was:"
+echo "${notarize_output}"
+
+notarization_waited_sec=0
+echo "Waiting for a max of ${NOTARIZATION_TIMEOUT_SEC} seconds for the package to be notarized..."
+while [[ $notarization_waited_sec -lt $NOTARIZATION_TIMEOUT_SEC ]] && [[ "${notaizaiton_status}" != "success" ]]
+do
+  sleep $NOTARIZATION_TIME_INCREMENT_SEC
+  notarization_waited_sec=$(( notarization_waited_sec + NOTARIZATION_TIME_INCREMENT_SEC ))
+  notaizaiton_status_str="$(xcrun altool --notarization-history 0 --username "a@yudichev.net" --password "@keychain:Apple Notarization Tool App Password" \
+  | grep "${request_uuid}")"
+  echo "${notaizaiton_status_str}"
+  notaizaiton_status="$(echo "${notaizaiton_status_str}" | awk '{print $5}')"
+done
+if [[ "${notaizaiton_status}" != "success" ]]; then
+  >&2 echo "Failed to notarize"
+  exit 1;
+fi
+
+echo "Notarized, stapling..."
+xcrun stapler staple "${BUILD_DIR}/jpackage/${APP_NAME}-${VERSION}.dmg"
+
+echo "All done"
