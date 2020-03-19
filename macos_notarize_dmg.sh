@@ -109,29 +109,28 @@ notarize_output="$(xcrun altool \
   --username "a@yudichev.net" --password "@keychain:Apple Notarization Tool App Password" \
   --file "${BUILD_DIR}/jpackage/${APP_NAME}-${VERSION}.dmg")"
 
-request_uuid="$(echo "${notarize_output}"  | grep "RequestUUID = " | awk '{print $3}')"
+request_uuid="$(echo "${notarize_output}" | grep "RequestUUID = " | awk '{print $3}')"
 if [[ -z "${request_uuid}" ]]; then
-  >&2 echo "Notarization command failed, output was:"
+  echo >&2 "Notarization command failed, output was:"
   echo "${notarize_output}"
-  exit 1;
+  exit 1
 fi
 echo "Notarization command success, request ID ${request_uuid}, full output was:"
 echo "${notarize_output}"
 
 notarization_waited_sec=0
 echo "Waiting for a max of ${NOTARIZATION_TIMEOUT_SEC} seconds for the package to be notarized..."
-while [[ $notarization_waited_sec -lt $NOTARIZATION_TIMEOUT_SEC ]] && [[ "${notaizaiton_status}" != "success" ]]
-do
+while [[ $notarization_waited_sec -lt $NOTARIZATION_TIMEOUT_SEC ]] && [[ "${notaizaiton_status}" != "success" ]]; do
   sleep $NOTARIZATION_TIME_INCREMENT_SEC
-  notarization_waited_sec=$(( notarization_waited_sec + NOTARIZATION_TIME_INCREMENT_SEC ))
-  notaizaiton_status_str="$(xcrun altool --notarization-history 0 --username "a@yudichev.net" --password "@keychain:Apple Notarization Tool App Password" \
-  | grep "${request_uuid}")"
+  notarization_waited_sec=$((notarization_waited_sec + NOTARIZATION_TIME_INCREMENT_SEC))
+  notaizaiton_status_str="$(xcrun altool --notarization-history 0 --username "a@yudichev.net" --password "@keychain:Apple Notarization Tool App Password" |
+    grep "${request_uuid}")"
   echo "${notaizaiton_status_str}"
   notaizaiton_status="$(echo "${notaizaiton_status_str}" | awk '{print $5}')"
 done
 if [[ "${notaizaiton_status}" != "success" ]]; then
-  >&2 echo "Failed to notarize"
-  exit 1;
+  echo >&2 "Failed to notarize"
+  exit 1
 fi
 
 echo "Notarized, stapling..."
