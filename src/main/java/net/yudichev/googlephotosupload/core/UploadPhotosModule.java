@@ -19,6 +19,8 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
 
     @Override
     protected void configure() {
+        bind(BuildVersion.class).asEagerSingleton();
+
         install(new FactoryModuleBuilder()
                 .implement(StateSaver.class, StateSaverImpl.class)
                 .build(StateSaverFactory.class));
