@@ -45,8 +45,8 @@ final class ProgressBox implements ProgressStatusBar {
     }
 
     @Override
-    public void close() {
-        controller.done();
+    public void close(boolean success) {
+        controller.done(success);
     }
 
     @Override

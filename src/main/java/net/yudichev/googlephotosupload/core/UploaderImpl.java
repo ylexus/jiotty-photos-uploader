@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfList;
@@ -50,27 +51,35 @@ final class UploaderImpl implements Uploader {
                         .thenCompose(cloudAlbumsByTitle -> albumManager.listAlbumsByTitle(albumDirectories, cloudAlbumsByTitle)
                                 .thenCompose(albumsByTitle -> {
                                     ProgressStatus directoryProgressStatus =
-                                            progressStatusFactory.create("Folders uploaded", Optional.of(albumDirectories.size() - 1));
+                                            progressStatusFactory.create("Folders processed", Optional.of(albumDirectories.size() - 1));
                                     ProgressStatus fileProgressStatus = progressStatusFactory.create("Uploading files", Optional.empty());
-                                    return albumDirectories.stream()
-                                            .flatMap(albumDirectory -> {
-                                                directoryProgressStatus.incrementSuccess();
-                                                return filesystemManager.listFiles(albumDirectory.path()).stream()
-                                                        .map(path -> googlePhotosUploader.uploadFile(albumDirectory.albumTitle().map(albumsByTitle::get), path)
-                                                                .whenComplete((aVoid, e) -> {
-                                                                    if (e != null) {
-                                                                        fileProgressStatus.incrementFailure();
-                                                                    } else {
-                                                                        fileProgressStatus.incrementSuccess();
-                                                                    }
-                                                                }));
-                                            })
-                                            .collect(toFutureOfList())
-                                            .whenComplete((voids, throwable) -> {
-                                                directoryProgressStatus.close();
-                                                fileProgressStatus.close();
-                                            })
-                                            .thenAccept(list -> logger.info("All done without errors, files uploaded: {}", list.size()));
+                                    try {
+                                        return albumDirectories.stream()
+                                                .flatMap(albumDirectory -> {
+                                                    Stream<CompletableFuture<Void>> result = filesystemManager.listFiles(albumDirectory.path()).stream()
+                                                            .map(path -> googlePhotosUploader
+                                                                    .uploadFile(albumDirectory.albumTitle().map(albumsByTitle::get), path)
+                                                                    .whenComplete((aVoid, e) -> {
+                                                                        if (e != null) {
+                                                                            fileProgressStatus.incrementFailure();
+                                                                        } else {
+                                                                            fileProgressStatus.incrementSuccess();
+                                                                        }
+                                                                    }));
+                                                    directoryProgressStatus.incrementSuccess();
+                                                    return result;
+                                                })
+                                                .collect(toFutureOfList())
+                                                .whenComplete((ignored, e) -> {
+                                                    directoryProgressStatus.close(e == null);
+                                                    fileProgressStatus.close(e == null);
+                                                })
+                                                .thenAccept(list -> logger.info("All done without errors, files uploaded: {}", list.size()));
+                                    } catch (RuntimeException e) {
+                                        directoryProgressStatus.closeUnsuccessfully();
+                                        fileProgressStatus.closeUnsuccessfully();
+                                        throw e;
+                                    }
                                 })));
     }
 

@@ -46,7 +46,7 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
             });
             List<AlbumDirectory> directoriesByAlbumTitle = listBuilder.build();
             logger.info("... done, {} directories found that will be used as albums", directoriesByAlbumTitle.size());
-            progressStatus.close();
+            progressStatus.closeSuccessfully();
             return directoriesByAlbumTitle;
         });
     }

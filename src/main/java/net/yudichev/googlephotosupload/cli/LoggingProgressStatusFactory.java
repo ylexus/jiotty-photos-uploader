@@ -47,7 +47,7 @@ final class LoggingProgressStatusFactory implements ProgressStatusFactory {
             }
 
             @Override
-            public void close() {
+            public void close(boolean success) {
                 inLock(lock, () -> logger.info("{}: completed; {} succeeded, {} failed", name, successCount, failureCount));
             }
 

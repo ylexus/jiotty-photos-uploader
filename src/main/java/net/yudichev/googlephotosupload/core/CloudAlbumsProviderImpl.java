@@ -49,7 +49,7 @@ final class CloudAlbumsProviderImpl extends BaseLifecycleComponent implements Cl
                             cloudAlbumsByTitle.computeIfAbsent(googlePhotosAlbum.getTitle(), title -> new ArrayList<>()).add(googlePhotosAlbum));
                     return cloudAlbumsByTitle;
                 })
-                .whenComplete((ignored, e) -> progressStatus.close());
+                .whenComplete((ignored, e) -> progressStatus.close(e == null));
     }
 
     @Override

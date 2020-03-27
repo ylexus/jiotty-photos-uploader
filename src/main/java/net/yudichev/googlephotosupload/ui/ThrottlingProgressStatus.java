@@ -59,13 +59,13 @@ final class ThrottlingProgressStatus implements ProgressStatus {
     }
 
     @Override
-    public void close() {
+    public void close(boolean success) {
         closed = true;
         delegate.updateSuccess(successCount.get());
         delegate.updateFailure(failureCount.get());
         eventSink.close();
         executor.close();
-        delegate.close();
+        delegate.close(success);
     }
 
     private void ensureNotClosed() {

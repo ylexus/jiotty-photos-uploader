@@ -71,7 +71,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                         .collect(toImmutableMap(
                                 GooglePhotosAlbum::getTitle,
                                 Function.identity())))
-                .whenComplete((ignored, e) -> progressStatus.close());
+                .whenComplete((ignored, e) -> progressStatus.close(e == null));
     }
 
     @Override

@@ -2,6 +2,7 @@ package net.yudichev.googlephotosupload.ui;
 
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.text.Text;
 
 import java.util.Optional;
 
@@ -13,6 +14,7 @@ public final class ProgressBoxFxController {
     public Label nameLabel;
     public Label valueLabel;
     public Label failureCountLabel;
+    public Text progressIndicatorFailureText;
     private Optional<Integer> totalCount;
 
     public void init(String name, Optional<Integer> totalCount) {
@@ -37,7 +39,17 @@ public final class ProgressBoxFxController {
         }
     }
 
-    public void done() {
-        runLater(() -> progressIndicator.setProgress(1.0));
+    public void done(boolean success) {
+        runLater(() -> {
+                    if (success) {
+                        progressIndicator.setProgress(1.0);
+                    } else {
+                        if (totalCount.isEmpty()) {
+                            progressIndicator.setVisible(false);
+                            progressIndicatorFailureText.setVisible(true);
+                        }
+                    }
+                }
+        );
     }
 }

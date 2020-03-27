@@ -1,8 +1,6 @@
 package net.yudichev.googlephotosupload.core;
 
-import net.yudichev.jiotty.common.lang.Closeable;
-
-public interface ProgressStatus extends Closeable {
+public interface ProgressStatus {
     void updateSuccess(int newValue);
 
     void incrementSuccessBy(int increment);
@@ -15,5 +13,15 @@ public interface ProgressStatus extends Closeable {
 
     default void incrementFailure() {
         incrementFailureBy(1);
+    }
+
+    void close(boolean success);
+
+    default void closeSuccessfully() {
+        close(true);
+    }
+
+    default void closeUnsuccessfully() {
+        close(false);
     }
 }
