@@ -3,6 +3,7 @@ package net.yudichev.googlephotosupload.ui;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import net.yudichev.googlephotosupload.core.DependenciesModule;
+import net.yudichev.googlephotosupload.core.ResourceBundleModule;
 import net.yudichev.googlephotosupload.core.UploadPhotosModule;
 import net.yudichev.googlephotosupload.ui.Bindings.AuthBrowser;
 import net.yudichev.jiotty.common.app.Application;
@@ -23,6 +24,7 @@ public final class UiMain extends javafx.application.Application {
                     new Thread(() -> launch(args)).start();
                 }))
                 .addModule(() -> new DependenciesModule(builder -> builder.setAuthorizationBrowser(annotatedWith(AuthBrowser.class))))
+                .addModule(ResourceBundleModule::new)
                 .addModule(() -> new UploadPhotosModule(1000))
                 .addModule(UiAuthorizationBrowserModule::new)
                 .build()

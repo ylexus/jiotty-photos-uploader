@@ -415,6 +415,7 @@ final class IntegrationTest {
                     .addModule(ExecutorModule::new)
                     .addModule(() -> new VarStoreModule(varStoreAppName))
                     .addModule(() -> new MockGooglePhotosModule(googlePhotosClient))
+                    .addModule(ResourceBundleModule::new)
                     .addModule(() -> new UploadPhotosModule(1))
                     .addModule(() -> new CliModule(commandLine))
                     .build()

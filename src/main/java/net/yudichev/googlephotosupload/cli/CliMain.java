@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.cli;
 
 import net.yudichev.googlephotosupload.core.DependenciesModule;
+import net.yudichev.googlephotosupload.core.ResourceBundleModule;
 import net.yudichev.googlephotosupload.core.UploadPhotosModule;
 import net.yudichev.jiotty.common.app.Application;
 import org.apache.commons.cli.*;
@@ -19,6 +20,7 @@ public final class CliMain {
             Application.builder()
                     .addModule(DependenciesModule::new)
                     .addModule(() -> new UploadPhotosModule(1000))
+                    .addModule(ResourceBundleModule::new)
                     .addModule(() -> new CliModule(commandLine))
                     .build()
                     .run();

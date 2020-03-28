@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.CheckBox?>
-<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="folderSelector" alignment="CENTER" onDragDropped="#folderSelectorOnDragDropped"
       onDragEntered="#folderSelectorOnDragEnter" onDragExited="#folderSelectorOnDragExit" onDragOver="#folderSelectorOnDragOver" spacing="10.0"
@@ -17,4 +15,5 @@
         <CheckBox fx:id="resumeCheckbox" mnemonicParsing="false" selected="true" text="Resume from last attempt"/>
         <Label fx:id="alreadyUploadedLabel"/>
     </FlowPane>
+    <Label styleClass="side-note" text="%googleStorageWarning" wrapText="true"/>
 </VBox>
