@@ -24,6 +24,8 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 final class BackingOffRemoteApiResultHandler implements RemoteApiResultHandler {
     private static final Logger logger = LoggerFactory.getLogger(BackingOffRemoteApiResultHandler.class);
     private final BackOff backOff;
+    // Unfortunately, the "retryable" flag in most, if not all, all these exceptions is not reliable; some of these
+    // are marked as not retryable while in reality they are
     private Set<Class<? extends Throwable>> EXCEPTION_TYPES_REQUIRING_BACKOFF = ImmutableSet.of(
             ResourceExhaustedException.class,
             UnavailableException.class,

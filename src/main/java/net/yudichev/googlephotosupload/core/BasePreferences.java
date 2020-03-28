@@ -25,7 +25,7 @@ abstract class BasePreferences {
         return ImmutableSet.of(
                 "\\..*",
                 ".*picasaoriginals",
-                ".*picasa.ini",
+                ".*[Pp]icasa.[Ii][Nn][Ii]",
                 "DS_Store",
                 "Thumbs.db",
                 ".*\\.(txt|exe|htm)");
