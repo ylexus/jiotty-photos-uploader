@@ -11,8 +11,8 @@ import static com.google.common.base.Throwables.getCausalChain;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 
-final class InvalidMediaItemRemoteApiResultHandler implements RemoteApiResultHandler {
-    private static final Logger logger = LoggerFactory.getLogger(InvalidMediaItemRemoteApiResultHandler.class);
+final class InvalidMediaItemRemoteApiExceptionHandlerImpl implements InvalidMediaItemRemoteApiExceptionHandler {
+    private static final Logger logger = LoggerFactory.getLogger(InvalidMediaItemRemoteApiExceptionHandlerImpl.class);
     private static final Predicate<Throwable> PREDICATE =
             ((Predicate<Throwable>) e ->
                     e instanceof MediaItemCreationFailedException &&
@@ -31,9 +31,5 @@ final class InvalidMediaItemRemoteApiResultHandler implements RemoteApiResultHan
                     return TRUE;
                 })
                 .orElse(FALSE);
-    }
-
-    @Override
-    public void reset() {
     }
 }

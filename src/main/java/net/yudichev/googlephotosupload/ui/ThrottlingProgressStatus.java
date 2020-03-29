@@ -59,6 +59,12 @@ final class ThrottlingProgressStatus implements ProgressStatus {
     }
 
     @Override
+    public void onBackoffDelay(long backoffDelayMs) {
+        ensureNotClosed();
+        eventSink.accept(() -> delegate.onBackoffDelay(backoffDelayMs));
+    }
+
+    @Override
     public void close(boolean success) {
         closed = true;
         delegate.updateSuccess(successCount.get());

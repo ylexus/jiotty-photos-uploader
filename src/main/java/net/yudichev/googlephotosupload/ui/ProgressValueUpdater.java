@@ -6,4 +6,6 @@ interface ProgressValueUpdater {
     void updateFailure(int newValue);
 
     void close(boolean success);
+
+    void onBackoffDelay(long backoffDelayMs);
 }

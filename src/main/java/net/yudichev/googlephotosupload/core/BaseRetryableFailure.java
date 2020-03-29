@@ -10,5 +10,5 @@ interface BaseRetryableFailure {
     Throwable exception();
 
     @Value.Parameter
-    boolean shouldRetry();
+    long backoffDelayMs();
 }

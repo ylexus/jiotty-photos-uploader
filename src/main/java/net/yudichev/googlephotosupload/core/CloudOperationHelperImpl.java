@@ -6,38 +6,39 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.LongConsumer;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.yudichev.googlephotosupload.core.Bindings.Backoff;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
 
 final class CloudOperationHelperImpl implements CloudOperationHelper {
     private static final Logger logger = LoggerFactory.getLogger(CloudOperationHelperImpl.class);
-    private final RemoteApiResultHandler backOffHandler;
+    private final BackingOffRemoteApiExceptionHandler backOffHandler;
 
     @Inject
-    CloudOperationHelperImpl(@Backoff RemoteApiResultHandler backOffHandler) {
+    CloudOperationHelperImpl(BackingOffRemoteApiExceptionHandler backOffHandler) {
         this.backOffHandler = checkNotNull(backOffHandler);
     }
 
     @Override
-    public <T> CompletableFuture<T> withBackOffAndRetry(String operationName, Supplier<CompletableFuture<T>> action) {
+    public <T> CompletableFuture<T> withBackOffAndRetry(String operationName, Supplier<CompletableFuture<T>> action, LongConsumer backoffEventConsumer) {
         return action.get()
                 .thenApply(value -> {
                     backOffHandler.reset();
                     return Either.<T, RetryableFailure>left(value);
                 })
                 .exceptionally(exception -> {
-                    boolean shouldRetry = backOffHandler.handle(operationName, exception);
-                    return Either.right(RetryableFailure.of(exception, shouldRetry));
+                    long backoffDelayMs = backOffHandler.handle(operationName, exception);
+                    return Either.right(RetryableFailure.of(exception, backoffDelayMs));
                 })
                 .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(
                         CompletableFuture::completedFuture,
                         retryableFailure -> {
-                            if (retryableFailure.shouldRetry()) {
-                                logger.debug("Retrying operation '{}'", operationName);
-                                return withBackOffAndRetry(operationName, action);
+                            if (retryableFailure.backoffDelayMs() > 0) {
+                                logger.debug("Retrying operation '{}' with backoff {}ms", operationName, retryableFailure.backoffDelayMs());
+                                backoffEventConsumer.accept(retryableFailure.backoffDelayMs());
+                                return withBackOffAndRetry(operationName, action, backoffEventConsumer);
                             } else {
                                 return CompletableFutures.failure(retryableFailure.exception());
                             }

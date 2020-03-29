@@ -7,6 +7,13 @@ Configuration:
         Pattern: "%d %p [%t] %C{1.} %m%n"
 
   Loggers:
+    logger:
+      - name: net.yudichev.jiotty.connector.google.photos
+        level: debug
+        includeLocation: true
+      - name: net.yudichev.googlephotosupload
+        level: debug
+        includeLocation: true
     Root:
       level: info
       includeLocation: true

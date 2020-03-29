@@ -31,9 +31,9 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
         bind(DirectoryStructureSupplier.class).to(DirectoryStructureSupplierImpl.class);
 
         bindConstant().annotatedWith(BackOffProvider.InitialDelayMs.class).to(backOffInitialDelayMs);
-        bind(BackOff.class).annotatedWith(BackingOffRemoteApiResultHandler.Dependency.class).toProvider(BackOffProvider.class);
-        bind(RemoteApiResultHandler.class).annotatedWith(Bindings.Backoff.class).to(BackingOffRemoteApiResultHandler.class);
-        bind(RemoteApiResultHandler.class).annotatedWith(GooglePhotosUploaderImpl.InvalidMediaItem.class).to(InvalidMediaItemRemoteApiResultHandler.class);
+        bind(BackOff.class).annotatedWith(BackingOffRemoteApiExceptionHandlerImpl.Dependency.class).toProvider(BackOffProvider.class);
+        bind(BackingOffRemoteApiExceptionHandler.class).to(BackingOffRemoteApiExceptionHandlerImpl.class);
+        bind(InvalidMediaItemRemoteApiExceptionHandler.class).to(InvalidMediaItemRemoteApiExceptionHandlerImpl.class);
 
         bind(FilesystemManager.class).to(FilesystemManagerImpl.class);
 

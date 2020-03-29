@@ -7,6 +7,8 @@ public interface ProgressStatus {
 
     void incrementFailureBy(int increment);
 
+    void onBackoffDelay(long backoffDelayMs);
+
     default void incrementSuccess() {
         incrementSuccessBy(1);
     }

@@ -25,7 +25,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static java.util.stream.Collectors.toConcurrentMap;
-import static net.yudichev.googlephotosupload.core.Bindings.Backoff;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture;
 import static net.yudichev.jiotty.common.lang.Locks.inLock;
@@ -38,8 +37,8 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     private final UploadStateManager uploadStateManager;
 
     private final Provider<ExecutorService> executorServiceProvider;
-    private final RemoteApiResultHandler backOffHandler;
-    private final RemoteApiResultHandler invalidMediaItemHandler;
+    private final BackingOffRemoteApiExceptionHandler backOffHandler;
+    private final InvalidMediaItemRemoteApiExceptionHandler invalidMediaItemHandler;
     private final Lock stateLock = new ReentrantLock();
 
     private StateSaver stateSaver;
@@ -50,8 +49,8 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     @Inject
     GooglePhotosUploaderImpl(GooglePhotosClient googlePhotosClient,
                              @Backpressured Provider<ExecutorService> executorServiceProvider,
-                             @Backoff RemoteApiResultHandler backOffHandler,
-                             @InvalidMediaItem RemoteApiResultHandler invalidMediaItemHandler,
+                             BackingOffRemoteApiExceptionHandler backOffHandler,
+                             InvalidMediaItemRemoteApiExceptionHandler invalidMediaItemHandler,
                              StateSaverFactory stateSaverFactory,
                              UploadStateManager uploadStateManager) {
         this.executorServiceProvider = checkNotNull(executorServiceProvider);
@@ -91,7 +90,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                 })
                 .exceptionally(exception -> {
                     String operationName = "uploading file " + file;
-                    boolean shouldRetry = backOffHandler.handle(operationName, exception);
+                    boolean shouldRetry = backOffHandler.handle(operationName, exception) > 0;
                     boolean invalidMediaItem = invalidMediaItemHandler.handle(operationName, exception);
                     if (invalidMediaItem) {
                         uploadedItemStateByPath.computeIfPresent(file, (path, existingStateFuture) ->

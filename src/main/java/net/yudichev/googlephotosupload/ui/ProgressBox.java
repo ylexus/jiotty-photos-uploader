@@ -6,17 +6,10 @@ import javafx.scene.Parent;
 
 import javax.inject.Inject;
 import java.util.Optional;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-import static net.yudichev.jiotty.common.lang.Locks.inLock;
 
 final class ProgressBox implements ProgressStatusBar {
     private final Parent root;
     private final ProgressBoxFxController controller;
-    private final Lock lock = new ReentrantLock();
-    private int successCount;
-    private int failureCount;
 
     @Inject
     ProgressBox(FxmlContainerFactory fxmlContainerFactory,
@@ -30,23 +23,22 @@ final class ProgressBox implements ProgressStatusBar {
 
     @Override
     public void updateSuccess(int newValue) {
-        inLock(lock, () -> {
-            successCount = newValue;
-            controller.updateSuccess(successCount);
-        });
+        controller.updateSuccess(newValue);
     }
 
     @Override
     public void updateFailure(int newValue) {
-        inLock(lock, () -> {
-            failureCount = newValue;
-            controller.updateFailure(failureCount);
-        });
+        controller.updateFailure(newValue);
     }
 
     @Override
     public void close(boolean success) {
         controller.done(success);
+    }
+
+    @Override
+    public void onBackoffDelay(long backoffDelayMs) {
+        controller.onBackoffDelay(backoffDelayMs);
     }
 
     @Override

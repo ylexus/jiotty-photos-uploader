@@ -5,6 +5,7 @@ import net.yudichev.googlephotosupload.core.ProgressStatusFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -13,6 +14,7 @@ import static net.yudichev.jiotty.common.lang.Locks.inLock;
 import static net.yudichev.jiotty.common.lang.Optionals.ifPresent;
 
 final class LoggingProgressStatusFactory implements ProgressStatusFactory {
+    private static final long BACKOFF_DELAY_MS_BEFORE_NOTICE_APPEARS = Duration.ofMinutes(1).toMillis();
     private static final Logger logger = LoggerFactory.getLogger(LoggingProgressStatusFactory.class);
 
     @Override
@@ -44,6 +46,14 @@ final class LoggingProgressStatusFactory implements ProgressStatusFactory {
                     failureCount += increment;
                     log();
                 });
+            }
+
+            @Override
+            public void onBackoffDelay(long backoffDelayMs) {
+                if (backoffDelayMs > BACKOFF_DELAY_MS_BEFORE_NOTICE_APPEARS) {
+                    // TODO only ever log again if it drops back
+                    logger.info("Pausing for a long time due to Google imposed request quota...");
+                }
             }
 
             @Override

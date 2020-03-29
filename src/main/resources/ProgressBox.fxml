@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?language javascript?>
+
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.text.Text?>
-<GridPane xmlns:fx="http://javafx.com/fxml/1" hgap="10.0" prefHeight="70.0" prefWidth="200.0" styleClass="progress-box" stylesheets="@style.css"
+<GridPane xmlns:fx="http://javafx.com/fxml/1" fx:id="topPane" hgap="10.0" prefHeight="70.0" styleClass="progress-box" stylesheets="@style.css"
           xmlns="http://javafx.com/javafx/10.0.2-internal" fx:controller="net.yudichev.googlephotosupload.ui.ProgressBoxFxController">
     <columnConstraints>
         <ColumnConstraints hgrow="NEVER" minWidth="55.0"/>
-        <ColumnConstraints hgrow="SOMETIMES" prefWidth="40.0"/>
-        <ColumnConstraints hgrow="SOMETIMES"/>
+        <ColumnConstraints hgrow="ALWAYS" prefWidth="40.0"/>
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="5.0"/>
+        <ColumnConstraints hgrow="SOMETIMES" minWidth="5.0"/>
     </columnConstraints>
     <rowConstraints>
         <RowConstraints minHeight="10.0" vgrow="SOMETIMES"/>
@@ -25,13 +30,16 @@
     </padding>
     <StackPane GridPane.columnIndex="0" GridPane.halignment="CENTER" GridPane.rowIndex="0" GridPane.rowSpan="2" GridPane.valignment="CENTER">
         <ProgressIndicator fx:id="progressIndicator"/>
-        <Text fx:id="progressIndicatorFailureText" visible="false" stroke="#f50303" strokeType="OUTSIDE" strokeWidth="2.0" text="X">
+        <Text fx:id="progressIndicatorFailureText" stroke="#f50303" strokeType="OUTSIDE" strokeWidth="2.0" text="X" visible="false">
             <font>
                 <Font size="24.0"/>
             </font>
         </Text>
     </StackPane>
-    <Label fx:id="nameLabel" GridPane.columnIndex="1" GridPane.columnSpan="2" GridPane.rowIndex="0"/>
+    <Label fx:id="nameLabel" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="0"/>
     <Label fx:id="valueLabel" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
     <Label fx:id="failureCountLabel" styleClass="failed-text" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+    <ImageView fx:id="backoffInfoIcon" fitWidth="20" preserveRatio="true" GridPane.columnIndex="3" GridPane.rowIndex="1">
+        <Image url="@info-symbol.png"/>
+    </ImageView>
 </GridPane>

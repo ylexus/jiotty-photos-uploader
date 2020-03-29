@@ -14,15 +14,13 @@ import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Throwables.getCausalChain;
-import static java.lang.Boolean.FALSE;
-import static java.lang.Boolean.TRUE;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
-final class BackingOffRemoteApiResultHandler implements RemoteApiResultHandler {
-    private static final Logger logger = LoggerFactory.getLogger(BackingOffRemoteApiResultHandler.class);
+final class BackingOffRemoteApiExceptionHandlerImpl implements BackingOffRemoteApiExceptionHandler {
+    private static final Logger logger = LoggerFactory.getLogger(BackingOffRemoteApiExceptionHandlerImpl.class);
     private final BackOff backOff;
     // Unfortunately, the "retryable" flag in most, if not all, all these exceptions is not reliable; some of these
     // are marked as not retryable while in reality they are
@@ -34,12 +32,12 @@ final class BackingOffRemoteApiResultHandler implements RemoteApiResultHandler {
             InternalException.class);
 
     @Inject
-    BackingOffRemoteApiResultHandler(@Dependency BackOff backOff) {
+    BackingOffRemoteApiExceptionHandlerImpl(@Dependency BackOff backOff) {
         this.backOff = checkNotNull(backOff);
     }
 
     @Override
-    public boolean handle(String operationName, Throwable exception) {
+    public long handle(String operationName, Throwable exception) {
         return getCausalChain(exception).stream()
                 .filter(e -> EXCEPTION_TYPES_REQUIRING_BACKOFF.contains(e.getClass()))
                 .findFirst()
@@ -47,9 +45,9 @@ final class BackingOffRemoteApiResultHandler implements RemoteApiResultHandler {
                     long backOffMs = getAsUnchecked(backOff::nextBackOffMillis);
                     logger.debug("Retryable exception performing operation '{}', backing off by waiting for {}ms", operationName, backOffMs, throwable);
                     asUnchecked(() -> Thread.sleep(backOffMs));
-                    return TRUE;
+                    return backOffMs;
                 })
-                .orElse(FALSE);
+                .orElse(0L);
     }
 
     @Override

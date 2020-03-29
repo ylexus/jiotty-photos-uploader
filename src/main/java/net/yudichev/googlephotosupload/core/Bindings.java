@@ -17,16 +17,4 @@ final class Bindings {
     @Retention(RUNTIME)
     @interface Backpressured {
     }
-
-    @BindingAnnotation
-    @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME)
-    @interface Backoff {
-    }
-
-    @BindingAnnotation
-    @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME)
-    @interface Internal {
-    }
 }
