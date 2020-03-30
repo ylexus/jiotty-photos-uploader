@@ -13,7 +13,7 @@ plugins {
 version = readEnvOrDefault('VERSION', 'DEVELOPMENT')
 //noinspection GroovyUnusedAssignment
 sourceCompatibility = '13'
-ext.javafxVersion = '13.0.2'
+ext.javafxVersion = '14'
 
 application {
     mainClassName = 'net.yudichev.googlephotosupload.ui.Launcher'
@@ -134,7 +134,6 @@ runtime {
     additive = true
 
     jpackage {
-        jpackageHome = readEnvOrNull('JPACKAGE_HOME')
         jvmArgs = ['-Dprism.verbose=true']
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             installerType = 'dmg'
