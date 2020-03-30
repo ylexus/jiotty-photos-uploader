@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.LongConsumer;
 import java.util.function.Supplier;
@@ -29,20 +30,18 @@ final class CloudOperationHelperImpl implements CloudOperationHelper {
                     return Either.<T, RetryableFailure>left(value);
                 })
                 .exceptionally(exception -> {
-                    long backoffDelayMs = backOffHandler.handle(operationName, exception);
+                    Optional<Long> backoffDelayMs = backOffHandler.handle(operationName, exception);
                     return Either.right(RetryableFailure.of(exception, backoffDelayMs));
                 })
                 .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(
                         CompletableFuture::completedFuture,
-                        retryableFailure -> {
-                            if (retryableFailure.backoffDelayMs() > 0) {
-                                logger.debug("Retrying operation '{}' with backoff {}ms", operationName, retryableFailure.backoffDelayMs());
-                                backoffEventConsumer.accept(retryableFailure.backoffDelayMs());
-                                return withBackOffAndRetry(operationName, action, backoffEventConsumer);
-                            } else {
-                                return CompletableFutures.failure(retryableFailure.exception());
-                            }
-                        }
+                        retryableFailure -> retryableFailure.backoffDelayMs()
+                                .map(backoffDelayMs -> {
+                                    logger.debug("Retrying operation '{}' with backoff {}ms", operationName, retryableFailure.backoffDelayMs());
+                                    backoffEventConsumer.accept(backoffDelayMs);
+                                    return withBackOffAndRetry(operationName, action, backoffEventConsumer);
+                                })
+                                .orElseGet(() -> CompletableFutures.failure(retryableFailure.exception()))
                 ))
                 .whenComplete(logErrorOnFailure(logger, "Unhandled exception performing '%s'", operationName));
     }

@@ -90,7 +90,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                 })
                 .exceptionally(exception -> {
                     String operationName = "uploading file " + file;
-                    boolean shouldRetry = backOffHandler.handle(operationName, exception) > 0;
+                    boolean shouldRetry = backOffHandler.handle(operationName, exception).isPresent();
                     boolean invalidMediaItem = invalidMediaItemHandler.handle(operationName, exception);
                     if (invalidMediaItem) {
                         uploadedItemStateByPath.computeIfPresent(file, (path, existingStateFuture) ->

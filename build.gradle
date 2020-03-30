@@ -179,6 +179,7 @@ runtime {
 }
 
 task fullpackage {
+    dependsOn test
     dependsOn jpackage
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {

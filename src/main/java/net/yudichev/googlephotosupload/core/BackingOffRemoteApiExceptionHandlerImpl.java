@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -37,7 +38,7 @@ final class BackingOffRemoteApiExceptionHandlerImpl implements BackingOffRemoteA
     }
 
     @Override
-    public long handle(String operationName, Throwable exception) {
+    public Optional<Long> handle(String operationName, Throwable exception) {
         return getCausalChain(exception).stream()
                 .filter(e -> EXCEPTION_TYPES_REQUIRING_BACKOFF.contains(e.getClass()))
                 .findFirst()
@@ -45,9 +46,9 @@ final class BackingOffRemoteApiExceptionHandlerImpl implements BackingOffRemoteA
                     long backOffMs = getAsUnchecked(backOff::nextBackOffMillis);
                     logger.debug("Retryable exception performing operation '{}', backing off by waiting for {}ms", operationName, backOffMs, throwable);
                     asUnchecked(() -> Thread.sleep(backOffMs));
-                    return backOffMs;
+                    return Optional.of(backOffMs);
                 })
-                .orElse(0L);
+                .orElse(Optional.empty());
     }
 
     @Override
