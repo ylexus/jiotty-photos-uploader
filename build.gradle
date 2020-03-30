@@ -181,6 +181,7 @@ runtime {
 task fullpackage {
     dependsOn test
     dependsOn jpackage
+    tasks.findByName('jpackage').mustRunAfter 'test'
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             exec {
