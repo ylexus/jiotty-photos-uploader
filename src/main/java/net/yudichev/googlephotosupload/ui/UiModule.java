@@ -16,6 +16,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.googlephotosupload.ui.OperatingSystemDetection.OSType.MacOS;
 import static net.yudichev.googlephotosupload.ui.OperatingSystemDetection.getOperatingSystemType;
 
+@SuppressWarnings({"OverlyCoupledMethod", "OverlyCoupledClass"}) // OK for module
 final class UiModule extends BaseLifecycleComponentModule {
     private final Consumer<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler;
 
@@ -25,29 +26,16 @@ final class UiModule extends BaseLifecycleComponentModule {
 
     @Override
     protected void configure() {
-        bind(new TypeLiteral<Consumer<Consumer<JavafxApplicationResources>>>() {}).toInstance(javafxApplicationResourcesHandler);
+        bind(new TypeLiteral<Consumer<Consumer<JavafxApplicationResources>>>() {
+        }).toInstance(javafxApplicationResourcesHandler);
 
         install(new FactoryModuleBuilder()
-                .implement(ModalDialog.class, ModalDialogImpl.class)
-                .build(ModalDialogFactory.class));
+                .implement(Dialog.class, DialogImpl.class)
+                .build(DialogFactory.class));
 
-        bind(PlatformSpecificMenu.class).to(getOperatingSystemType() == MacOS ? MacPlatformSpecificMenu.class : DefaultPlatformSpecificMenu.class);
-        bind(MainScreenControllerImpl.class).in(Singleton.class);
-        bind(MainScreenController.class).to(MainScreenControllerImpl.class);
+        bindControllers();
 
-        bind(LoginDialogFxControllerImpl.class).in(Singleton.class);
-        bind(LoginDialogFxController.class).to(LoginDialogFxControllerImpl.class);
-
-        bind(FolderSelectorControllerImpl.class).in(Singleton.class);
-        bind(FolderSelectorController.class).to(FolderSelectorControllerImpl.class);
-
-        bind(PreferencesDialogFxController.class).in(Singleton.class);
-        bind(PreferencesSupplier.class).to(PreferencesDialogFxController.class);
-
-        Key<UploadPaneControllerImpl> uploadPaneControllerKey = boundLifecycleComponent(UploadPaneControllerImpl.class);
-        bind(UploadPaneController.class).to(uploadPaneControllerKey);
-
-        bind(SupportMePaneFxController.class).in(Singleton.class);
+        bind(SupportMePaneController.class).in(Singleton.class);
 
         bind(JavafxApplicationResources.class).toProvider(boundLifecycleComponent(UserInterface.class)).in(Singleton.class);
         expose(JavafxApplicationResources.class);
@@ -67,14 +55,33 @@ final class UiModule extends BaseLifecycleComponentModule {
         expose(FxmlContainerFactory.class);
         expose(MainScreenController.class);
 
+        expose(PreferencesSupplier.class);
+        expose(DialogFactory.class);
+    }
+
+    private void bindControllers() {
+        bind(PlatformSpecificMenu.class).to(getOperatingSystemType() == MacOS ? MacPlatformSpecificMenu.class : DefaultPlatformSpecificMenu.class);
+        bind(MainScreenControllerImpl.class).in(Singleton.class);
+        bind(MainScreenController.class).to(MainScreenControllerImpl.class);
+
+        bind(LoginDialogControllerImpl.class).in(Singleton.class);
+        bind(LoginDialogFxController.class).to(LoginDialogControllerImpl.class);
+
+        bind(FolderSelectorControllerImpl.class).in(Singleton.class);
+        bind(FolderSelectorController.class).to(FolderSelectorControllerImpl.class);
+
+        bind(PreferencesDialogController.class).in(Singleton.class);
+        bind(PreferencesSupplier.class).to(PreferencesDialogController.class);
+
+        Key<UploadPaneControllerImpl> uploadPaneControllerKey = boundLifecycleComponent(UploadPaneControllerImpl.class);
+        bind(UploadPaneController.class).to(uploadPaneControllerKey);
+
         // needed for FxmlLoader to find them
         expose(MainScreenControllerImpl.class);
-        expose(LoginDialogFxControllerImpl.class);
+        expose(LoginDialogControllerImpl.class);
         expose(FolderSelectorControllerImpl.class);
-        expose(PreferencesDialogFxController.class);
-        expose(SupportMePaneFxController.class);
+        expose(PreferencesDialogController.class);
+        expose(SupportMePaneController.class);
         expose(uploadPaneControllerKey);
-        expose(PreferencesSupplier.class);
-        expose(ModalDialogFactory.class);
     }
 }

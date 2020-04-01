@@ -3,7 +3,7 @@ package net.yudichev.googlephotosupload.ui;
 import javafx.scene.control.TextField;
 import javafx.scene.web.WebView;
 
-public final class LoginDialogFxControllerImpl implements LoginDialogFxController {
+public final class LoginDialogControllerImpl implements LoginDialogFxController {
     public WebView webView;
     public TextField urlTextField;
 

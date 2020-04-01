@@ -14,11 +14,12 @@ import java.nio.file.Path;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javafx.application.Platform.runLater;
+import static javafx.stage.Modality.APPLICATION_MODAL;
 
 public final class MainScreenControllerImpl implements MainScreenController {
     private final ApplicationLifecycleControl applicationLifecycleControl;
     private final Restarter restarter;
-    private final ModalDialogFactory modalDialogFactory;
+    private final DialogFactory dialogFactory;
     private final PlatformSpecificMenu platformSpecificMenu;
     private final Node folderSelectionPane;
     private final UploadPaneController uploadPaneController;
@@ -28,18 +29,18 @@ public final class MainScreenControllerImpl implements MainScreenController {
     public MenuItem menuItemLogout;
     public MenuItem menuItemStopUpload;
     public VBox root;
-    private ModalDialog preferencesDialog;
-    private ModalDialog aboutDialog;
+    private Dialog preferencesDialog;
+    private Dialog aboutDialog;
 
     @Inject
     public MainScreenControllerImpl(ApplicationLifecycleControl applicationLifecycleControl,
                                     FxmlContainerFactory fxmlContainerFactory,
                                     Restarter restarter,
-                                    ModalDialogFactory modalDialogFactory,
+                                    DialogFactory dialogFactory,
                                     PlatformSpecificMenu platformSpecificMenu) {
         this.applicationLifecycleControl = checkNotNull(applicationLifecycleControl);
         this.restarter = checkNotNull(restarter);
-        this.modalDialogFactory = checkNotNull(modalDialogFactory);
+        this.dialogFactory = checkNotNull(dialogFactory);
         this.platformSpecificMenu = checkNotNull(platformSpecificMenu);
 
         FxmlContainer folderSelectorFxmlContainer = fxmlContainerFactory.create("FolderSelector.fxml");
@@ -87,7 +88,7 @@ public final class MainScreenControllerImpl implements MainScreenController {
 
     private void onAbout(ActionEvent actionEvent) {
         if (aboutDialog == null) {
-            aboutDialog = modalDialogFactory.create("About", "AboutDialog.fxml", stage -> {});
+            aboutDialog = dialogFactory.create("About", "AboutDialog.fxml", stage -> stage.initModality(APPLICATION_MODAL));
         }
         aboutDialog.show();
         actionEvent.consume();
@@ -101,7 +102,8 @@ public final class MainScreenControllerImpl implements MainScreenController {
 
     private void onPreferences(ActionEvent actionEvent) {
         if (preferencesDialog == null) {
-            preferencesDialog = modalDialogFactory.create("Preferences", "PreferencesDialog.fxml", dialog -> {
+            preferencesDialog = dialogFactory.create("Preferences", "PreferencesDialog.fxml", dialog -> {
+                dialog.initModality(APPLICATION_MODAL);
                 dialog.setMinHeight(500);
                 dialog.setMinWidth(500);
             });

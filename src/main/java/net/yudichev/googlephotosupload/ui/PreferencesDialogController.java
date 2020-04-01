@@ -21,7 +21,7 @@ import java.util.regex.PatternSyntaxException;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javafx.scene.control.SelectionMode.MULTIPLE;
 
-public final class PreferencesDialogFxController implements PreferencesSupplier {
+public final class PreferencesDialogController implements PreferencesSupplier {
     private static final String VAR_STORE_KEY = "preferences";
     private final VarStore varStore;
     public ListView<String> listView;
@@ -30,7 +30,7 @@ public final class PreferencesDialogFxController implements PreferencesSupplier 
     private volatile Preferences preferences;
 
     @Inject
-    PreferencesDialogFxController(VarStore varStore) {
+    PreferencesDialogController(VarStore varStore) {
         this.varStore = checkNotNull(varStore);
         preferences = varStore.readValue(Preferences.class, VAR_STORE_KEY).orElseGet(() -> Preferences.builder().build());
     }
@@ -93,7 +93,7 @@ public final class PreferencesDialogFxController implements PreferencesSupplier 
         listView.getItems().removeAll(selectedItems);
     }
 
-    private void onListChange(ListChangeListener.Change<? extends String> change) {
+    private void onListChange(@SuppressWarnings("TypeParameterExtendsFinalClass") ListChangeListener.Change<? extends String> change) {
         preferences = Preferences.of(listView.getItems());
         varStore.saveValue(VAR_STORE_KEY, preferences);
     }
@@ -105,7 +105,7 @@ public final class PreferencesDialogFxController implements PreferencesSupplier 
         editEvent.consume();
     }
 
-    private void onIgnorePatternListSelectionChanged(ListChangeListener.Change<? extends String> change) {
+    private void onIgnorePatternListSelectionChanged(@SuppressWarnings("TypeParameterExtendsFinalClass") ListChangeListener.Change<? extends String> change) {
         minusButton.setDisable(change.getList().isEmpty());
     }
 }

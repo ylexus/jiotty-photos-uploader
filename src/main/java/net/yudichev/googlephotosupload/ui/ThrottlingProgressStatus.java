@@ -2,6 +2,7 @@ package net.yudichev.googlephotosupload.ui;
 
 import com.google.inject.BindingAnnotation;
 import com.google.inject.assistedinject.Assisted;
+import net.yudichev.googlephotosupload.core.KeyedError;
 import net.yudichev.googlephotosupload.core.ProgressStatus;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
@@ -11,7 +12,11 @@ import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Optional;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -22,7 +27,7 @@ final class ThrottlingProgressStatus implements ProgressStatus {
     private final ProgressValueUpdater delegate;
     private final ThrottlingConsumer<Runnable> eventSink;
     private final AtomicInteger successCount = new AtomicInteger();
-    private final AtomicInteger failureCount = new AtomicInteger();
+    private final BlockingQueue<KeyedError> pendingErrors = new ArrayBlockingQueue<>(65536);
     private final SchedulingExecutor executor;
 
     private volatile boolean closed;
@@ -32,7 +37,7 @@ final class ThrottlingProgressStatus implements ProgressStatus {
                              ExecutorFactory executorFactory,
                              @Assisted String name,
                              @Assisted Optional<Integer> totalCount) {
-        this.delegate = delegateFactory.create(name, totalCount);
+        delegate = delegateFactory.create(name, totalCount);
         executor = executorFactory.createSingleThreadedSchedulingExecutor("progress-status");
         eventSink = new ThrottlingConsumer<>(executor, Duration.ofMillis(200), Runnable::run);
     }
@@ -52,10 +57,10 @@ final class ThrottlingProgressStatus implements ProgressStatus {
     }
 
     @Override
-    public void incrementFailureBy(int increment) {
+    public void addFailure(KeyedError keyedError) {
         ensureNotClosed();
-        failureCount.updateAndGet(operand -> operand + increment);
-        eventSink.accept(() -> delegate.updateFailure(failureCount.get()));
+        pendingErrors.add(keyedError);
+        eventSink.accept(this::drainPendingFailuresToDelegate);
     }
 
     @Override
@@ -68,10 +73,18 @@ final class ThrottlingProgressStatus implements ProgressStatus {
     public void close(boolean success) {
         closed = true;
         delegate.updateSuccess(successCount.get());
-        delegate.updateFailure(failureCount.get());
+        drainPendingFailuresToDelegate();
         eventSink.close();
         executor.close();
         delegate.close(success);
+    }
+
+    private void drainPendingFailuresToDelegate() {
+        Collection<KeyedError> errors = new ArrayList<>();
+        pendingErrors.drainTo(errors);
+        if (!errors.isEmpty()) {
+            delegate.addFailures(errors);
+        }
     }
 
     private void ensureNotClosed() {

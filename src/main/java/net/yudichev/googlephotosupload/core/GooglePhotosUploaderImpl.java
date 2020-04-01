@@ -1,6 +1,5 @@
 package net.yudichev.googlephotosupload.core;
 
-import com.google.inject.BindingAnnotation;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
@@ -9,8 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
@@ -22,11 +19,12 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static java.lang.annotation.ElementType.*;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.stream.Collectors.toConcurrentMap;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
-import static net.yudichev.jiotty.common.lang.CompletableFutures.completedFuture;
+import static net.yudichev.googlephotosupload.core.ResultOrFailure.failure;
+import static net.yudichev.googlephotosupload.core.ResultOrFailure.success;
+import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 import static net.yudichev.jiotty.common.lang.Locks.inLock;
 
 final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements GooglePhotosUploader {
@@ -38,7 +36,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     private final Provider<ExecutorService> executorServiceProvider;
     private final BackingOffRemoteApiExceptionHandler backOffHandler;
-    private final InvalidMediaItemRemoteApiExceptionHandler invalidMediaItemHandler;
+    private final FatalUserCorrectableRemoteApiExceptionHandler fatalUserCorrectableHandler;
     private final Lock stateLock = new ReentrantLock();
 
     private StateSaver stateSaver;
@@ -50,19 +48,19 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     GooglePhotosUploaderImpl(GooglePhotosClient googlePhotosClient,
                              @Backpressured Provider<ExecutorService> executorServiceProvider,
                              BackingOffRemoteApiExceptionHandler backOffHandler,
-                             InvalidMediaItemRemoteApiExceptionHandler invalidMediaItemHandler,
+                             FatalUserCorrectableRemoteApiExceptionHandler fatalUserCorrectableHandler,
                              StateSaverFactory stateSaverFactory,
                              UploadStateManager uploadStateManager) {
         this.executorServiceProvider = checkNotNull(executorServiceProvider);
         this.backOffHandler = checkNotNull(backOffHandler);
-        this.invalidMediaItemHandler = checkNotNull(invalidMediaItemHandler);
+        this.fatalUserCorrectableHandler = checkNotNull(fatalUserCorrectableHandler);
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
         this.stateSaverFactory = checkNotNull(stateSaverFactory);
         this.uploadStateManager = checkNotNull(uploadStateManager);
     }
 
     @Override
-    public CompletableFuture<Void> uploadFile(Optional<GooglePhotosAlbum> album, Path file) {
+    public CompletableFuture<ResultOrFailure<Object>> uploadFile(Optional<GooglePhotosAlbum> album, Path file) {
         checkStarted();
         return inLock(stateLock, () -> uploadedItemStateByPath.compute(file,
                 (theFile, currentFuture) -> {
@@ -71,12 +69,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                         currentFuture = doUpload(album, theFile);
                     } else {
                         if (currentFuture.isDone()) {
-                            ItemState currentItemState = currentFuture.getNow(null);
-                            if (currentItemState.mediaId().isEmpty()) {
-                                logger.info("Permanently failed before, skipping: {}", file);
-                            } else {
-                                logger.info("Already uploaded, skipping: {}", file);
-                            }
+                            logger.info("Already uploaded, skipping: {}", file);
                         } else {
                             logger.error("Unexpected future state for {}: {}", file, currentFuture);
                         }
@@ -86,27 +79,18 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                 .thenApply(itemState -> {
                     stateSaver.save();
                     backOffHandler.reset();
-                    return false;
+                    return success();
                 })
-                .exceptionally(exception -> {
+                .exceptionallyCompose(exception -> {
                     String operationName = "uploading file " + file;
-                    boolean shouldRetry = backOffHandler.handle(operationName, exception).isPresent();
-                    boolean invalidMediaItem = invalidMediaItemHandler.handle(operationName, exception);
-                    if (invalidMediaItem) {
-                        uploadedItemStateByPath.computeIfPresent(file, (path, existingStateFuture) ->
-                                CompletableFuture.completedFuture(ItemState.builder().build()));
-                    }
-                    if (!shouldRetry && !invalidMediaItem) {
-                        throw new RuntimeException(exception);
-                    }
-                    return shouldRetry;
-                })
-                .thenCompose(shouldRetry -> {
-                    if (shouldRetry) {
+                    if (fatalUserCorrectableHandler.handle(operationName, exception)) {
+                        return completedFuture(failure(humanReadableMessage(exception)));
+                    } else if (backOffHandler.handle(operationName, exception).isPresent()) {
                         logger.debug("Retrying upload of {}", file);
                         return uploadFile(album, file);
+                    } else {
+                        throw new RuntimeException(exception);
                     }
-                    return completedFuture();
                 }));
     }
 
@@ -134,7 +118,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
             uploadedItemStateByPath = uploadState.uploadedMediaItemIdByAbsolutePath().entrySet().stream()
                     .collect(toConcurrentMap(
                             entry -> Paths.get(entry.getKey()),
-                            entry -> CompletableFuture.completedFuture(entry.getValue())));
+                            entry -> completedFuture(entry.getValue())));
         });
     }
 
@@ -169,9 +153,4 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         }
     }
 
-    @BindingAnnotation
-    @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME)
-    @interface InvalidMediaItem {
-    }
 }

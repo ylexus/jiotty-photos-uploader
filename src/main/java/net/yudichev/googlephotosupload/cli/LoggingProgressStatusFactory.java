@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.cli;
 
+import net.yudichev.googlephotosupload.core.KeyedError;
 import net.yudichev.googlephotosupload.core.ProgressStatus;
 import net.yudichev.googlephotosupload.core.ProgressStatusFactory;
 import org.slf4j.Logger;
@@ -41,19 +42,19 @@ final class LoggingProgressStatusFactory implements ProgressStatusFactory {
             }
 
             @Override
-            public void incrementFailureBy(int increment) {
-                inLock(lock, () -> {
-                    failureCount += increment;
-                    log();
-                });
+            public void onBackoffDelay(long backoffDelayMs) {
+                if (backoffDelayMs > BACKOFF_DELAY_MS_BEFORE_NOTICE_APPEARS) {
+                    logger.info("Pausing for a long time due to Google imposed request quota...");
+                }
             }
 
             @Override
-            public void onBackoffDelay(long backoffDelayMs) {
-                if (backoffDelayMs > BACKOFF_DELAY_MS_BEFORE_NOTICE_APPEARS) {
-                    // TODO only ever log again if it drops back
-                    logger.info("Pausing for a long time due to Google imposed request quota...");
-                }
+            public void addFailure(KeyedError keyedError) {
+                logger.warn("Failure for {}: {}", keyedError.getKey(), keyedError.getError());
+                inLock(lock, () -> {
+                    failureCount += 1;
+                    log();
+                });
             }
 
             @Override

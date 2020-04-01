@@ -5,16 +5,10 @@ public interface ProgressStatus {
 
     void incrementSuccessBy(int increment);
 
-    void incrementFailureBy(int increment);
-
     void onBackoffDelay(long backoffDelayMs);
 
     default void incrementSuccess() {
         incrementSuccessBy(1);
-    }
-
-    default void incrementFailure() {
-        incrementFailureBy(1);
     }
 
     void close(boolean success);
@@ -26,4 +20,6 @@ public interface ProgressStatus {
     default void closeUnsuccessfully() {
         close(false);
     }
+
+    void addFailure(KeyedError keyedError);
 }

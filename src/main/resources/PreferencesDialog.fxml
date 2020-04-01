@@ -7,7 +7,7 @@
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.VBox?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" stylesheets="@style.css" xmlns="http://javafx.com/javafx/10.0.2-internal"
-      fx:controller="net.yudichev.googlephotosupload.ui.PreferencesDialogFxController">
+      fx:controller="net.yudichev.googlephotosupload.ui.PreferencesDialogController">
     <padding>
         <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
     </padding>

@@ -3,6 +3,7 @@
 <?language javascript?>
 
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Hyperlink?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ProgressIndicator?>
 <?import javafx.scene.image.Image?>
@@ -28,9 +29,11 @@
     <padding>
         <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
     </padding>
-    <StackPane GridPane.columnIndex="0" GridPane.halignment="CENTER" GridPane.rowIndex="0" GridPane.rowSpan="2" GridPane.valignment="CENTER">
+    <StackPane GridPane.columnIndex="0" GridPane.halignment="CENTER" GridPane.rowIndex="0" GridPane.rowSpan="2"
+               GridPane.valignment="CENTER">
         <ProgressIndicator fx:id="progressIndicator"/>
-        <Text fx:id="progressIndicatorFailureText" stroke="#f50303" strokeType="OUTSIDE" strokeWidth="2.0" text="X" visible="false">
+        <Text fx:id="progressIndicatorFailureText" stroke="#f50303" strokeType="OUTSIDE" strokeWidth="2.0" text="X"
+              visible="false">
             <font>
                 <Font size="24.0"/>
             </font>
@@ -38,8 +41,10 @@
     </StackPane>
     <Label fx:id="nameLabel" GridPane.columnIndex="1" GridPane.columnSpan="3" GridPane.rowIndex="0"/>
     <Label fx:id="valueLabel" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-    <Label fx:id="failureCountLabel" styleClass="failed-text" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
-    <ImageView fx:id="backoffInfoIcon" fitWidth="20" preserveRatio="true" GridPane.columnIndex="3" GridPane.rowIndex="1">
+    <Hyperlink fx:id="failureCountHyperlink" onAction="#failureCountHyperlinkAction" styleClass="failed-text"
+               GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+    <ImageView fx:id="backoffInfoIcon" fitWidth="20" preserveRatio="true" GridPane.columnIndex="3"
+               GridPane.rowIndex="1">
         <Image url="@info-symbol.png"/>
     </ImageView>
 </GridPane>

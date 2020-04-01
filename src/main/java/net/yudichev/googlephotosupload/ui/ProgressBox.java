@@ -3,8 +3,10 @@ package net.yudichev.googlephotosupload.ui;
 import com.google.inject.assistedinject.Assisted;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import net.yudichev.googlephotosupload.core.KeyedError;
 
 import javax.inject.Inject;
+import java.util.Collection;
 import java.util.Optional;
 
 final class ProgressBox implements ProgressStatusBar {
@@ -27,8 +29,8 @@ final class ProgressBox implements ProgressStatusBar {
     }
 
     @Override
-    public void updateFailure(int newValue) {
-        controller.updateFailure(newValue);
+    public void addFailures(Collection<KeyedError> failures) {
+        controller.addFailures(failures);
     }
 
     @Override

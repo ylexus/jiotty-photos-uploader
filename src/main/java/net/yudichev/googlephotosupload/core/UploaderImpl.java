@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.core;
 
+import net.yudichev.jiotty.common.lang.Optionals;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,16 +57,14 @@ final class UploaderImpl implements Uploader {
                                     try {
                                         return albumDirectories.stream()
                                                 .flatMap(albumDirectory -> {
-                                                    Stream<CompletableFuture<Void>> result = filesystemManager.listFiles(albumDirectory.path()).stream()
-                                                            .map(path -> googlePhotosUploader
-                                                                    .uploadFile(albumDirectory.albumTitle().map(albumsByTitle::get), path)
-                                                                    .whenComplete((aVoid, e) -> {
-                                                                        if (e != null) {
-                                                                            fileProgressStatus.incrementFailure();
-                                                                        } else {
-                                                                            fileProgressStatus.incrementSuccess();
-                                                                        }
-                                                                    }));
+                                                    Stream<CompletableFuture<Void>> result =
+                                                            filesystemManager.listFiles(albumDirectory.path()).stream()
+                                                                    .map(path -> googlePhotosUploader
+                                                                            .uploadFile(albumDirectory.albumTitle().map(albumsByTitle::get), path)
+                                                                            .thenAccept(resultOrFailure -> Optionals
+                                                                                    .ifPresent(resultOrFailure.toFailure(),
+                                                                                            error -> fileProgressStatus.addFailure(KeyedError.of(path, error)))
+                                                                                    .orElse(fileProgressStatus::incrementSuccess)));
                                                     directoryProgressStatus.incrementSuccess();
                                                     return result;
                                                 })

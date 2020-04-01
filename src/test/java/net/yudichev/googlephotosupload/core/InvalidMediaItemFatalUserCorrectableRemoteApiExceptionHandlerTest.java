@@ -9,12 +9,12 @@ import org.junit.jupiter.api.Test;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-class InvalidMediaItemRemoteApiExceptionHandlerTest {
-    private InvalidMediaItemRemoteApiExceptionHandlerImpl resultHandler;
+class InvalidMediaItemFatalUserCorrectableRemoteApiExceptionHandlerTest {
+    private FatalUserCorrectableRemoteApiExceptionHandlerImpl resultHandler;
 
     @BeforeEach
     void setUp() {
-        resultHandler = new InvalidMediaItemRemoteApiExceptionHandlerImpl();
+        resultHandler = new FatalUserCorrectableRemoteApiExceptionHandlerImpl();
     }
 
     @Test

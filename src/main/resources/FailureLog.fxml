@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<HBox xmlns:fx="http://javafx.com/fxml/1" prefHeight="600.0" prefWidth="800.0"
+      xmlns="http://javafx.com/javafx/10.0.2-internal"
+      fx:controller="net.yudichev.googlephotosupload.ui.FailureLogFxController">
+    <TableView fx:id="tableView" prefHeight="200.0" prefWidth="200.0" HBox.hgrow="ALWAYS">
+        <columns>
+            <TableColumn prefWidth="500.0" text="%failuresDialogPathColumnTitle"/>
+            <TableColumn prefWidth="300.0" text="%failuresDialogFailureColumnTitle"/>
+        </columns>
+    </TableView>
+</HBox>

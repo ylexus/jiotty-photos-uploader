@@ -5,6 +5,6 @@ import javafx.stage.Stage;
 
 import java.util.function.Consumer;
 
-interface ModalDialogFactory {
-    ModalDialog create(@Assisted("title") String title, @Assisted("fxmlPath") String fxmlPath, Consumer<Stage> customizer);
+interface DialogFactory {
+    Dialog create(@Assisted("title") String title, @Assisted("fxmlPath") String fxmlPath, Consumer<Stage> customizer);
 }

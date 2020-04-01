@@ -1,42 +1,51 @@
 package net.yudichev.googlephotosupload.ui;
 
+import javafx.event.ActionEvent;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.text.Text;
+import net.yudichev.googlephotosupload.core.KeyedError;
 
 import javax.inject.Inject;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.ResourceBundle;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javafx.application.Platform.runLater;
 
+@SuppressWarnings("ClassWithTooManyFields") // OK for a UI controller
 public final class ProgressBoxFxController {
     private static final long BACKOFF_DELAY_BEFORE_ICON_APPEARS_MS = Duration.ofSeconds(20).toMillis();
     private final ResourceBundle resourceBundle;
+    private final DialogFactory dialogFactory;
     public ProgressIndicator progressIndicator;
     public Label nameLabel;
     public Label valueLabel;
-    public Label failureCountLabel;
+    public Hyperlink failureCountHyperlink;
     public Text progressIndicatorFailureText;
     public ImageView backoffInfoIcon;
     public GridPane topPane;
     private Optional<Integer> totalCount;
     private SepiaToneEffectAnimatedNode animatedBackoffInfoIcon;
     private Tooltip backoffTooltip;
+    private Dialog failuresDialog;
 
     @Inject
-    public ProgressBoxFxController(ResourceBundle resourceBundle) {
+    public ProgressBoxFxController(ResourceBundle resourceBundle,
+                                   DialogFactory dialogFactory) {
         this.resourceBundle = checkNotNull(resourceBundle);
+        this.dialogFactory = checkNotNull(dialogFactory);
     }
 
     public void initialize() {
         backoffTooltip = new Tooltip();
-        backoffTooltip.setShowDelay(javafx.util.Duration.millis(10));
+        backoffTooltip.setShowDelay(javafx.util.Duration.ZERO);
         backoffTooltip.setWrapText(true);
         backoffTooltip.setPrefWidth(400);
         backoffTooltip.setShowDuration(javafx.util.Duration.INDEFINITE);
@@ -62,13 +71,20 @@ public final class ProgressBoxFxController {
         });
     }
 
-    public void updateFailure(int failureCount) {
-        if (failureCount > 0) {
-            runLater(() -> {
-                failureCountLabel.setText("Failed: " + failureCount);
-                animatedBackoffInfoIcon.hide();
-            });
-        }
+    public void addFailures(Collection<KeyedError> failures) {
+        runLater(() -> {
+            if (failuresDialog == null) {
+                failuresDialog = dialogFactory.create(
+                        resourceBundle.getString("failuresDialogTitlePrefix") + ' ' + nameLabel.getText(),
+                        "FailureLog.fxml",
+                        stage -> {
+                        });
+                failureCountHyperlink.setText(resourceBundle.getString("progressBoxFailuresHyperlinkText"));
+            }
+            FailureLogFxController failureLogFxController = failuresDialog.controller();
+            failureLogFxController.addFailures(failures);
+            animatedBackoffInfoIcon.hide();
+        });
     }
 
     public void done(boolean success) {
@@ -93,5 +109,10 @@ public final class ProgressBoxFxController {
                 animatedBackoffInfoIcon.show();
             }
         });
+    }
+
+    public void failureCountHyperlinkAction(ActionEvent actionEvent) {
+        failuresDialog.show();
+        actionEvent.consume();
     }
 }

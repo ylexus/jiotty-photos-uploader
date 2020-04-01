@@ -1,12 +1,15 @@
 package net.yudichev.googlephotosupload.core;
 
 import javax.annotation.Nullable;
+import java.util.Optional;
 import java.util.function.Function;
 
 public final class Either<L, R> {
-    private final @Nullable
+    @Nullable
+    private final
     L left;
-    private final @Nullable
+    @Nullable
+    private final
     R right;
     private final boolean isLeft;
 
@@ -28,5 +31,13 @@ public final class Either<L, R> {
             Function<? super L, ? extends T> lFunc,
             Function<? super R, ? extends T> rFunc) {
         return isLeft ? lFunc.apply(left) : rFunc.apply(right);
+    }
+
+    public Optional<L> getLeft() {
+        return Optional.ofNullable(left);
+    }
+
+    public Optional<R> getRight() {
+        return Optional.ofNullable(right);
     }
 }

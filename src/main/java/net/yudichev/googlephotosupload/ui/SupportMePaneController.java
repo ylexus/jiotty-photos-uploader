@@ -7,11 +7,11 @@ import javax.inject.Provider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public final class SupportMePaneFxController {
+public final class SupportMePaneController {
     private final Provider<JavafxApplicationResources> javafxApplicationResourcesProvider;
 
     @Inject
-    SupportMePaneFxController(Provider<JavafxApplicationResources> javafxApplicationResourcesProvider) {
+    SupportMePaneController(Provider<JavafxApplicationResources> javafxApplicationResourcesProvider) {
         this.javafxApplicationResourcesProvider = checkNotNull(javafxApplicationResourcesProvider);
     }
 

@@ -1,5 +1,5 @@
 package net.yudichev.googlephotosupload.core;
 
-interface InvalidMediaItemRemoteApiExceptionHandler {
+interface FatalUserCorrectableRemoteApiExceptionHandler {
     boolean handle(String operationName, Throwable exception);
 }

@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutorService;
 
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 
+@SuppressWarnings("OverlyCoupledClass") // OK for module
 public final class UploadPhotosModule extends BaseLifecycleComponentModule implements ExposedKeyModule<Uploader> {
     private final int backOffInitialDelayMs;
 
@@ -33,7 +34,7 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
         bindConstant().annotatedWith(BackOffProvider.InitialDelayMs.class).to(backOffInitialDelayMs);
         bind(BackOff.class).annotatedWith(BackingOffRemoteApiExceptionHandlerImpl.Dependency.class).toProvider(BackOffProvider.class);
         bind(BackingOffRemoteApiExceptionHandler.class).to(BackingOffRemoteApiExceptionHandlerImpl.class);
-        bind(InvalidMediaItemRemoteApiExceptionHandler.class).to(InvalidMediaItemRemoteApiExceptionHandlerImpl.class);
+        bind(FatalUserCorrectableRemoteApiExceptionHandler.class).to(FatalUserCorrectableRemoteApiExceptionHandlerImpl.class);
 
         bind(FilesystemManager.class).to(FilesystemManagerImpl.class);
 

@@ -10,6 +10,7 @@ import javax.inject.Provider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javafx.application.Platform.runLater;
+import static javafx.stage.Modality.APPLICATION_MODAL;
 
 final class UiAuthorizationBrowser extends BaseLifecycleComponent implements AuthorizationBrowser {
     static {
@@ -18,14 +19,14 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
 
     private final Provider<MainScreenController> mainScreenControllerProvider;
     private final ApplicationLifecycleControl applicationLifecycleControl;
-    private final ModalDialogFactory modalDialogFactory;
-    private ModalDialog dialog;
+    private final DialogFactory dialogFactory;
+    private Dialog dialog;
 
     @Inject
     UiAuthorizationBrowser(Provider<MainScreenController> mainScreenControllerProvider,
-                           ModalDialogFactory modalDialogFactory,
+                           DialogFactory dialogFactory,
                            ApplicationLifecycleControl applicationLifecycleControl) {
-        this.modalDialogFactory = checkNotNull(modalDialogFactory);
+        this.dialogFactory = checkNotNull(dialogFactory);
         this.mainScreenControllerProvider = checkNotNull(mainScreenControllerProvider);
         this.applicationLifecycleControl = checkNotNull(applicationLifecycleControl);
     }
@@ -34,7 +35,7 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     public void browse(String url) {
         runLater(() -> {
             if (dialog == null) {
-                dialog = modalDialogFactory.create("Login to Google", "LoginDialog.fxml", this::customizeLoginDialog);
+                dialog = dialogFactory.create("Login to Google", "LoginDialog.fxml", this::customizeLoginDialog);
             }
 
             dialog.show();
@@ -56,6 +57,7 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     }
 
     private void customizeLoginDialog(Stage dialog) {
+        dialog.initModality(APPLICATION_MODAL);
         dialog.setMinHeight(500);
         dialog.setMinWidth(500);
         dialog.setOnCloseRequest(event -> {
