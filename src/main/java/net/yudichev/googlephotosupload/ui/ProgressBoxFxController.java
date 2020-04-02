@@ -115,4 +115,10 @@ public final class ProgressBoxFxController {
         failuresDialog.show();
         actionEvent.consume();
     }
+
+    public void close() {
+        if (failuresDialog != null) {
+            failuresDialog.close();
+        }
+    }
 }

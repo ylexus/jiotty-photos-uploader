@@ -43,7 +43,7 @@ final class UiModule extends BaseLifecycleComponentModule {
         bind(FxmlContainerFactory.class).to(FxmlContainerFactoryImpl.class);
 
         install(new FactoryModuleBuilder()
-                .implement(ProgressStatusBar.class, ProgressBox.class)
+                .implement(ProgressStatusBar.class, ProgressStatusBarImpl.class)
                 .build(ProgressStatusBarFactory.class));
 
         installLifecycleComponentModule(new TimeModule());

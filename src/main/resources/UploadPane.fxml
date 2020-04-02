@@ -12,7 +12,7 @@
         <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
     </padding>
     <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;" VBox.vgrow="ALWAYS">
-        <VBox fx:id="progressBox" spacing="4.0">
+        <VBox fx:id="progressBoxContainer" spacing="4.0">
             <GridPane styleClass="progress-box">
                 <columnConstraints>
                     <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0"/>

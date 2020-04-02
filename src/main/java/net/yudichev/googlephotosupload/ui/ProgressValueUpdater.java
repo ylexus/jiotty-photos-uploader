@@ -9,7 +9,7 @@ interface ProgressValueUpdater {
 
     void addFailures(Collection<KeyedError> failures);
 
-    void close(boolean success);
+    void completed(boolean success);
 
     void onBackoffDelay(long backoffDelayMs);
 }

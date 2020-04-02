@@ -31,6 +31,7 @@ final class DialogImpl implements Dialog {
     @Override
     public void show() {
         dialog.show();
+        dialog.toFront();
     }
 
     @SuppressWarnings("unchecked")

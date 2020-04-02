@@ -11,6 +11,7 @@ import javafx.scene.text.TextFlow;
 import net.yudichev.googlephotosupload.core.Restarter;
 import net.yudichev.googlephotosupload.core.Uploader;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
+import net.yudichev.jiotty.common.lang.Closeable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,6 +19,8 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -31,7 +34,8 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     private final Restarter restarter;
     private final FxmlContainerFactory fxmlContainerFactory;
     private final Provider<MainScreenController> mainScreenControllerProvider;
-    public VBox progressBox;
+    private final Collection<Closeable> progressBoxes = new ArrayList<>();
+    public VBox progressBoxContainer;
     public TextFlow logArea;
     public Button stopButton;
     public VBox topVBox;
@@ -54,8 +58,11 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     }
 
     @Override
-    public void addProgressBox(Node node) {
-        runLater(() -> progressBox.getChildren().add(node));
+    public void addProgressBox(ProgressBox progressBox) {
+        runLater(() -> {
+            progressBoxes.add(progressBox);
+            progressBoxContainer.getChildren().add(progressBox.node());
+        });
     }
 
     @Override
@@ -63,11 +70,12 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
         runLater(() -> {
             logArea.getStyleClass().remove("success-background");
             logArea.getStyleClass().remove("failed-background");
-            ObservableList<Node> logAreaChildren = logArea.getChildren();
-            logAreaChildren.clear();
+            logArea.getChildren().clear();
             logArea.setVisible(false);
 
-            progressBox.getChildren().clear();
+            progressBoxContainer.getChildren().clear();
+            progressBoxes.forEach(Closeable::close);
+            progressBoxes.clear();
 
             stopButton.setDisable(true);
             uploadMoreButton.setDisable(true);

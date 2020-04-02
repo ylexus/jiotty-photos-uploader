@@ -1,12 +1,10 @@
 package net.yudichev.googlephotosupload.ui;
 
-import javafx.scene.Node;
-
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 
 interface UploadPaneController {
-    void addProgressBox(Node node);
+    void addProgressBox(ProgressBox progressBox);
 
     void reset();
 

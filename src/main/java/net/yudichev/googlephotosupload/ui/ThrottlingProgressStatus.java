@@ -76,7 +76,7 @@ final class ThrottlingProgressStatus implements ProgressStatus {
         drainPendingFailuresToDelegate();
         eventSink.close();
         executor.close();
-        delegate.close(success);
+        delegate.completed(success);
     }
 
     private void drainPendingFailuresToDelegate() {
