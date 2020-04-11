@@ -142,9 +142,9 @@ runtime {
             resourceDir = file("$rootDir/src/main/packaging-resources/macOS/out")
         }
         if (org.gradle.internal.os.OperatingSystem.current().windows) {
-            installerType = 'exe'
+            installerType = 'msi'
             imageOptions = ['--verbose']
-            installerOptions = ['--verbose', '--win-per-user-install', '--win-menu']
+            installerOptions = ['--verbose', '--win-per-user-install', '--win-menu', '--win-upgrade-uuid', '58e3cc92-0df9-4089-9609-8ad54b2608e7']
             resourceDir = file("$rootDir/src/main/packaging-resources/windows")
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
