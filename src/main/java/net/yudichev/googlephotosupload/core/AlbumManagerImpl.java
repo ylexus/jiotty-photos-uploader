@@ -12,10 +12,7 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
@@ -39,6 +36,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     private final Provider<ExecutorService> executorServiceProvider;
     private final CloudOperationHelper cloudOperationHelper;
     private final ProgressStatusFactory progressStatusFactory;
+    private final ResourceBundle resourceBundle;
 
     private volatile ExecutorService executorService;
 
@@ -46,34 +44,19 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     AlbumManagerImpl(GooglePhotosClient googlePhotosClient,
                      @Backpressured Provider<ExecutorService> executorServiceProvider,
                      CloudOperationHelper cloudOperationHelper,
-                     ProgressStatusFactory progressStatusFactory) {
+                     ProgressStatusFactory progressStatusFactory,
+                     ResourceBundle resourceBundle) {
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
         this.executorServiceProvider = checkNotNull(executorServiceProvider);
         this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
         this.progressStatusFactory = checkNotNull(progressStatusFactory);
+        this.resourceBundle = checkNotNull(resourceBundle);
     }
 
-    @Override
-    public CompletableFuture<Map<String, GooglePhotosAlbum>> listAlbumsByTitle(List<AlbumDirectory> albumDirectories, Map<String,
-            List<GooglePhotosAlbum>> cloudAlbumsByTitle) {
-        checkStarted();
-        int reconcilableAlbumCount = albumDirectories.size() - 1;
-        logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", reconcilableAlbumCount);
-        ProgressStatus progressStatus = progressStatusFactory.create(
-                String.format("Reconciling %s album(s) with Google Photos", reconcilableAlbumCount),
-                Optional.of(reconcilableAlbumCount)); // root directory is excluded from progress as it does not need to be reconciled
-        return albumDirectories.stream()
-                .map(albumDirectory -> albumDirectory.albumTitle()
-                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path(), progressStatus::onBackoffDelay)
-                                .whenComplete((album, e) -> progressStatus.incrementSuccess())))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(toFutureOfList())
-                .<Map<String, GooglePhotosAlbum>>thenApply(googlePhotosAlbums -> googlePhotosAlbums.stream()
-                        .collect(toImmutableMap(
-                                GooglePhotosAlbum::getTitle,
-                                Function.identity())))
-                .whenComplete((ignored, e) -> progressStatus.close(e == null));
+    private static List<GoogleMediaItem> without(List<GoogleMediaItem> mediaItems, List<GoogleMediaItem> itemsToExclude) {
+        List<GoogleMediaItem> result = new ArrayList<>(mediaItems);
+        result.removeAll(itemsToExclude);
+        return result;
     }
 
     @Override
@@ -81,38 +64,8 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
         executorService = executorServiceProvider.get();
     }
 
-    private CompletableFuture<GooglePhotosAlbum> reconcile(Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle,
-                                                           String filesystemAlbumTitle,
-                                                           Path path,
-                                                           LongConsumer backoffEventConsumer) {
-        CompletableFuture<GooglePhotosAlbum> albumFuture;
-        List<GooglePhotosAlbum> cloudAlbumsForThisTitle = cloudAlbumsByTitle.get(filesystemAlbumTitle);
-        if (cloudAlbumsForThisTitle == null) {
-            logger.info("Creating album [{}] for path [{}]", filesystemAlbumTitle, path);
-            albumFuture = cloudOperationHelper.withBackOffAndRetry(
-                    "create album " + filesystemAlbumTitle,
-                    () -> googlePhotosClient.createAlbum(filesystemAlbumTitle, executorService),
-                    backoffEventConsumer);
-        } else if (cloudAlbumsForThisTitle.size() > 1) {
-            List<GooglePhotosAlbum> nonEmptyCloudAlbumsForThisTitle = cloudAlbumsForThisTitle.stream()
-                    .filter(googlePhotosAlbum -> googlePhotosAlbum.getMediaItemCount() > 0)
-                    .collect(toImmutableList());
-            if (nonEmptyCloudAlbumsForThisTitle.isEmpty()) {
-                cloudAlbumsForThisTitle.stream()
-                        .skip(1)
-                        .forEach(this::removeAlbum);
-                return completedFuture(cloudAlbumsForThisTitle.get(0));
-            } else if (nonEmptyCloudAlbumsForThisTitle.size() > 1) {
-                GooglePhotosAlbum primaryAlbum = cloudAlbumsForThisTitle.get(0);
-                logger.info("Merging {} duplicate cloud album(s) for path [{}] into {}", cloudAlbumsForThisTitle.size(), path, primaryAlbum);
-                albumFuture = mergeAlbums(primaryAlbum, cloudAlbumsForThisTitle.subList(1, cloudAlbumsForThisTitle.size()), backoffEventConsumer);
-            } else {
-                albumFuture = completedFuture(nonEmptyCloudAlbumsForThisTitle.get(0));
-            }
-        } else {
-            albumFuture = completedFuture(cloudAlbumsForThisTitle.get(0));
-        }
-        return albumFuture;
+    private static String mediaItemsToIds(List<GoogleMediaItem> items) {
+        return items.stream().map(GoogleMediaItem::getId).collect(Collectors.joining(", "));
     }
 
     private CompletableFuture<GooglePhotosAlbum> mergeAlbums(GooglePhotosAlbum primaryAlbum,
@@ -131,10 +84,10 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                 });
     }
 
-    private List<GoogleMediaItem> without(List<GoogleMediaItem> mediaItems, List<GoogleMediaItem> itemsToExclude) {
-        ArrayList<GoogleMediaItem> result = new ArrayList<>(mediaItems);
-        result.removeAll(itemsToExclude);
-        return result;
+    private static void removeAlbum(GooglePhotosAlbum albumToBeMerged) {
+        // remove this album - CAN'T DO THIS :-(, so flagging to user
+        logger.warn("Google Photos API deficiency: album '{}' with URL {} may now be empty and will require manual deletion",
+                albumToBeMerged.getTitle(), albumToBeMerged.getAlbumUrl());
     }
 
     private CompletableFuture<Void> moveItems(GooglePhotosAlbum sourceAlbum,
@@ -176,8 +129,27 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                         .thenApply(list -> null));
     }
 
-    private String mediaItemsToIds(List<GoogleMediaItem> items) {
-        return items.stream().map(GoogleMediaItem::getId).collect(Collectors.joining(", "));
+    @Override
+    public CompletableFuture<Map<String, GooglePhotosAlbum>> listAlbumsByTitle(List<AlbumDirectory> albumDirectories, Map<String,
+            List<GooglePhotosAlbum>> cloudAlbumsByTitle) {
+        checkStarted();
+        int reconcilableAlbumCount = albumDirectories.size() - 1;
+        logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", reconcilableAlbumCount);
+        ProgressStatus progressStatus = progressStatusFactory.create(
+                String.format(resourceBundle.getString("albumManagerProgressStatusTitlePattern"), reconcilableAlbumCount),
+                Optional.of(reconcilableAlbumCount)); // root directory is excluded from progress as it does not need to be reconciled
+        return albumDirectories.stream()
+                .map(albumDirectory -> albumDirectory.albumTitle()
+                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path(), progressStatus::onBackoffDelay)
+                                .whenComplete((album, e) -> progressStatus.incrementSuccess())))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(toFutureOfList())
+                .<Map<String, GooglePhotosAlbum>>thenApply(googlePhotosAlbums -> googlePhotosAlbums.stream()
+                        .collect(toImmutableMap(
+                                GooglePhotosAlbum::getTitle,
+                                Function.identity())))
+                .whenComplete((ignored, e) -> progressStatus.close(e == null));
     }
 
     private CompletableFuture<List<GoogleMediaItem>> getItemsInAlbum(GooglePhotosAlbum sourceAlbum, LongConsumer backoffEventConsumer) {
@@ -187,17 +159,46 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                 backoffEventConsumer);
     }
 
-    private void removeAlbum(GooglePhotosAlbum albumToBeMerged) {
-        // remove this album - CAN'T DO THIS :-(, so flagging to user
-        logger.warn("Google Photos API deficiency: album '{}' with URL {} may now be empty and will require manual deletion",
-                albumToBeMerged.getTitle(), albumToBeMerged.getAlbumUrl());
+    private CompletableFuture<GooglePhotosAlbum> reconcile(Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle,
+                                                           String filesystemAlbumTitle,
+                                                           Path path,
+                                                           LongConsumer backoffEventConsumer) {
+        CompletableFuture<GooglePhotosAlbum> albumFuture;
+        List<GooglePhotosAlbum> cloudAlbumsForThisTitle = cloudAlbumsByTitle.get(filesystemAlbumTitle);
+        if (cloudAlbumsForThisTitle == null) {
+            logger.info("Creating album [{}] for path [{}]", filesystemAlbumTitle, path);
+            albumFuture = cloudOperationHelper.withBackOffAndRetry(
+                    "create album " + filesystemAlbumTitle,
+                    () -> googlePhotosClient.createAlbum(filesystemAlbumTitle, executorService),
+                    backoffEventConsumer);
+        } else if (cloudAlbumsForThisTitle.size() > 1) {
+            List<GooglePhotosAlbum> nonEmptyCloudAlbumsForThisTitle = cloudAlbumsForThisTitle.stream()
+                    .filter(googlePhotosAlbum -> googlePhotosAlbum.getMediaItemCount() > 0)
+                    .collect(toImmutableList());
+            if (nonEmptyCloudAlbumsForThisTitle.isEmpty()) {
+                cloudAlbumsForThisTitle.stream()
+                        .skip(1)
+                        .forEach(AlbumManagerImpl::removeAlbum);
+                return completedFuture(cloudAlbumsForThisTitle.get(0));
+            } else if (nonEmptyCloudAlbumsForThisTitle.size() > 1) {
+                GooglePhotosAlbum primaryAlbum = cloudAlbumsForThisTitle.get(0);
+                logger.info("Merging {} duplicate cloud album(s) for path [{}] into {}", cloudAlbumsForThisTitle.size(), path, primaryAlbum);
+                albumFuture = mergeAlbums(primaryAlbum, cloudAlbumsForThisTitle.subList(1, cloudAlbumsForThisTitle.size()), backoffEventConsumer);
+            } else {
+                albumFuture = completedFuture(nonEmptyCloudAlbumsForThisTitle.get(0));
+            }
+        } else {
+            albumFuture = completedFuture(cloudAlbumsForThisTitle.get(0));
+        }
+        return albumFuture;
     }
 
     private static CompletableFuture<Void> withInvalidMediaItemErrorIgnored(String operationName, CompletableFuture<Void> action) {
         return action
                 .exceptionally(exception -> {
                     if (getCausalChain(exception).stream().anyMatch(throwable -> throwable instanceof InvalidArgumentException)) {
-                        logger.warn("Ignoring INVALID_ARGUMENT failure, must be pre-existing media item that we have no access to; operation was '{}'", operationName);
+                        logger.warn("Ignoring INVALID_ARGUMENT failure, must be pre-existing media item that we have no access to; operation was '{}'",
+                                operationName);
                         return null;
                     } else {
                         throw new RuntimeException(exception);

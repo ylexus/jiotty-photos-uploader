@@ -9,7 +9,7 @@ final class UiAuthorizationBrowserModule extends BaseLifecycleComponentModule im
 
     private final Key<AuthorizationBrowser> exposedKey;
 
-    public UiAuthorizationBrowserModule() {
+    UiAuthorizationBrowserModule() {
         exposedKey = Key.get(AuthorizationBrowser.class, Bindings.AuthBrowser.class);
     }
 

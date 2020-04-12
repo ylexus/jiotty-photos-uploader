@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
@@ -24,6 +25,7 @@ final class UploaderImpl implements Uploader {
     private final AlbumManager albumManager;
     private final CloudAlbumsProvider cloudAlbumsProvider;
     private final ProgressStatusFactory progressStatusFactory;
+    private final ResourceBundle resourceBundle;
 
     @Inject
     UploaderImpl(FilesystemManager filesystemManager,
@@ -31,13 +33,15 @@ final class UploaderImpl implements Uploader {
                  DirectoryStructureSupplier directoryStructureSupplier,
                  AlbumManager albumManager,
                  CloudAlbumsProvider cloudAlbumsProvider,
-                 ProgressStatusFactory progressStatusFactory) {
+                 ProgressStatusFactory progressStatusFactory,
+                 ResourceBundle resourceBundle) {
         this.filesystemManager = checkNotNull(filesystemManager);
         this.googlePhotosUploader = checkNotNull(googlePhotosUploader);
         this.directoryStructureSupplier = checkNotNull(directoryStructureSupplier);
         this.albumManager = checkNotNull(albumManager);
         this.cloudAlbumsProvider = checkNotNull(cloudAlbumsProvider);
         this.progressStatusFactory = checkNotNull(progressStatusFactory);
+        this.resourceBundle = checkNotNull(resourceBundle);
     }
 
     @Override
@@ -52,8 +56,12 @@ final class UploaderImpl implements Uploader {
                         .thenCompose(cloudAlbumsByTitle -> albumManager.listAlbumsByTitle(albumDirectories, cloudAlbumsByTitle)
                                 .thenCompose(albumsByTitle -> {
                                     ProgressStatus directoryProgressStatus =
-                                            progressStatusFactory.create("Folders processed", Optional.of(albumDirectories.size() - 1));
-                                    ProgressStatus fileProgressStatus = progressStatusFactory.create("Uploading files", Optional.empty());
+                                            progressStatusFactory.create(
+                                                    resourceBundle.getString("uploaderDirectoryProgressTitle"),
+                                                    Optional.of(albumDirectories.size()));
+                                    ProgressStatus fileProgressStatus = progressStatusFactory.create(
+                                            resourceBundle.getString("uploaderFileProgressTitle"),
+                                            Optional.empty());
                                     try {
                                         return albumDirectories.stream()
                                                 .flatMap(albumDirectory -> {

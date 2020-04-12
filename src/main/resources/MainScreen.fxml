@@ -11,9 +11,9 @@
         <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
     </padding>
     <MenuBar fx:id="menuBar" useSystemMenuBar="true" VBox.vgrow="NEVER">
-        <Menu mnemonicParsing="false" text="Actions">
-            <MenuItem fx:id="menuItemStopUpload" disable="true" mnemonicParsing="false" onAction="#onStopUpload" text="Stop Upload"/>
-            <MenuItem fx:id="menuItemLogout" disable="true" mnemonicParsing="false" onAction="#onMenuActionLogout" text="Logout"/>
+        <Menu mnemonicParsing="false" text="%mainScreenMenuActionsText">
+            <MenuItem fx:id="menuItemStopUpload" disable="true" mnemonicParsing="false" onAction="#onStopUpload" text="%mainScreenMenuActionsStopUploadText"/>
+            <MenuItem fx:id="menuItemLogout" disable="true" mnemonicParsing="false" onAction="#onMenuActionLogout" text="%mainScreenMenuActionsLogoutText"/>
         </Menu>
     </MenuBar>
 </VBox>

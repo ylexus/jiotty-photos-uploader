@@ -19,8 +19,8 @@ public final class UiMain extends javafx.application.Application {
 
     public static void main(String[] args) {
         Application.builder()
-                .addModule(() -> new UiModule(javafxApplicationResourcesHandler -> {
-                    checkState(UiMain.javafxApplicationResourcesHandler.compareAndSet(null, javafxApplicationResourcesHandler), "can only launch once");
+                .addModule(() -> new UiModule(handler -> {
+                    checkState(javafxApplicationResourcesHandler.compareAndSet(null, handler), "can only launch once");
                     new Thread(() -> launch(args)).start();
                 }))
                 .addModule(() -> new DependenciesModule(builder -> builder.setAuthorizationBrowser(annotatedWith(AuthBrowser.class))))

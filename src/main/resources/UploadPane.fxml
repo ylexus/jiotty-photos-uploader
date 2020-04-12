@@ -33,8 +33,8 @@
         </padding>
     </TextFlow>
     <FlowPane alignment="CENTER_RIGHT" hgap="4.0">
-        <Button fx:id="stopButton" mnemonicParsing="false" onAction="#onStopButtonPressed" text="Stop"/>
-        <Button fx:id="uploadMoreButton" mnemonicParsing="false" onAction="#onUploadMoreButtonPressed" text="Upload more..." disable="true"/>
+        <Button fx:id="stopButton" mnemonicParsing="false" onAction="#onStopButtonPressed" text="%uploadPaneStopButtonText"/>
+        <Button fx:id="uploadMoreButton" mnemonicParsing="false" onAction="#onUploadMoreButtonPressed" text="%uploadPaneUploadMoreButtonText" disable="true"/>
         <padding>
             <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
         </padding>

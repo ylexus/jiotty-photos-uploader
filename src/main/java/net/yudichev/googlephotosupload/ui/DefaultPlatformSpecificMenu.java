@@ -8,24 +8,35 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 
+import javax.inject.Inject;
+import java.util.ResourceBundle;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
 final class DefaultPlatformSpecificMenu implements PlatformSpecificMenu {
+    private final ResourceBundle resourceBundle;
     private MenuItem exitMenuItem;
     private MenuItem preferencesMenuItem;
     private MenuItem aboutMenuItem;
 
+    @Inject
+    DefaultPlatformSpecificMenu(ResourceBundle resourceBundle) {
+        this.resourceBundle = checkNotNull(resourceBundle);
+    }
+
     @Override
     public void initialize(MenuBar menuBar) {
-        Menu fileMenu = new Menu("File");
+        Menu fileMenu = new Menu(resourceBundle.getString("menuItemDefaultFile"));
         ObservableList<MenuItem> fileMenuItems = fileMenu.getItems();
 
-        aboutMenuItem = new MenuItem("About...");
+        aboutMenuItem = new MenuItem(resourceBundle.getString("menuItemDefaultAbout"));
         fileMenuItems.add(aboutMenuItem);
 
-        preferencesMenuItem = new MenuItem("Settings...");
+        preferencesMenuItem = new MenuItem(resourceBundle.getString("menuItemDefaultSettings"));
         fileMenuItems.add(preferencesMenuItem);
 
         fileMenuItems.add(new SeparatorMenuItem());
-        exitMenuItem = new MenuItem("Exit");
+        exitMenuItem = new MenuItem(resourceBundle.getString("menuItemDefaultExit"));
 
         fileMenuItems.add(exitMenuItem);
         menuBar.getMenus().add(0, fileMenu);

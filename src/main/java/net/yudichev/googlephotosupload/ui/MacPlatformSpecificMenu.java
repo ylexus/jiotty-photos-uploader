@@ -9,13 +9,23 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCodeCombination;
 
+import javax.inject.Inject;
+import java.util.ResourceBundle;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 import static javafx.scene.input.KeyCode.COMMA;
 import static javafx.scene.input.KeyCombination.META_DOWN;
 import static net.yudichev.googlephotosupload.core.AppName.APP_TITLE;
 
 final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
+    private final ResourceBundle resourceBundle;
     private MenuItem preferencesMenuItem;
     private MenuItem aboutMenuItem;
+
+    @Inject
+    MacPlatformSpecificMenu(ResourceBundle resourceBundle) {
+        this.resourceBundle = checkNotNull(resourceBundle);
+    }
 
     @Override
     public void initialize(MenuBar menuBar) {
@@ -25,7 +35,7 @@ final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
         aboutMenuItem = tk.createAboutMenuItem(APP_TITLE);
         defaultApplicationMenu.getItems().set(0, aboutMenuItem);
 
-        preferencesMenuItem = new MenuItem("Preferences...");
+        preferencesMenuItem = new MenuItem(resourceBundle.getString("menuItemMacPreferences"));
         preferencesMenuItem.setAccelerator(new KeyCodeCombination(COMMA, META_DOWN));
         defaultApplicationMenu.getItems().add(2, new SeparatorMenuItem());
         defaultApplicationMenu.getItems().add(2, preferencesMenuItem);

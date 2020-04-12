@@ -21,12 +21,14 @@ import javax.inject.Provider;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javafx.application.Platform.runLater;
 import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 
+@SuppressWarnings("ClassWithTooManyFields") // OK for a FX controller
 public final class UploadPaneControllerImpl extends BaseLifecycleComponent implements UploadPaneController {
     private static final Logger logger = LoggerFactory.getLogger(UploadPaneControllerImpl.class);
 
@@ -34,6 +36,7 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     private final Restarter restarter;
     private final FxmlContainerFactory fxmlContainerFactory;
     private final Provider<MainScreenController> mainScreenControllerProvider;
+    private final ResourceBundle resourceBundle;
     private final Collection<Closeable> progressBoxes = new ArrayList<>();
     public VBox progressBoxContainer;
     public TextFlow logArea;
@@ -45,11 +48,13 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     UploadPaneControllerImpl(Uploader uploader,
                              Restarter restarter,
                              FxmlContainerFactory fxmlContainerFactory,
-                             Provider<MainScreenController> mainScreenControllerProvider) {
+                             Provider<MainScreenController> mainScreenControllerProvider,
+                             ResourceBundle resourceBundle) {
         this.uploader = checkNotNull(uploader);
         this.restarter = checkNotNull(restarter);
         this.fxmlContainerFactory = checkNotNull(fxmlContainerFactory);
         this.mainScreenControllerProvider = checkNotNull(mainScreenControllerProvider);
+        this.resourceBundle = checkNotNull(resourceBundle);
     }
 
     public void initialize() {
@@ -104,11 +109,11 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
                 ObservableList<Node> logAreaChildren = logArea.getChildren();
                 if (exception == null) {
                     logArea.getStyleClass().add("success-background");
-                    logAreaChildren.add(new Text("Total success, ladies and gentlemen!"));
+                    logAreaChildren.add(new Text(resourceBundle.getString("uploadPaneLogAreaSuccessLabel")));
                 } else {
                     logger.error("Upload failed", exception);
                     logArea.getStyleClass().add("failed-background");
-                    logAreaChildren.add(new Text("Something went wrong: "));
+                    logAreaChildren.add(new Text(resourceBundle.getString("uploadPaneLogAreaFailurePrefix") + " "));
                     Text failureText = new Text(humanReadableMessage(exception));
                     failureText.getStyleClass().add("failed-text");
                     logAreaChildren.add(failureText);

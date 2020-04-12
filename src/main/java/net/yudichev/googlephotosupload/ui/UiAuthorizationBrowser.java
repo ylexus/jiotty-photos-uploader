@@ -7,6 +7,7 @@ import net.yudichev.jiotty.connector.google.common.AuthorizationBrowser;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
+import java.util.ResourceBundle;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javafx.application.Platform.runLater;
@@ -19,23 +20,29 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
 
     private final Provider<MainScreenController> mainScreenControllerProvider;
     private final ApplicationLifecycleControl applicationLifecycleControl;
+    private final ResourceBundle resourceBundle;
     private final DialogFactory dialogFactory;
     private Dialog dialog;
 
     @Inject
     UiAuthorizationBrowser(Provider<MainScreenController> mainScreenControllerProvider,
                            DialogFactory dialogFactory,
-                           ApplicationLifecycleControl applicationLifecycleControl) {
+                           ApplicationLifecycleControl applicationLifecycleControl,
+                           ResourceBundle resourceBundle) {
         this.dialogFactory = checkNotNull(dialogFactory);
         this.mainScreenControllerProvider = checkNotNull(mainScreenControllerProvider);
         this.applicationLifecycleControl = checkNotNull(applicationLifecycleControl);
+        this.resourceBundle = checkNotNull(resourceBundle);
     }
 
     @Override
     public void browse(String url) {
         runLater(() -> {
             if (dialog == null) {
-                dialog = dialogFactory.create("Login to Google", "LoginDialog.fxml", this::customizeLoginDialog);
+                dialog = dialogFactory.create(
+                        resourceBundle.getString("uiAuthorisationBrowserTitle"),
+                        "LoginDialog.fxml",
+                        this::customizeLoginDialog);
             }
 
             dialog.show();

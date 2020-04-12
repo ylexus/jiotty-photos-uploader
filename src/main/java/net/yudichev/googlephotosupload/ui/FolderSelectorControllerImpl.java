@@ -15,6 +15,7 @@ import net.yudichev.googlephotosupload.core.Uploader;
 import javax.inject.Inject;
 import java.io.File;
 import java.nio.file.Path;
+import java.util.ResourceBundle;
 import java.util.function.BiConsumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -22,6 +23,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 public final class FolderSelectorControllerImpl implements FolderSelectorController {
     private final Uploader uploader;
+    private final ResourceBundle resourceBundle;
     public VBox folderSelector;
     public CheckBox resumeCheckbox;
     public FlowPane resumePane;
@@ -29,18 +31,17 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
     private BiConsumer<Path, Boolean> folderSelectionListener;
 
     @Inject
-    FolderSelectorControllerImpl(Uploader uploader) {
+    FolderSelectorControllerImpl(Uploader uploader,
+                                 ResourceBundle resourceBundle) {
         this.uploader = checkNotNull(uploader);
+        this.resourceBundle = checkNotNull(resourceBundle);
     }
 
-    public void initialize() {
-        int numberOfUploadedItems = uploader.numberOfUploadedItems();
-        if (numberOfUploadedItems > 0) {
-            alreadyUploadedLabel.setText(String.format("(already uploaded: %s)", numberOfUploadedItems));
-            resumePane.setVisible(true);
-        } else {
-            resumePane.setVisible(false);
+    public static void folderSelectorOnDragOver(DragEvent event) {
+        if (isSingleFolder(event.getDragboard())) {
+            event.acceptTransferModes(TransferMode.ANY);
         }
+        event.consume();
     }
 
     @Override
@@ -64,11 +65,8 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
         event.consume();
     }
 
-    public void folderSelectorOnDragOver(DragEvent event) {
-        if (isSingleFolder(event.getDragboard())) {
-            event.acceptTransferModes(TransferMode.ANY);
-        }
-        event.consume();
+    private static boolean isSingleFolder(Dragboard dragboard) {
+        return dragboard.hasFiles() && dragboard.getFiles().size() == 1 && dragboard.getFiles().get(0).isDirectory();
     }
 
     public void folderSelectorOnDragDropped(DragEvent event) {
@@ -82,21 +80,27 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
         event.consume();
     }
 
-    public void onBrowseButtonClick(ActionEvent actionEvent) {
-        DirectoryChooser directoryChooser = new DirectoryChooser();
-        directoryChooser.setTitle("Select folder with photos");
-        File file = directoryChooser.showDialog(folderSelector.getScene().getWindow());
-        if (file != null) {
-            notifyListener(file);
+    public void initialize() {
+        int numberOfUploadedItems = uploader.numberOfUploadedItems();
+        if (numberOfUploadedItems > 0) {
+            alreadyUploadedLabel.setText(String.format("(%s %s)", resourceBundle.getString("folderSelectorAlreadyUploadedLabelPrefix"), numberOfUploadedItems));
+            resumePane.setVisible(true);
+        } else {
+            resumePane.setVisible(false);
         }
-        actionEvent.consume();
     }
 
     private void notifyListener(File file) {
         folderSelectionListener.accept(file.toPath(), resumeCheckbox.isSelected());
     }
 
-    private boolean isSingleFolder(Dragboard dragboard) {
-        return dragboard.hasFiles() && dragboard.getFiles().size() == 1 && dragboard.getFiles().get(0).isDirectory();
+    public void onBrowseButtonClick(ActionEvent actionEvent) {
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        directoryChooser.setTitle(resourceBundle.getString("folderSelectorDirectoryChooserTitle"));
+        File file = directoryChooser.showDialog(folderSelector.getScene().getWindow());
+        if (file != null) {
+            notifyListener(file);
+        }
+        actionEvent.consume();
     }
 }

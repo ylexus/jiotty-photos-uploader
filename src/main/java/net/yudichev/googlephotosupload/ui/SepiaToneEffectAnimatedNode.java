@@ -14,7 +14,7 @@ final class SepiaToneEffectAnimatedNode implements AnimatedNode {
     private final Node node;
     private final Timeline timeline;
 
-    public SepiaToneEffectAnimatedNode(Node node) {
+    SepiaToneEffectAnimatedNode(Node node) {
         this.node = node;
         SepiaTone effect = new SepiaTone();
         node.setEffect(effect);

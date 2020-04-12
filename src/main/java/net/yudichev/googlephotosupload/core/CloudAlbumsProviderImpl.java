@@ -21,25 +21,28 @@ final class CloudAlbumsProviderImpl extends BaseLifecycleComponent implements Cl
     private final GooglePhotosClient googlePhotosClient;
     private final Provider<ExecutorService> executorServiceProvider;
     private final ProgressStatusFactory progressStatusFactory;
+    private final ResourceBundle resourceBundle;
 
     private volatile ExecutorService executorService;
 
     @Inject
     CloudAlbumsProviderImpl(CloudOperationHelper cloudOperationHelper,
                             GooglePhotosClient googlePhotosClient,
-                            @Backpressured Provider<ExecutorService> executorServiceProvider,
-                            ProgressStatusFactory progressStatusFactory) {
+                            @SuppressWarnings("BoundedWildcard") @Backpressured Provider<ExecutorService> executorServiceProvider,
+                            ProgressStatusFactory progressStatusFactory,
+                            ResourceBundle resourceBundle) {
         this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
         this.executorServiceProvider = executorServiceProvider;
         this.progressStatusFactory = checkNotNull(progressStatusFactory);
+        this.resourceBundle = checkNotNull(resourceBundle);
     }
 
     @Override
     public CompletableFuture<Map<String, List<GooglePhotosAlbum>>> listCloudAlbums() {
         checkStarted();
         logger.info("Loading albums in cloud (may take several minutes)...");
-        ProgressStatus progressStatus = progressStatusFactory.create("Loading albums in cloud", Optional.empty());
+        ProgressStatus progressStatus = progressStatusFactory.create(resourceBundle.getString("cloudAlbumsProviderProgressTitle"), Optional.empty());
         return cloudOperationHelper.withBackOffAndRetry(
                 "get all albums",
                 () -> googlePhotosClient.listAlbums(progressStatus::updateSuccess, executorService),

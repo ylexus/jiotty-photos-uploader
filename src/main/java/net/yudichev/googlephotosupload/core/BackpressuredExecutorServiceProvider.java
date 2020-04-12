@@ -24,6 +24,19 @@ final class BackpressuredExecutorServiceProvider extends BaseLifecycleComponent 
         return whenStartedAndNotLifecycling(() -> executor);
     }
 
+    private static void rejectedExecution(Runnable task, ThreadPoolExecutor executor) {
+        checkState(!executor.isShutdown(), "Executor shut down: %s", executor);
+        task.run();
+    }
+
+    @Override
+    protected void doStop() {
+        if (!shutdownAndAwaitTermination(executor, 3, TimeUnit.SECONDS)) {
+            logger.warn("Failed to shutdown upload thread pool in 3 seconds");
+        }
+        executor = null;
+    }
+
     @Override
     protected void doStart() {
         executor = new ThreadPoolExecutor(
@@ -35,19 +48,6 @@ final class BackpressuredExecutorServiceProvider extends BaseLifecycleComponent 
                         .setNameFormat("upload-pool-%s")
                         .setDaemon(true)
                         .build(),
-                this::rejectedExecution);
-    }
-
-    @Override
-    protected void doStop() {
-        if (!shutdownAndAwaitTermination(executor, 3, TimeUnit.SECONDS)) {
-            logger.warn("Failed to shutdown upload thread pool in 3 seconds");
-        }
-        executor = null;
-    }
-
-    private void rejectedExecution(Runnable task, ThreadPoolExecutor executor) {
-        checkState(!executor.isShutdown(), "Executor shut down: %s", executor);
-        task.run();
+                BackpressuredExecutorServiceProvider::rejectedExecution);
     }
 }

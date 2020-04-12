@@ -15,13 +15,6 @@ final class Bindings {
     @BindingAnnotation
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
-    @interface Primary {
-    }
-
-    @BindingAnnotation
-    @Target({FIELD, PARAMETER, METHOD})
-    @Retention(RUNTIME)
     @interface AuthBrowser {
     }
-
 }

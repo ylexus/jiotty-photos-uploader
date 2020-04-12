@@ -6,6 +6,6 @@
 <HBox xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER" styleClass="side-note" stylesheets="@style.css"
       xmlns="http://javafx.com/javafx/10.0.2-internal"
       fx:controller="net.yudichev.googlephotosupload.ui.SupportMePaneController">
-    <Label text="I develop this app in my free time. "/>
-    <Hyperlink onAction="#onSupportLinkAction" text="Please support the project!"/>
+    <Label text="%supportMePaneFirstSentence"/>
+    <Hyperlink onAction="#onSupportLinkAction" text="%supportMePaneSupportLinkSentence"/>
 </HBox>

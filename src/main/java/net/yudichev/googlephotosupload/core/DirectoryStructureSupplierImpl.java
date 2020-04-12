@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -24,18 +25,33 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
 
     private final FilesystemManager filesystemManager;
     private final ProgressStatusFactory progressStatusFactory;
+    private final ResourceBundle resourceBundle;
 
     @Inject
     DirectoryStructureSupplierImpl(FilesystemManager filesystemManager,
-                                   ProgressStatusFactory progressStatusFactory) {
+                                   ProgressStatusFactory progressStatusFactory,
+                                   ResourceBundle resourceBundle) {
         this.filesystemManager = checkNotNull(filesystemManager);
         this.progressStatusFactory = progressStatusFactory;
+        this.resourceBundle = checkNotNull(resourceBundle);
+    }
+
+    private static Optional<String> toAlbumTitle(Path path, int rootNameCount) {
+        int nameCount = path.getNameCount();
+        if (nameCount > rootNameCount) {
+            Path albumNamePath = path.subpath(rootNameCount, nameCount);
+            return Optional.of(String.join(": ", Streams.stream(albumNamePath.iterator())
+                    .map(Path::toString)
+                    .collect(toImmutableList())));
+        } else {
+            return Optional.empty();
+        }
     }
 
     @Override
     public CompletableFuture<List<AlbumDirectory>> listAlbumDirectories(Path rootDir) {
         checkArgument(Files.isDirectory(rootDir), "Path is not a directory: %s", rootDir);
-        ProgressStatus progressStatus = progressStatusFactory.create("Scanning directory structure", Optional.empty());
+        ProgressStatus progressStatus = progressStatusFactory.create(resourceBundle.getString("directoryStructureSupplierProgressTitle"), Optional.empty());
         int rootNameCount = rootDir.getNameCount();
         return CompletableFuture.supplyAsync(() -> {
             logger.info("Building album list from the file system...");
@@ -49,18 +65,6 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
             progressStatus.closeSuccessfully();
             return directoriesByAlbumTitle;
         });
-    }
-
-    private Optional<String> toAlbumTitle(Path path, int rootNameCount) {
-        int nameCount = path.getNameCount();
-        if (nameCount > rootNameCount) {
-            Path albumNamePath = path.subpath(rootNameCount, nameCount);
-            return Optional.of(String.join(": ", Streams.stream(albumNamePath.iterator())
-                    .map(Path::toString)
-                    .collect(toImmutableList())));
-        } else {
-            return Optional.empty();
-        }
     }
 
     @Immutable
