@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="folderSelector" alignment="CENTER" onDragDropped="#folderSelectorOnDragDropped"
       onDragEntered="#folderSelectorOnDragEnter" onDragExited="#folderSelectorOnDragExit" onDragOver="#folderSelectorOnDragOver" spacing="10.0"
@@ -14,5 +17,14 @@
         <CheckBox fx:id="resumeCheckbox" mnemonicParsing="false" selected="true" text="%folderSelectorResumeCheckboxLabel"/>
         <Label fx:id="alreadyUploadedLabel"/>
     </FlowPane>
-    <Label styleClass="side-note" text="%googleStorageWarning" textAlignment="CENTER" wrapText="true"/>
+    <HBox alignment="TOP_CENTER" spacing="5.0">
+        <ImageView fitWidth="20.0" pickOnBounds="true" preserveRatio="true">
+            <Image url="@info-icon-blue.png"/>
+        </ImageView>
+        <Label contentDisplay="CENTER" styleClass="side-note" text="%googleStorageWarning" textAlignment="CENTER" wrapText="true">
+            <opaqueInsets>
+                <Insets/>
+            </opaqueInsets>
+        </Label>
+    </HBox>
 </VBox>
