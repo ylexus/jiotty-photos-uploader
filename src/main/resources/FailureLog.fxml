@@ -1,15 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
-<?import javafx.scene.layout.HBox?>
-<HBox xmlns:fx="http://javafx.com/fxml/1" prefHeight="600.0" prefWidth="800.0"
-      xmlns="http://javafx.com/javafx/10.0.2-internal"
-      fx:controller="net.yudichev.googlephotosupload.ui.FailureLogFxController">
-    <TableView fx:id="tableView" prefHeight="200.0" prefWidth="200.0" HBox.hgrow="ALWAYS">
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" prefHeight="600.0" prefWidth="1024.0" spacing="4.0" stylesheets="@style.css"
+      xmlns="http://javafx.com/javafx/10.0.2-internal" fx:controller="net.yudichev.googlephotosupload.ui.FailureLogFxController">
+    <HBox spacing="4.0">
+        <ImageView fitWidth="20" preserveRatio="true">
+            <Image url="@info-icon.png"/>
+        </ImageView>
+        <Label text="%failuresDialogTopHint" wrapText="true" VBox.vgrow="SOMETIMES">
+            <VBox.margin>
+                <Insets bottom="2.0" left="2.0" right="2.0" top="2.0"/>
+            </VBox.margin>
+        </Label>
+        <opaqueInsets>
+            <Insets/>
+        </opaqueInsets>
+        <VBox.margin>
+            <Insets top="4.0"/>
+        </VBox.margin>
+    </HBox>
+    <TableView fx:id="tableView" HBox.hgrow="ALWAYS">
         <columns>
             <TableColumn prefWidth="500.0" text="%failuresDialogPathColumnTitle"/>
-            <TableColumn prefWidth="300.0" text="%failuresDialogFailureColumnTitle"/>
+            <TableColumn prefWidth="524.0" text="%failuresDialogFailureColumnTitle"/>
         </columns>
     </TableView>
-</HBox>
+    <HBox prefHeight="100.0" prefWidth="200.0"/>
+    <opaqueInsets>
+        <Insets/>
+    </opaqueInsets>
+    <padding>
+        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+    </padding>
+</VBox>
