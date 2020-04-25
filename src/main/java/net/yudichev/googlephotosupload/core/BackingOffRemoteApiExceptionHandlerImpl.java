@@ -25,7 +25,7 @@ final class BackingOffRemoteApiExceptionHandlerImpl implements BackingOffRemoteA
     private final BackOff backOff;
     // Unfortunately, the "retryable" flag in most, if not all, all these exceptions is not reliable; some of these
     // are marked as not retryable while in reality they are
-    private Set<Class<? extends Throwable>> EXCEPTION_TYPES_REQUIRING_BACKOFF = ImmutableSet.of(
+    private final Set<Class<? extends Throwable>> EXCEPTION_TYPES_REQUIRING_BACKOFF = ImmutableSet.of(
             ResourceExhaustedException.class,
             UnavailableException.class,
             DeadlineExceededException.class,

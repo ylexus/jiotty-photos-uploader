@@ -12,7 +12,7 @@ plugins {
 
 version = readEnvOrDefault('VERSION', 'DEVELOPMENT')
 //noinspection GroovyUnusedAssignment
-sourceCompatibility = '13'
+sourceCompatibility = '14'
 ext.javafxVersion = '14'
 
 application {
@@ -44,7 +44,7 @@ dependencies {
     ext.orgJunitJupiterVersion = '5.6.0'
     ext.orgMockitoVersion = '3.2.4'
     ext.orgImmutablesVersion = '2.8.3'
-    ext.netYudichevJiottyVersion = '1.4.0'
+    ext.netYudichevJiottyVersion = '1.4.1'
 
     annotationProcessor "org.immutables:value:$orgImmutablesVersion"
     testAnnotationProcessor "org.immutables:value:$orgImmutablesVersion"
@@ -52,7 +52,7 @@ dependencies {
     implementation platform("net.yudichev.jiotty:jiotty-bom:$netYudichevJiottyVersion")
     implementation platform("com.google.inject:guice-bom:4.2.2")
 
-    // This is needed as we depend on no_aop guice instead (regular Guice does not work on Java 13)
+    // This is needed as we depend on no_aop guice instead (regular Guice does not work on Java 14)
     def withoutGuice = {
         exclude group: "com.google.inject", module: "guice"
     }
@@ -101,6 +101,11 @@ dependencies {
 }
 
 repositories {
+    mavenLocal() {
+        content {
+            includeGroup "net.yudichev.jiotty"
+        }
+    }
     mavenCentral()
     maven {
         url "https://maven.google.com"
@@ -111,7 +116,6 @@ repositories {
             snapshotsOnly()
         }
     }
-    mavenLocal()
 }
 
 test {

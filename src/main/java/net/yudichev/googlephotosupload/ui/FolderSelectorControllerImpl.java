@@ -37,7 +37,8 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
         this.resourceBundle = checkNotNull(resourceBundle);
     }
 
-    public static void folderSelectorOnDragOver(DragEvent event) {
+    @SuppressWarnings("MethodMayBeStatic")
+    public void folderSelectorOnDragOver(DragEvent event) {
         if (isSingleFolder(event.getDragboard())) {
             event.acceptTransferModes(TransferMode.ANY);
         }

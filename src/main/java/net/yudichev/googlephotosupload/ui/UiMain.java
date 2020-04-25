@@ -23,7 +23,9 @@ public final class UiMain extends javafx.application.Application {
                     checkState(javafxApplicationResourcesHandler.compareAndSet(null, handler), "can only launch once");
                     new Thread(() -> launch(args)).start();
                 }))
-                .addModule(() -> new DependenciesModule(builder -> builder.setAuthorizationBrowser(annotatedWith(AuthBrowser.class))))
+                .addModule(() -> DependenciesModule.builder()
+                        .withGoogleApiSettingsCustomiser(builder -> builder.setAuthorizationBrowser(annotatedWith(AuthBrowser.class)))
+                        .build())
                 .addModule(ResourceBundleModule::new)
                 .addModule(() -> new UploadPhotosModule(1000))
                 .addModule(UiAuthorizationBrowserModule::new)

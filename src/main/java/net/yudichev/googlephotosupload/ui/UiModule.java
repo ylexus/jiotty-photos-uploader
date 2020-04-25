@@ -7,7 +7,6 @@ import net.yudichev.googlephotosupload.core.PreferencesSupplier;
 import net.yudichev.googlephotosupload.core.ProgressStatus;
 import net.yudichev.googlephotosupload.core.ProgressStatusFactory;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
-import net.yudichev.jiotty.common.time.TimeModule;
 
 import javax.inject.Singleton;
 import java.util.function.Consumer;
@@ -46,7 +45,6 @@ final class UiModule extends BaseLifecycleComponentModule {
                 .implement(ProgressStatusBar.class, ProgressStatusBarImpl.class)
                 .build(ProgressStatusBarFactory.class));
 
-        installLifecycleComponentModule(new TimeModule());
         bind(ProgressValueUpdaterFactory.class).annotatedWith(ThrottlingProgressStatus.Delegate.class).to(UiProgressStatusFactory.class);
         install(new FactoryModuleBuilder()
                 .implement(ProgressStatus.class, ThrottlingProgressStatus.class)

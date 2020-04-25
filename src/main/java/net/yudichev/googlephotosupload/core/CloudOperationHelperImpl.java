@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.core;
 
 import net.yudichev.jiotty.common.lang.CompletableFutures;
+import net.yudichev.jiotty.common.lang.Either;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,7 +12,6 @@ import java.util.function.LongConsumer;
 import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
 
 final class CloudOperationHelperImpl implements CloudOperationHelper {
     private static final Logger logger = LoggerFactory.getLogger(CloudOperationHelperImpl.class);
@@ -42,7 +42,6 @@ final class CloudOperationHelperImpl implements CloudOperationHelper {
                                     return withBackOffAndRetry(operationName, action, backoffEventConsumer);
                                 })
                                 .orElseGet(() -> CompletableFutures.failure(retryableFailure.exception()))
-                ))
-                .whenComplete(logErrorOnFailure(logger, "Unhandled exception performing '%s'", operationName));
+                ));
     }
 }

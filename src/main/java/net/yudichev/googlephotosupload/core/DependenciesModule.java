@@ -1,7 +1,10 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Module;
 import net.yudichev.jiotty.common.async.ExecutorModule;
+import net.yudichev.jiotty.common.lang.TypedBuilder;
+import net.yudichev.jiotty.common.time.TimeModule;
 import net.yudichev.jiotty.common.varstore.VarStoreModule;
 import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosModule;
@@ -18,16 +21,17 @@ public final class DependenciesModule extends AbstractModule {
     private static final String APPLICATION_NAME = "jiottyphotosuploader";
     private final Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser;
 
-    public DependenciesModule() {
-        this(builder -> {});
+    private DependenciesModule(Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser) {
+        this.googleApiSettingsCustomiser = checkNotNull(googleApiSettingsCustomiser);
     }
 
-    public DependenciesModule(Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser) {
-        this.googleApiSettingsCustomiser = checkNotNull(googleApiSettingsCustomiser);
+    public static Builder builder() {
+        return new Builder();
     }
 
     @Override
     protected void configure() {
+        install(new TimeModule());
         install(new ExecutorModule());
         install(new VarStoreModule(APPLICATION_NAME));
 
@@ -43,5 +47,19 @@ public final class DependenciesModule extends AbstractModule {
         install(GooglePhotosModule.builder()
                 .setSettings(googleApiSettingsBuilder.build())
                 .build());
+    }
+
+    public static final class Builder implements TypedBuilder<Module> {
+        private Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser = ignored -> {};
+
+        public Builder withGoogleApiSettingsCustomiser(Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser) {
+            this.googleApiSettingsCustomiser = checkNotNull(googleApiSettingsCustomiser);
+            return this;
+        }
+
+        @Override
+        public Module build() {
+            return new DependenciesModule(googleApiSettingsCustomiser);
+        }
     }
 }

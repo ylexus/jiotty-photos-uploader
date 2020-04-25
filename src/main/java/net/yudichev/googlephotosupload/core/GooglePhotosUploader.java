@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 interface GooglePhotosUploader {
-    CompletableFuture<ResultOrFailure<Object>> uploadFile(Optional<GooglePhotosAlbum> album, Path file);
+    CompletableFuture<Void> uploadDirectory(Path albumDirectoryPath, Optional<GooglePhotosAlbum> googlePhotosAlbum, ProgressStatus fileProgressStatus);
 
     void doNotResume();
 

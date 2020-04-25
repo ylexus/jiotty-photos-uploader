@@ -18,7 +18,7 @@ public final class CliMain {
         try {
             CommandLine commandLine = parser.parse(CliOptions.OPTIONS, args);
             Application.builder()
-                    .addModule(DependenciesModule::new)
+                    .addModule(() -> DependenciesModule.builder().build())
                     .addModule(() -> new UploadPhotosModule(1000))
                     .addModule(ResourceBundleModule::new)
                     .addModule(() -> new CliModule(commandLine))

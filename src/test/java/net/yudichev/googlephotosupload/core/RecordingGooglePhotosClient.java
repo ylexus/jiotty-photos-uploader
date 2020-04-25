@@ -4,33 +4,35 @@ import com.google.api.gax.grpc.GrpcStatusCode;
 import com.google.api.gax.rpc.InvalidArgumentException;
 import com.google.api.gax.rpc.ResourceExhaustedException;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.rpc.Code;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
-import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
-import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
-import net.yudichev.jiotty.connector.google.photos.MediaItemCreationFailedException;
+import net.yudichev.jiotty.connector.google.photos.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntConsumer;
 
 import static com.google.common.base.Preconditions.*;
 import static com.google.common.collect.ImmutableList.copyOf;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static io.grpc.Status.INVALID_ARGUMENT;
+import static net.yudichev.googlephotosupload.core.TestTimeModule.getCurrentInstant;
 
 final class RecordingGooglePhotosClient implements GooglePhotosClient {
     private static final Logger logger = LoggerFactory.getLogger(RecordingGooglePhotosClient.class);
 
+    private final Map<String, UploadedGoogleMediaBinary> binariesByUploadToken = new LinkedHashMap<>();
     private final Map<String, UploadedGoogleMediaItem> itemsById = new LinkedHashMap<>();
     private final Map<String, CreatedGooglePhotosAlbum> albumsById = new LinkedHashMap<>();
     private final Map<String, Integer> albumIdSuffixByName = new LinkedHashMap<>();
@@ -38,33 +40,95 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
     private final Object lock = new Object();
 
     private boolean resourceExhaustedExceptions;
+    @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized") // analysis failure
+    private boolean fileNameBasedFailuresEnabled = true;
+
+    RecordingGooglePhotosClient() {
+        createAlbum("fail-on-me-pre-existing-album", directExecutor());
+    }
 
     @Override
-    public CompletableFuture<GoogleMediaItem> uploadMediaItem(Optional<String> albumId, Path path, Executor executor) {
+    public CompletableFuture<String> uploadMediaData(Path file, Executor executor) {
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
-                if (!path.toString().endsWith(".jpg")) {
-                    throw new MediaItemCreationFailedException("Unable to create media item for file",
-                            com.google.rpc.Status.newBuilder()
-                                    .setCode(Code.INVALID_ARGUMENT_VALUE)
-                                    .setMessage("Failed: There was an error while trying to create this media item.")
-                                    .build());
+                if (fileNameBasedFailuresEnabled) {
+                    if (file.toString().endsWith("failOnMe.jpg")) {
+                        throw new RuntimeException("upload failed");
+                    }
+                    if (file.toString().endsWith("failOnMeWithInvalidArgumentDuringUploadIngMediaData.jpg")) {
+                        throw new InvalidArgumentException(new StatusRuntimeException(
+                                INVALID_ARGUMENT.withDescription("Some invalid argument error")),
+                                GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
+                                false);
+                    }
                 }
-                if (path.toString().endsWith("failOnMe.jpg")) {
-                    throw new RuntimeException("upload failed");
-                }
-                simulateResourceExhaustion(ImmutableSet.of("uploadMediaItem", path));
-                UploadedGoogleMediaItem item = new UploadedGoogleMediaItem(path, albumId);
-                return itemsById.compute(item.getId(), (ignored, existingItem) -> existingItem == null ? item : existingItem.withUploadCountIncremented());
+                simulateResourceExhaustion(ImmutableSet.of("uploadMediaData", file));
+                UploadedGoogleMediaBinary binary = new UploadedGoogleMediaBinary(file);
+                binariesByUploadToken.put(binary.getUploadToken(), binary);
+                return binary.getUploadToken();
             }
         }, executor);
+    }
+
+    @Override
+    public CompletableFuture<List<MediaItemOrError>> createMediaItems(Optional<String> albumId, List<NewMediaItem> newMediaItems, Executor executor) {
+        return CompletableFuture.supplyAsync(() -> {
+            synchronized (lock) {
+                checkArgument(!newMediaItems.isEmpty(), "the list of media items is empty");
+                simulateResourceExhaustion(ImmutableSet.of("createMediaItems", albumId, newMediaItems));
+
+                albumId
+                        .filter(s -> fileNameBasedFailuresEnabled)
+                        .filter(theAlbumId -> theAlbumId.contains("fail-on-me-pre-existing-album"))
+                        .ifPresent(theAlbumId -> {
+                            throw new InvalidArgumentException(new StatusRuntimeException(
+                                    INVALID_ARGUMENT.withDescription("No permission to add media items to this album")),
+                                    GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
+                                    false);
+                        });
+                expireTokens();
+
+                List<MediaItemOrError> result = newMediaItems.stream()
+                        .map(newMediaItem -> {
+                            UploadedGoogleMediaBinary uploadedGoogleMediaBinary = checkNotNull(binariesByUploadToken.get(newMediaItem.uploadToken()),
+                                    "Unknown upload token: %s", newMediaItem.uploadToken());
+                            if (fileNameBasedFailuresEnabled &&
+                                    uploadedGoogleMediaBinary.getFile().toString().endsWith("failOnMeWithInvalidArgumentDuringCreationOfMediaItem.jpg")) {
+                                logger.warn("Media item upload error for binary {}", uploadedGoogleMediaBinary);
+                                return MediaItemOrError.error(com.google.rpc.Status.newBuilder()
+                                        .setCode(Code.INVALID_ARGUMENT_VALUE)
+                                        .build());
+                            } else {
+                                UploadedGoogleMediaItem googleMediaItem = new UploadedGoogleMediaItem(
+                                        uploadedGoogleMediaBinary,
+                                        albumId,
+                                        newMediaItem.description());
+                                return MediaItemOrError.item(itemsById.compute(googleMediaItem.getId(), (mediaId, existingItem) -> {
+                                    if (existingItem == null) {
+                                        return googleMediaItem;
+                                    }
+                                    existingItem = existingItem.withUploadCountIncremented();
+                                    albumId.ifPresent(existingItem::addToAlbum);
+                                    return existingItem;
+                                }));
+                            }
+                        })
+                        .collect(toImmutableList());
+                logger.debug("createMediaItems albumId={}, newMediaItems={} result: {}", albumId, newMediaItems, result);
+                return result;
+            }
+        }, executor);
+    }
+
+    private void expireTokens() {
+        binariesByUploadToken.values().removeIf(binary -> binary.getUploadTime().plus(Duration.ofDays(1)).isBefore(getCurrentInstant()));
     }
 
     @Override
     public CompletableFuture<GooglePhotosAlbum> createAlbum(String name, Executor executor) {
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
-                if (name.endsWith("failOnMe")) {
+                if (fileNameBasedFailuresEnabled && name.endsWith("failOnMe")) {
                     throw new RuntimeException("album creation failed");
                 }
                 simulateResourceExhaustion(ImmutableSet.of("createAlbum", name));
@@ -98,18 +162,26 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
     }
 
     void enableResourceExhaustedExceptions() {
-        resourceExhaustedExceptions = true;
+        synchronized (lock) {
+            resourceExhaustedExceptions = true;
+        }
+    }
+
+    void disableFileNameBaseFailures() {
+        synchronized (lock) {
+            fileNameBasedFailuresEnabled = false;
+        }
     }
 
     Collection<UploadedGoogleMediaItem> getAllItems() {
         synchronized (lock) {
-            return ImmutableList.copyOf(itemsById.values());
+            return copyOf(itemsById.values());
         }
     }
 
     List<CreatedGooglePhotosAlbum> getAllAlbums() {
         synchronized (lock) {
-            return ImmutableList.copyOf(albumsById.values());
+            return copyOf(albumsById.values());
         }
     }
 
@@ -147,14 +219,16 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
     @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     public static class UploadedGoogleMediaItem implements GoogleMediaItem {
         private final String id;
+        private final Optional<String> description;
         private final Set<String> albumIds = new HashSet<>();
-        private final Path file;
+        private final UploadedGoogleMediaBinary uploadedGoogleMediaBinary;
         private final Object stateLock = new Object();
         private final AtomicInteger uploadCount = new AtomicInteger(1);
 
-        UploadedGoogleMediaItem(Path file, Optional<String> albumId) {
-            this.file = checkNotNull(file);
-            id = file.toAbsolutePath().toString();
+        UploadedGoogleMediaItem(UploadedGoogleMediaBinary uploadedGoogleMediaBinary, Optional<String> albumId, Optional<String> description) {
+            this.uploadedGoogleMediaBinary = checkNotNull(uploadedGoogleMediaBinary);
+            id = uploadedGoogleMediaBinary.getFile().toAbsolutePath().toString();
+            this.description = checkNotNull(description);
             albumId.ifPresent(albumIds::add);
         }
 
@@ -167,26 +241,30 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
             return uploadCount.get();
         }
 
+        public Optional<String> getDescription() {
+            return description;
+        }
+
+        public UploadedGoogleMediaBinary getBinary() {
+            return uploadedGoogleMediaBinary;
+        }
+
         @Override
         public String toString() {
             synchronized (stateLock) {
                 return MoreObjects.toStringHelper(this)
                         .add("id", id)
-                        .add("file", file)
+                        .add("binary", uploadedGoogleMediaBinary)
                         .add("albumIds", albumIds)
+                        .add("uploadCount", uploadCount)
                         .toString();
             }
-        }
-
-        UploadedGoogleMediaItem withUploadCountIncremented() {
-            uploadCount.incrementAndGet();
-            return this;
         }
 
         void addToAlbum(String albumId) {
             synchronized (stateLock) {
                 logger.debug("Add item {} to album {}", this, albumId);
-                checkState(albumIds.add(albumId), "item %s is already in album %s", id, albumId);
+                albumIds.add(albumId);
             }
         }
 
@@ -201,6 +279,45 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
             synchronized (stateLock) {
                 return ImmutableSet.copyOf(albumIds);
             }
+        }
+
+        UploadedGoogleMediaItem withUploadCountIncremented() {
+            uploadCount.incrementAndGet();
+            return this;
+        }
+    }
+
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    static final class UploadedGoogleMediaBinary {
+        private static final AtomicLong counter = new AtomicLong();
+        private final String uploadToken;
+        private final Path file;
+        private final Instant uploadTime;
+
+        UploadedGoogleMediaBinary(Path file) {
+            this.file = checkNotNull(file);
+            uploadToken = file.toAbsolutePath().toString() + '_' + counter.incrementAndGet();
+            uploadTime = getCurrentInstant();
+        }
+
+        public String getUploadToken() {
+            return uploadToken;
+        }
+
+        public Path getFile() {
+            return file;
+        }
+
+        public Instant getUploadTime() {
+            return uploadTime;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                    .add("uploadToken", uploadToken)
+                    .add("file", file)
+                    .toString();
         }
     }
 
@@ -239,14 +356,14 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         }
 
         @Override
-        public CompletableFuture<Void> addMediaItemsByIds(List<String> list, Executor executor) {
+        public CompletableFuture<Void> addMediaItemsByIds(List<String> mediaItemsIds, Executor executor) {
             return CompletableFuture.runAsync(
                     () -> {
-                        checkArgument(!list.isEmpty(), "list must contain at least one media item");
-                        checkArgument(list.size() < 50, "Request must have less than 50 items, but was %s", list.size());
+                        checkArgument(!mediaItemsIds.isEmpty(), "list must contain at least one media item");
+                        checkArgument(mediaItemsIds.size() < 50, "Request must have less than 50 items, but was %s", mediaItemsIds.size());
                         synchronized (lock) {
-                            simulateResourceExhaustion(ImmutableSet.of("addMediaItemsByIds", list));
-                            list.stream()
+                            simulateResourceExhaustion(ImmutableSet.of("addMediaItemsByIds", mediaItemsIds));
+                            mediaItemsIds.stream()
                                     .peek(mediaItemId -> {
                                         if (mediaItemId.contains("protected")) {
                                             throw new InvalidArgumentException(
@@ -263,14 +380,14 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         }
 
         @Override
-        public CompletableFuture<Void> removeMediaItemsByIds(List<String> list, Executor executor) {
+        public CompletableFuture<Void> removeMediaItemsByIds(List<String> mediaItemsIds, Executor executor) {
             return CompletableFuture.runAsync(
                     () -> {
-                        checkArgument(!list.isEmpty(), "list must contain at least one media item");
-                        checkArgument(list.size() < 50, "Request must have less than 50 items, but was %s", list.size());
+                        checkArgument(!mediaItemsIds.isEmpty(), "list must contain at least one media item");
+                        checkArgument(mediaItemsIds.size() < 50, "Request must have less than 50 items, but was %s", mediaItemsIds.size());
                         synchronized (lock) {
-                            simulateResourceExhaustion(ImmutableSet.of("removeMediaItemsByIds", list));
-                            list.stream()
+                            simulateResourceExhaustion(ImmutableSet.of("removeMediaItemsByIds", mediaItemsIds));
+                            mediaItemsIds.stream()
                                     .peek(mediaItemId -> {
                                         if (mediaItemId.contains("protected")) {
                                             throw new InvalidArgumentException(
