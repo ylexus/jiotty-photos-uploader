@@ -7,17 +7,22 @@ import net.yudichev.googlephotosupload.core.ResourceBundleModule;
 import net.yudichev.googlephotosupload.core.UploadPhotosModule;
 import net.yudichev.googlephotosupload.ui.Bindings.AuthBrowser;
 import net.yudichev.jiotty.common.app.Application;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkState;
+import static net.yudichev.googlephotosupload.core.BuildVersion.buildVersion;
 import static net.yudichev.jiotty.common.inject.BindingSpec.annotatedWith;
 
 public final class UiMain extends javafx.application.Application {
+    private static final Logger logger = LoggerFactory.getLogger(UiMain.class);
     private static final AtomicReference<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler = new AtomicReference<>();
 
     public static void main(String[] args) {
+        logger.info("Version {}", buildVersion());
         Application.builder()
                 .addModule(() -> new UiModule(handler -> {
                     checkState(javafxApplicationResourcesHandler.compareAndSet(null, handler), "can only launch once");
