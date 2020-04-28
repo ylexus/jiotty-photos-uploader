@@ -19,7 +19,7 @@ class InvalidMediaItemFatalUserCorrectableRemoteApiExceptionHandlerTest {
 
     @Test
     void failedToGetResult() {
-        boolean invalidMediaItem = resultHandler.handle("operationName", new ApiException(
+        var invalidMediaItem = resultHandler.handle("operationName", new ApiException(
                 new IllegalArgumentException("The upload was completed but failed to finalize or get the result"),
                 GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
                 true));

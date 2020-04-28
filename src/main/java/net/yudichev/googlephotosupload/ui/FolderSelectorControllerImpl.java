@@ -52,7 +52,7 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
     }
 
     public void folderSelectorOnDragEnter(DragEvent event) {
-        Dragboard dragboard = event.getDragboard();
+        var dragboard = event.getDragboard();
         if (isSingleFolder(dragboard)) {
             folderSelector.setEffect(new DropShadow());
             folderSelector.setStyle("-fx-background-color: #6495ed80;");
@@ -71,7 +71,7 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
     }
 
     public void folderSelectorOnDragDropped(DragEvent event) {
-        Dragboard dragboard = event.getDragboard();
+        var dragboard = event.getDragboard();
         if (isSingleFolder(dragboard)) {
             event.setDropCompleted(true);
             notifyListener(dragboard.getFiles().get(0));
@@ -82,7 +82,7 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
     }
 
     public void initialize() {
-        int numberOfUploadedItems = uploader.numberOfUploadedItems();
+        var numberOfUploadedItems = uploader.numberOfUploadedItems();
         if (numberOfUploadedItems > 0) {
             alreadyUploadedLabel.setText(String.format("(%s %s)", resourceBundle.getString("folderSelectorAlreadyUploadedLabelPrefix"), numberOfUploadedItems));
             resumePane.setVisible(true);
@@ -96,9 +96,9 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
     }
 
     public void onBrowseButtonClick(ActionEvent actionEvent) {
-        DirectoryChooser directoryChooser = new DirectoryChooser();
+        var directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle(resourceBundle.getString("folderSelectorDirectoryChooserTitle"));
-        File file = directoryChooser.showDialog(folderSelector.getScene().getWindow());
+        var file = directoryChooser.showDialog(folderSelector.getScene().getWindow());
         if (file != null) {
             notifyListener(file);
         }

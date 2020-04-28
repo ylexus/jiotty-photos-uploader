@@ -16,7 +16,7 @@ final class SepiaToneEffectAnimatedNode implements AnimatedNode {
 
     SepiaToneEffectAnimatedNode(Node node) {
         this.node = node;
-        SepiaTone effect = new SepiaTone();
+        var effect = new SepiaTone();
         node.setEffect(effect);
         timeline = new Timeline();
         timeline.getKeyFrames().add(new KeyFrame(Duration.ZERO, new KeyValue(effect.levelProperty(), 0)));

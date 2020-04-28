@@ -24,7 +24,7 @@ public final class OperatingSystemDetection {
      */
     public static OSType getOperatingSystemType() {
         if (detectedOS == null) {
-            String OS = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH);
+            var OS = System.getProperty("os.name", "generic").toLowerCase(Locale.ENGLISH);
             if ((OS.contains("mac")) || (OS.contains("darwin"))) {
                 detectedOS = OSType.MacOS;
             } else if (OS.contains("win")) {

@@ -1,7 +1,7 @@
 package net.yudichev.googlephotosupload.ui;
 
 import javafx.scene.control.TableColumn;
-import javafx.scene.control.TablePosition;
+import javafx.scene.control.TablePositionBase;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.Clipboard;
@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import static java.lang.System.lineSeparator;
+import static java.util.stream.Collectors.toCollection;
 import static javafx.scene.control.SelectionMode.MULTIPLE;
 import static javafx.scene.input.KeyCombination.CONTROL_ANY;
 import static javafx.scene.input.KeyCombination.META_ANY;
@@ -26,36 +27,35 @@ public final class FailureLogFxController {
 
     @SuppressWarnings("rawtypes")
     public static void copySelectionToClipboard(TableView<?> table) {
-        Set<Integer> rows = new TreeSet<>();
-        for (TablePosition tablePosition : table.getSelectionModel().getSelectedCells()) {
-            rows.add(tablePosition.getRow());
-        }
-        StringBuilder stringBuilder = new StringBuilder(rows.size() * 256);
-        boolean firstRow = true;
-        for (Integer row : rows) {
+        Set<Integer> rows = table.getSelectionModel().getSelectedCells().stream()
+                .map(TablePositionBase::getRow)
+                .collect(toCollection(TreeSet::new));
+        var stringBuilder = new StringBuilder(rows.size() * 256);
+        var firstRow = true;
+        for (var row : rows) {
             if (!firstRow) {
                 stringBuilder.append(lineSeparator());
             }
             firstRow = false;
-            boolean firstCol = true;
+            var firstCol = true;
             for (TableColumn<?, ?> column : table.getColumns()) {
                 if (!firstCol) {
                     stringBuilder.append('\t');
                 }
                 firstCol = false;
-                Object cellData = column.getCellData(row);
+                var cellData = column.getCellData(row);
                 stringBuilder.append(cellData == null ? "" : cellData.toString());
             }
         }
-        ClipboardContent clipboardContent = new ClipboardContent();
+        var clipboardContent = new ClipboardContent();
         clipboardContent.putString(stringBuilder.toString());
         Clipboard.getSystemClipboard().setContent(clipboardContent);
     }
 
     public void initialize() {
         tableView.getSelectionModel().setSelectionMode(MULTIPLE);
-        KeyCodeCombination keyCodeCopy1 = new KeyCodeCombination(KeyCode.C, getOperatingSystemType() == OSType.MacOS ? META_ANY : CONTROL_ANY);
-        KeyCodeCombination keyCodeCopy2 = new KeyCodeCombination(KeyCode.INSERT, CONTROL_ANY);
+        var keyCodeCopy1 = new KeyCodeCombination(KeyCode.C, getOperatingSystemType() == OSType.MacOS ? META_ANY : CONTROL_ANY);
+        var keyCodeCopy2 = new KeyCodeCombination(KeyCode.INSERT, CONTROL_ANY);
         tableView.setOnKeyPressed(event -> {
             if (keyCodeCopy1.match(event) || keyCodeCopy2.match(event)) {
                 copySelectionToClipboard(tableView);

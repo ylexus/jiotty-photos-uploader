@@ -4,7 +4,10 @@ import net.yudichev.googlephotosupload.core.DependenciesModule;
 import net.yudichev.googlephotosupload.core.ResourceBundleModule;
 import net.yudichev.googlephotosupload.core.UploadPhotosModule;
 import net.yudichev.jiotty.common.app.Application;
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +19,7 @@ public final class CliMain {
     public static void main(String[] args) {
         CommandLineParser parser = new DefaultParser();
         try {
-            CommandLine commandLine = parser.parse(CliOptions.OPTIONS, args);
+            var commandLine = parser.parse(CliOptions.OPTIONS, args);
             Application.builder()
                     .addModule(() -> DependenciesModule.builder().build())
                     .addModule(() -> new UploadPhotosModule(1000))
@@ -25,7 +28,7 @@ public final class CliMain {
                     .build()
                     .run();
         } catch (ParseException e) {
-            Logger logger = LoggerFactory.getLogger(CliMain.class);
+            var logger = LoggerFactory.getLogger(CliMain.class);
             logger.error(e.getMessage());
             printHelp(logger);
         }
@@ -33,10 +36,10 @@ public final class CliMain {
     }
 
     private static void printHelp(Logger logger) {
-        HelpFormatter helpFormatter = new HelpFormatter();
+        var helpFormatter = new HelpFormatter();
         helpFormatter.setWidth(100);
-        StringWriter sw = new StringWriter();
-        PrintWriter pw = new PrintWriter(sw);
+        var sw = new StringWriter();
+        var pw = new PrintWriter(sw);
         helpFormatter.printHelp(pw, helpFormatter.getWidth(),
                 "Jiotty Photos Uploader",
                 null,
@@ -46,7 +49,7 @@ public final class CliMain {
                 null,
                 false);
         pw.flush();
-        String help = sw.toString();
+        var help = sw.toString();
         logger.info(help);
     }
 }

@@ -1,6 +1,5 @@
 package net.yudichev.googlephotosupload.ui;
 
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Menu;
@@ -26,8 +25,8 @@ final class DefaultPlatformSpecificMenu implements PlatformSpecificMenu {
 
     @Override
     public void initialize(MenuBar menuBar) {
-        Menu fileMenu = new Menu(resourceBundle.getString("menuItemDefaultFile"));
-        ObservableList<MenuItem> fileMenuItems = fileMenu.getItems();
+        var fileMenu = new Menu(resourceBundle.getString("menuItemDefaultFile"));
+        var fileMenuItems = fileMenu.getItems();
 
         aboutMenuItem = new MenuItem(resourceBundle.getString("menuItemDefaultAbout"));
         fileMenuItems.add(aboutMenuItem);

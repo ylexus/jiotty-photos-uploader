@@ -12,7 +12,6 @@ import net.yudichev.jiotty.common.varstore.VarStore;
 import net.yudichev.jiotty.common.varstore.VarStoreModule;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
-import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.hamcrest.CustomTypeSafeMatcher;
@@ -31,7 +30,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -74,7 +72,7 @@ final class IntegrationTest {
         rootPhoto = root.resolve("root-photo.jpg");
         Files.write(rootPhoto, new byte[]{0});
 
-        Path outerAlbumDir = root.resolve("outer-album");
+        var outerAlbumDir = root.resolve("outer-album");
         Files.createDirectories(outerAlbumDir);
         outerAlbumPhoto = outerAlbumDir.resolve("outer-album-photo.jpg");
         Files.write(outerAlbumPhoto, new byte[]{1});
@@ -82,7 +80,7 @@ final class IntegrationTest {
 
         Files.createDirectories(root.resolve("DS_Store"));
 
-        Path innerAlbumDir = outerAlbumDir.resolve("inner-album");
+        var innerAlbumDir = outerAlbumDir.resolve("inner-album");
         Files.createDirectories(innerAlbumDir);
         innerAlbumPhoto = innerAlbumDir.resolve("inner-album-photo.jpg");
         Files.write(innerAlbumPhoto, new byte[]{2});
@@ -110,9 +108,9 @@ final class IntegrationTest {
 
     @Test
     void skipsUploadIfSavedStateShowsAlreadyUploaded() throws InterruptedException {
-        VarStore varStore = Guice.createInjector(new VarStoreModule(varStoreAppName)).getInstance(VarStore.class);
-        String photosUploaderKey = "photosUploader";
-        String outerAlbumPhotoAbsolutePath = outerAlbumPhoto.toAbsolutePath().toString();
+        var varStore = Guice.createInjector(new VarStoreModule(varStoreAppName)).getInstance(VarStore.class);
+        var photosUploaderKey = "photosUploader";
+        var outerAlbumPhotoAbsolutePath = outerAlbumPhoto.toAbsolutePath().toString();
         varStore.saveValue(photosUploaderKey, UploadState.builder()
                 .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath,
                         ItemState.builder()
@@ -138,7 +136,7 @@ final class IntegrationTest {
 
     @Test
     void ignoresExcludedFile() throws Exception {
-        Path invalidPhoto = root.resolve("excluded-file.txt");
+        var invalidPhoto = root.resolve("excluded-file.txt");
         Files.write(invalidPhoto, new byte[]{0});
 
         doUploadTest();
@@ -148,19 +146,19 @@ final class IntegrationTest {
 
     @Test
     void handlesInvalidArgumentDuringCreationOfMediaItem() throws Exception {
-        Path invalidMediaItemPath = root.resolve("failOnMeWithInvalidArgumentDuringCreationOfMediaItem.jpg").toAbsolutePath();
+        var invalidMediaItemPath = root.resolve("failOnMeWithInvalidArgumentDuringCreationOfMediaItem.jpg").toAbsolutePath();
         Files.write(invalidMediaItemPath, new byte[]{0});
 
         doExecuteUpload();
 
         doVerifyGoogleClientState();
 
-        VarStoreData varStoreData = readVarStoreDirectly();
+        var varStoreData = readVarStoreDirectly();
         Map<String, ItemState> uploadedMediaItemIdByAbsolutePath = varStoreData.photosUploader().uploadedMediaItemIdByAbsolutePath();
         assertThat(uploadedMediaItemIdByAbsolutePath.values(), hasSize(4));
 
-        String invalidItemPathString = invalidMediaItemPath.toAbsolutePath().toString();
-        ItemState invalidItemState = uploadedMediaItemIdByAbsolutePath.get(invalidItemPathString);
+        var invalidItemPathString = invalidMediaItemPath.toAbsolutePath().toString();
+        var invalidItemState = uploadedMediaItemIdByAbsolutePath.get(invalidItemPathString);
         assertThat(invalidItemState, itemStateHavingMediaId(emptyOptional()));
         assertThat(invalidItemState, itemStateHavingUploadState(optionalWithValue(allOf(
                 uploadMediaItemStateHavingToken(startsWith(invalidItemPathString)),
@@ -172,14 +170,14 @@ final class IntegrationTest {
 
     @Test
     void handlesInvalidArgumentDuringCreationOfMediaData() throws Exception {
-        Path invalidMediaItemPath = root.resolve("failOnMeWithInvalidArgumentDuringUploadIngMediaData.jpg").toAbsolutePath();
+        var invalidMediaItemPath = root.resolve("failOnMeWithInvalidArgumentDuringUploadIngMediaData.jpg").toAbsolutePath();
         Files.write(invalidMediaItemPath, new byte[]{0});
 
         doExecuteUpload();
 
         doVerifyGoogleClientState();
 
-        VarStoreData varStoreData = readVarStoreDirectly();
+        var varStoreData = readVarStoreDirectly();
         Map<String, ItemState> uploadedMediaItemIdByAbsolutePath = varStoreData.photosUploader().uploadedMediaItemIdByAbsolutePath();
         assertThat(uploadedMediaItemIdByAbsolutePath.values(), hasSize(3));
 
@@ -214,12 +212,12 @@ final class IntegrationTest {
 
     @Test
     void mergesPreExistingNonEmptyAlbumsWithSameNameAndReusesResultingAlbum() throws Exception {
-        GooglePhotosAlbum preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        GooglePhotosAlbum preExistingAlbum3 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum3 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
 
-        Path preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "photo1.jpg");
-        Path preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "photo2.jpg");
+        var preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "photo1.jpg");
+        var preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "photo2.jpg");
 
         doExecuteUpload();
 
@@ -242,10 +240,10 @@ final class IntegrationTest {
 
     @Test
     void mergesPreExistingNonEmptyAlbumsWithSamePhotoInThem() throws Exception {
-        GooglePhotosAlbum preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(3, TimeUnit.SECONDS);
-        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(3, TimeUnit.SECONDS);
+        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(3, TimeUnit.SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(3, TimeUnit.SECONDS);
 
-        Path preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "photo1.jpg");
+        var preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "photo1.jpg");
         preExistingAlbum2.addMediaItemsByIds(of(preExistingPhoto1.toAbsolutePath().toString())).get(3, TimeUnit.SECONDS);
 
         Files.delete(outerAlbumPhoto);
@@ -259,17 +257,17 @@ final class IntegrationTest {
 
     @Test
     void mergesAlbumsWithMoreThanMaxItemsAllowedPerRequest() throws Exception {
-        GooglePhotosAlbum preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
 
         uploadPhoto(preExistingAlbum1, "photo-in-album1.jpg");
-        List<Path> filePaths = IntStream.range(0, 51)
+        var filePaths = IntStream.range(0, 51)
                 .mapToObj(i -> getAsUnchecked(() -> uploadPhoto(preExistingAlbum2, "photo" + i + ".jpg")))
                 .collect(toList());
 
         doExecuteUpload();
 
-        List<GoogleMediaItem> outerAlbumItems = preExistingAlbum1.getMediaItems().get(3, TimeUnit.SECONDS);
+        var outerAlbumItems = preExistingAlbum1.getMediaItems().get(3, TimeUnit.SECONDS);
         assertThat(outerAlbumItems, hasSize(53));
         filePaths.forEach(path -> assertThat(outerAlbumItems, hasItem(itemForFile(path))));
         assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
@@ -280,17 +278,17 @@ final class IntegrationTest {
 
     @Test
     void mergesAlbumsWithExactlyMaxItemsAllowedPerRequest() throws Exception {
-        GooglePhotosAlbum preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
 
         uploadPhoto(preExistingAlbum1, "photo-in-album1.jpg");
-        List<Path> filePaths = IntStream.range(0, 49)
+        var filePaths = IntStream.range(0, 49)
                 .mapToObj(i -> getAsUnchecked(() -> uploadPhoto(preExistingAlbum2, "photo" + i + ".jpg")))
                 .collect(toList());
 
         doExecuteUpload();
 
-        List<GoogleMediaItem> outerAlbumItems = preExistingAlbum1.getMediaItems().get(3, TimeUnit.SECONDS);
+        var outerAlbumItems = preExistingAlbum1.getMediaItems().get(3, TimeUnit.SECONDS);
         assertThat(outerAlbumItems, hasSize(51));
         filePaths.forEach(path -> assertThat(outerAlbumItems, hasItem(itemForFile(path))));
         assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
@@ -302,9 +300,9 @@ final class IntegrationTest {
     @Test
     void mergesPreExistingAlbumsWithSameNameSecondOneNonEmptyAndReusesResultingAlbum() throws Exception {
         googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
 
-        Path preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "photo2.jpg");
+        var preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "photo2.jpg");
 
         doExecuteUpload();
 
@@ -324,11 +322,11 @@ final class IntegrationTest {
 
     @Test
     void mergesPreExistingAlbumsSameNameWithPreexistingProtectedItemIgnoresError() throws Exception {
-        GooglePhotosAlbum preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        GooglePhotosAlbum preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
 
-        Path preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "protected1.jpg");
-        Path preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "protected2.jpg");
+        var preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "protected1.jpg");
+        var preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "protected2.jpg");
 
         doExecuteUpload();
         assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
@@ -347,7 +345,7 @@ final class IntegrationTest {
 
     @Test
     void testPermanentUploadFailureResultsInGlobalError() throws Exception {
-        Path failedPhoto = root.resolve("failOnMe.jpg");
+        var failedPhoto = root.resolve("failOnMe.jpg");
         Files.write(failedPhoto, new byte[]{0});
 
         doExecuteUpload();
@@ -357,9 +355,9 @@ final class IntegrationTest {
 
     @Test
     void testPermanentAlbumCreationFailureStopsUpload() throws Exception {
-        Path failOnMeAlbumDir = root.resolve("failOnMe");
+        var failOnMeAlbumDir = root.resolve("failOnMe");
         Files.createDirectories(failOnMeAlbumDir);
-        Path photo = failOnMeAlbumDir.resolve("photo-new.jpg");
+        var photo = failOnMeAlbumDir.resolve("photo-new.jpg");
         Files.write(photo, new byte[]{0});
 
         doExecuteUpload();
@@ -380,7 +378,7 @@ final class IntegrationTest {
 
     @Test
     void doesNotReUploadDataIfPreviouslyUploadedButMediaCreationFailed() throws Exception {
-        Path invalidMediaItemPath = root.resolve("failOnMeWithInvalidArgumentDuringCreationOfMediaItem.jpg").toAbsolutePath();
+        var invalidMediaItemPath = root.resolve("failOnMeWithInvalidArgumentDuringCreationOfMediaItem.jpg").toAbsolutePath();
         Files.write(invalidMediaItemPath, new byte[]{0});
 
         doExecuteUpload();
@@ -391,11 +389,11 @@ final class IntegrationTest {
 
         assertThat(googlePhotosClient.getAllItems(), hasItem(allOf(itemForFile(invalidMediaItemPath), itemWithNoAlbum())));
 
-        VarStoreData varStoreData = readVarStoreDirectly();
+        var varStoreData = readVarStoreDirectly();
         Map<String, ItemState> uploadedMediaItemIdByAbsolutePath = varStoreData.photosUploader().uploadedMediaItemIdByAbsolutePath();
 
-        String invalidItemPathString = invalidMediaItemPath.toAbsolutePath().toString();
-        ItemState invalidItemState = uploadedMediaItemIdByAbsolutePath.get(invalidItemPathString);
+        var invalidItemPathString = invalidMediaItemPath.toAbsolutePath().toString();
+        var invalidItemState = uploadedMediaItemIdByAbsolutePath.get(invalidItemPathString);
         assertThat(invalidItemState, itemStateHavingMediaId(optionalWithValue(equalTo(invalidItemPathString))));
         assertThat(getLastFailure(), emptyOptional());
     }
@@ -411,7 +409,7 @@ final class IntegrationTest {
 
     @Test
     void expiredUploadTokenCausesReUploadOnlyForFilesThatWereNotSuccessfullyUploaded() throws Exception {
-        Path invalidMediaItemPath = root.resolve("failOnMeWithInvalidArgumentDuringCreationOfMediaItem.jpg").toAbsolutePath();
+        var invalidMediaItemPath = root.resolve("failOnMeWithInvalidArgumentDuringCreationOfMediaItem.jpg").toAbsolutePath();
         Files.write(invalidMediaItemPath, new byte[]{0});
 
         doExecuteUpload();
@@ -420,7 +418,7 @@ final class IntegrationTest {
         TestTimeModule.advanceTimeBy(Duration.ofDays(2));
 
         doExecuteUpload();
-        UploadedGoogleMediaItem mediaItem = googlePhotosClient.getAllItems().stream()
+        var mediaItem = googlePhotosClient.getAllItems().stream()
                 .filter(item -> item.getBinary().getFile().equals(invalidMediaItemPath))
                 .findFirst()
                 .get();
@@ -435,9 +433,9 @@ final class IntegrationTest {
 
     @Test
     void albumPermissionErrorOnMediaItemCreationSkipsAlbumAndIsIgnored() throws Exception {
-        Path preExistingAlbumPath = root.resolve("fail-on-me-pre-existing-album");
+        var preExistingAlbumPath = root.resolve("fail-on-me-pre-existing-album");
         Files.createDirectory(preExistingAlbumPath);
-        Path photoInPreExistingAlbumPath = preExistingAlbumPath.resolve("photoInPreExistingAlbum.jpg");
+        var photoInPreExistingAlbumPath = preExistingAlbumPath.resolve("photoInPreExistingAlbum.jpg");
         Files.write(photoInPreExistingAlbumPath, new byte[]{0});
 
         doExecuteUpload();
@@ -452,23 +450,23 @@ final class IntegrationTest {
 
     private void doVerifyJpegFilesInVarStore(VarStoreData varStoreData) {
         Map<String, ItemState> uploadedMediaItemIdByAbsolutePath = varStoreData.photosUploader().uploadedMediaItemIdByAbsolutePath();
-        String innerPhotoPath = innerAlbumPhoto.toAbsolutePath().toString();
-        String outerPhotoPath = outerAlbumPhoto.toAbsolutePath().toString();
-        String rootPhotoPath = rootPhoto.toAbsolutePath().toString();
+        var innerPhotoPath = innerAlbumPhoto.toAbsolutePath().toString();
+        var outerPhotoPath = outerAlbumPhoto.toAbsolutePath().toString();
+        var rootPhotoPath = rootPhoto.toAbsolutePath().toString();
 
-        ItemState rootItemState = uploadedMediaItemIdByAbsolutePath.get(rootPhotoPath);
+        var rootItemState = uploadedMediaItemIdByAbsolutePath.get(rootPhotoPath);
         assertThat(rootItemState, itemStateHavingMediaId(optionalWithValue(equalTo(rootPhotoPath))));
         assertThat(rootItemState, itemStateHavingUploadState(optionalWithValue(allOf(
                 uploadMediaItemStateHavingToken(startsWith(rootPhotoPath)),
                 uploadMediaItemStateHavingInstant(equalTo(EPOCH))))));
 
-        ItemState innerItemState = uploadedMediaItemIdByAbsolutePath.get(innerPhotoPath);
+        var innerItemState = uploadedMediaItemIdByAbsolutePath.get(innerPhotoPath);
         assertThat(innerItemState, itemStateHavingMediaId(optionalWithValue(equalTo(innerPhotoPath))));
         assertThat(innerItemState, itemStateHavingUploadState(optionalWithValue(allOf(
                 uploadMediaItemStateHavingToken(startsWith(innerPhotoPath)),
                 uploadMediaItemStateHavingInstant(equalTo(EPOCH))))));
 
-        ItemState outerItemState = uploadedMediaItemIdByAbsolutePath.get(outerPhotoPath);
+        var outerItemState = uploadedMediaItemIdByAbsolutePath.get(outerPhotoPath);
         assertThat(outerItemState, itemStateHavingMediaId(optionalWithValue(equalTo(outerPhotoPath))));
         assertThat(outerItemState, itemStateHavingUploadState(optionalWithValue(allOf(
                 uploadMediaItemStateHavingToken(startsWith(outerPhotoPath)),
@@ -480,7 +478,7 @@ final class IntegrationTest {
 
         doVerifyGoogleClientState();
 
-        VarStoreData varStoreData = readVarStoreDirectly();
+        var varStoreData = readVarStoreDirectly();
         assertThat(varStoreData.photosUploader().uploadedMediaItemIdByAbsolutePath().values(), hasSize(3));
         doVerifyJpegFilesInVarStore(varStoreData);
     }
@@ -515,12 +513,12 @@ final class IntegrationTest {
 
     private void doExecuteUpload(String... additionalCommandLineOptions) throws InterruptedException {
         CommandLineParser parser = new DefaultParser();
-        CommandLine commandLine = getAsUnchecked(() -> parser.parse(OPTIONS, ImmutableList.<String>builder()
+        var commandLine = getAsUnchecked(() -> parser.parse(OPTIONS, ImmutableList.<String>builder()
                 .add("-r", root.toString())
                 .add(additionalCommandLineOptions)
                 .build()
                 .toArray(String[]::new)));
-        CountDownLatch applicationExitedLatch = new CountDownLatch(1);
+        var applicationExitedLatch = new CountDownLatch(1);
         new Thread(() -> {
             Application.builder()
                     .addModule(TestTimeModule::new)

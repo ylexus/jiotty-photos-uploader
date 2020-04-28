@@ -3,7 +3,6 @@ package net.yudichev.googlephotosupload.ui;
 import de.codecentric.centerdevice.MenuToolkit;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
@@ -29,8 +28,8 @@ final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
 
     @Override
     public void initialize(MenuBar menuBar) {
-        MenuToolkit tk = MenuToolkit.toolkit();
-        Menu defaultApplicationMenu = tk.createDefaultApplicationMenu(APP_TITLE);
+        var tk = MenuToolkit.toolkit();
+        var defaultApplicationMenu = tk.createDefaultApplicationMenu(APP_TITLE);
 
         aboutMenuItem = tk.createAboutMenuItem(APP_TITLE);
         defaultApplicationMenu.getItems().set(0, aboutMenuItem);

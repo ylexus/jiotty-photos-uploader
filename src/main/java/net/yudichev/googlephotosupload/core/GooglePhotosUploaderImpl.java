@@ -6,7 +6,6 @@ import net.yudichev.jiotty.common.lang.ResultOrFailure;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
-import net.yudichev.jiotty.connector.google.photos.MediaItemOrError;
 import net.yudichev.jiotty.connector.google.photos.NewMediaItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +14,6 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -100,7 +98,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                                                    List<PathState> createMediaDataResults) {
         List<PathState> pendingPathStates = createMediaDataResults.stream()
                 .filter(pathState -> {
-                    Optional<ItemState> itemStateOptional = pathState.state().toSuccess();
+                    var itemStateOptional = pathState.state().toSuccess();
                     return itemStateOptional.isPresent() &&
                             itemStateOptional.get().mediaId().isEmpty();
                 })
@@ -121,9 +119,9 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                         executorService),
                 fileProgressStatus::onBackoffDelay)
                 .thenAccept(mediaItemOrErrors -> {
-                    for (int i = 0; i < pendingPathStates.size(); i++) {
-                        PathState pathState = pendingPathStates.get(i);
-                        MediaItemOrError mediaItemOrError = mediaItemOrErrors.get(i);
+                    for (var i = 0; i < pendingPathStates.size(); i++) {
+                        var pathState = pendingPathStates.get(i);
+                        var mediaItemOrError = mediaItemOrErrors.get(i);
                         mediaItemOrError.errorStatus().ifPresent(status -> fileProgressStatus.addFailure(
                                 KeyedError.of(pathState.path(), status.getCode() + ": " + status.getMessage())));
                         mediaItemOrError.item().ifPresent(item -> {
@@ -155,7 +153,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                         logger.info("Scheduling upload of {}", file);
                         currentFuture = doCreateMediaData(theFile);
                     } else {
-                        ItemState itemState = currentFuture.getNow(null);
+                        var itemState = currentFuture.getNow(null);
                         if (itemState != null) {
                             currentFuture = itemState.uploadState()
                                     .filter(uploadMediaItemState -> {
@@ -184,7 +182,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                     return success(itemState);
                 })
                 .exceptionallyCompose(exception -> {
-                    String operationName = "uploading file " + file;
+                    var operationName = "uploading file " + file;
                     if (fatalUserCorrectableHandler.handle(operationName, exception)) {
                         return completedFuture(failure(humanReadableMessage(exception)));
                     } else if (backOffHandler.handle(operationName, exception).isPresent()) {
@@ -230,8 +228,8 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     }
 
     private boolean uploadTokenNotExpired(Path file, UploadMediaItemState uploadMediaItemState) {
-        Instant expiry = uploadMediaItemState.uploadInstant().plus(23, HOURS);
-        boolean notExpired = expiry.isAfter(currentDateTimeProvider.currentInstant());
+        var expiry = uploadMediaItemState.uploadInstant().plus(23, HOURS);
+        var notExpired = expiry.isAfter(currentDateTimeProvider.currentInstant());
         if (!notExpired) {
             logger.debug("upload token for {} expired, forgetting: {}", file, uploadMediaItemState);
         }
@@ -249,7 +247,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     }
 
     private void saveState() {
-        UploadState newUploadState = UploadState.of(
+        var newUploadState = UploadState.of(
                 uploadedItemStateByPath.entrySet().stream()
                         .filter(entry -> entry.getValue().isDone() && !entry.getValue().isCompletedExceptionally())
                         .collect(toImmutableMap(

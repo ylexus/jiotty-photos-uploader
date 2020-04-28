@@ -2,7 +2,6 @@ package net.yudichev.googlephotosupload.ui;
 
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.stage.Stage;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import org.slf4j.Logger;
@@ -44,7 +43,7 @@ final class UserInterface extends BaseLifecycleComponent implements Provider<Jav
     @Override
     protected void doStart() {
         if (javafxApplicationResources == null) {
-            CountDownLatch initLatch = new CountDownLatch(1);
+            var initLatch = new CountDownLatch(1);
             javafxApplicationResourcesHandler.accept(javafxApplicationResources -> {
                 Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
                     logger.error("Unhandled exception", throwable);
@@ -52,9 +51,9 @@ final class UserInterface extends BaseLifecycleComponent implements Provider<Jav
                 });
 
                 this.javafxApplicationResources = javafxApplicationResources;
-                Stage primaryStage = javafxApplicationResources.primaryStage();
+                var primaryStage = javafxApplicationResources.primaryStage();
 
-                FxmlContainer fxmlContainer = fxmlContainerFactory.create("MainScreen.fxml");
+                var fxmlContainer = fxmlContainerFactory.create("MainScreen.fxml");
                 Parent parent = fxmlContainer.root();
                 primaryStage.setScene(new Scene(parent));
                 primaryStage.setTitle(APP_TITLE);

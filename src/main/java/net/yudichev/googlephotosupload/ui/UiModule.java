@@ -1,6 +1,5 @@
 package net.yudichev.googlephotosupload.ui;
 
-import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import net.yudichev.googlephotosupload.core.PreferencesSupplier;
@@ -71,7 +70,7 @@ final class UiModule extends BaseLifecycleComponentModule {
         bind(PreferencesDialogController.class).in(Singleton.class);
         bind(PreferencesSupplier.class).to(PreferencesDialogController.class);
 
-        Key<UploadPaneControllerImpl> uploadPaneControllerKey = boundLifecycleComponent(UploadPaneControllerImpl.class);
+        var uploadPaneControllerKey = boundLifecycleComponent(UploadPaneControllerImpl.class);
         bind(UploadPaneController.class).to(uploadPaneControllerKey);
 
         // needed for FxmlLoader to find them

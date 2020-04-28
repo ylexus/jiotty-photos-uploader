@@ -63,7 +63,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                     }
                 }
                 simulateResourceExhaustion(ImmutableSet.of("uploadMediaData", file));
-                UploadedGoogleMediaBinary binary = new UploadedGoogleMediaBinary(file);
+                var binary = new UploadedGoogleMediaBinary(file);
                 binariesByUploadToken.put(binary.getUploadToken(), binary);
                 return binary.getUploadToken();
             }
@@ -90,7 +90,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
 
                 List<MediaItemOrError> result = newMediaItems.stream()
                         .map(newMediaItem -> {
-                            UploadedGoogleMediaBinary uploadedGoogleMediaBinary = checkNotNull(binariesByUploadToken.get(newMediaItem.uploadToken()),
+                            var uploadedGoogleMediaBinary = checkNotNull(binariesByUploadToken.get(newMediaItem.uploadToken()),
                                     "Unknown upload token: %s", newMediaItem.uploadToken());
                             if (fileNameBasedFailuresEnabled &&
                                     uploadedGoogleMediaBinary.getFile().toString().endsWith("failOnMeWithInvalidArgumentDuringCreationOfMediaItem.jpg")) {
@@ -99,7 +99,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                                         .setCode(Code.INVALID_ARGUMENT_VALUE)
                                         .build());
                             } else {
-                                UploadedGoogleMediaItem googleMediaItem = new UploadedGoogleMediaItem(
+                                var googleMediaItem = new UploadedGoogleMediaItem(
                                         uploadedGoogleMediaBinary,
                                         albumId,
                                         newMediaItem.description());
@@ -132,7 +132,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                     throw new RuntimeException("album creation failed");
                 }
                 simulateResourceExhaustion(ImmutableSet.of("createAlbum", name));
-                CreatedGooglePhotosAlbum album = new CreatedGooglePhotosAlbum(name, generateAlbumId(name));
+                var album = new CreatedGooglePhotosAlbum(name, generateAlbumId(name));
                 albumsById.put(album.getId(), album);
                 return album;
             }
@@ -287,7 +287,6 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         }
     }
 
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
     static final class UploadedGoogleMediaBinary {
         private static final AtomicLong counter = new AtomicLong();
         private final String uploadToken;

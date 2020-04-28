@@ -1,13 +1,10 @@
 package net.yudichev.googlephotosupload.core;
 
-import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.nio.file.Path;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
@@ -44,18 +41,18 @@ final class UploaderImpl implements Uploader {
         if (!resume) {
             googlePhotosUploader.doNotResume();
         }
-        CompletableFuture<List<AlbumDirectory>> albumDirectoriesFuture = directoryStructureSupplier.listAlbumDirectories(
+        var albumDirectoriesFuture = directoryStructureSupplier.listAlbumDirectories(
                 rootDir);
-        CompletableFuture<Map<String, List<GooglePhotosAlbum>>> cloudAlbumsByTitleFuture = cloudAlbumsProvider.listCloudAlbums();
+        var cloudAlbumsByTitleFuture = cloudAlbumsProvider.listCloudAlbums();
         return albumDirectoriesFuture
                 .thenCompose(albumDirectories -> cloudAlbumsByTitleFuture
                         .thenCompose(cloudAlbumsByTitle -> albumManager.listAlbumsByTitle(albumDirectories, cloudAlbumsByTitle)
                                 .thenCompose(albumsByTitle -> {
-                                    ProgressStatus directoryProgressStatus =
+                                    var directoryProgressStatus =
                                             progressStatusFactory.create(
                                                     resourceBundle.getString("uploaderDirectoryProgressTitle"),
                                                     Optional.of(albumDirectories.size()));
-                                    ProgressStatus fileProgressStatus = progressStatusFactory.create(
+                                    var fileProgressStatus = progressStatusFactory.create(
                                             resourceBundle.getString("uploaderFileProgressTitle"),
                                             Optional.empty());
                                     try {

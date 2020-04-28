@@ -94,7 +94,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                                               GooglePhotosAlbum destinationAlbum,
                                               List<GoogleMediaItem> itemsInDestinationAlbum,
                                               LongConsumer backoffEventConsumer) {
-        int maxItemsPerRequest = 49;
+        var maxItemsPerRequest = 49;
         return getItemsInAlbum(sourceAlbum, backoffEventConsumer).thenCompose(itemsInSourceAlbum -> itemsInSourceAlbum.isEmpty() ?
                 CompletableFutures.completedFuture() :
                 IntStream.range(0, itemsInSourceAlbum.size() / maxItemsPerRequest + 1)
@@ -105,7 +105,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                         .map(itemsInGroup -> {
                             logger.debug("Moving a batch of {} items for {} from {} to {}",
                                     itemsInGroup.size(), sourceAlbum.getTitle(), sourceAlbum.getId(), destinationAlbum.getId());
-                            List<GoogleMediaItem> itemsToAdd = without(itemsInGroup, itemsInDestinationAlbum);
+                            var itemsToAdd = without(itemsInGroup, itemsInDestinationAlbum);
                             CompletableFuture<Void> addFuture;
                             if (itemsToAdd.isEmpty()) {
                                 addFuture = CompletableFutures.completedFuture();
@@ -113,13 +113,13 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                                 if (logger.isDebugEnabled()) {
                                     logger.debug("Add to album {} items {}", destinationAlbum.getId(), mediaItemsToIds(itemsToAdd));
                                 }
-                                String addOperationName = "add " + itemsToAdd.size() + " items for " + sourceAlbum.getTitle() +
+                                var addOperationName = "add " + itemsToAdd.size() + " items for " + sourceAlbum.getTitle() +
                                         " to album " + destinationAlbum.getId();
                                 addFuture = cloudOperationHelper.withBackOffAndRetry(addOperationName,
                                         () -> withInvalidMediaItemErrorIgnored(addOperationName, destinationAlbum.addMediaItems(itemsToAdd, executorService)),
                                         backoffEventConsumer);
                             }
-                            String removeOperationName = "remove " + itemsInGroup.size() + " items for " + sourceAlbum.getTitle() +
+                            var removeOperationName = "remove " + itemsInGroup.size() + " items for " + sourceAlbum.getTitle() +
                                     " from album " + sourceAlbum.getId();
                             return addFuture.thenCompose(aVoid -> cloudOperationHelper.withBackOffAndRetry(removeOperationName,
                                     () -> withInvalidMediaItemErrorIgnored(removeOperationName, sourceAlbum.removeMediaItems(itemsInGroup, executorService)),
@@ -133,9 +133,9 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     public CompletableFuture<Map<String, GooglePhotosAlbum>> listAlbumsByTitle(List<AlbumDirectory> albumDirectories, Map<String,
             List<GooglePhotosAlbum>> cloudAlbumsByTitle) {
         checkStarted();
-        int reconcilableAlbumCount = albumDirectories.size() - 1;
+        var reconcilableAlbumCount = albumDirectories.size() - 1;
         logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", reconcilableAlbumCount);
-        ProgressStatus progressStatus = progressStatusFactory.create(
+        var progressStatus = progressStatusFactory.create(
                 String.format(resourceBundle.getString("albumManagerProgressStatusTitlePattern"), reconcilableAlbumCount),
                 Optional.of(reconcilableAlbumCount)); // root directory is excluded from progress as it does not need to be reconciled
         return albumDirectories.stream()
@@ -164,7 +164,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                                                            Path path,
                                                            LongConsumer backoffEventConsumer) {
         CompletableFuture<GooglePhotosAlbum> albumFuture;
-        List<GooglePhotosAlbum> cloudAlbumsForThisTitle = cloudAlbumsByTitle.get(filesystemAlbumTitle);
+        var cloudAlbumsForThisTitle = cloudAlbumsByTitle.get(filesystemAlbumTitle);
         if (cloudAlbumsForThisTitle == null) {
             logger.info("Creating album [{}] for path [{}]", filesystemAlbumTitle, path);
             albumFuture = cloudOperationHelper.withBackOffAndRetry(
@@ -181,7 +181,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                         .forEach(AlbumManagerImpl::removeAlbum);
                 return completedFuture(cloudAlbumsForThisTitle.get(0));
             } else if (nonEmptyCloudAlbumsForThisTitle.size() > 1) {
-                GooglePhotosAlbum primaryAlbum = cloudAlbumsForThisTitle.get(0);
+                var primaryAlbum = cloudAlbumsForThisTitle.get(0);
                 logger.info("Merging {} duplicate cloud album(s) for path [{}] into {}", cloudAlbumsForThisTitle.size(), path, primaryAlbum);
                 albumFuture = mergeAlbums(primaryAlbum, cloudAlbumsForThisTitle.subList(1, cloudAlbumsForThisTitle.size()), backoffEventConsumer);
             } else {

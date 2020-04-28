@@ -8,7 +8,6 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -25,7 +24,7 @@ final class FilesystemManagerImpl implements FilesystemManager {
 
     @Override
     public void walkDirectories(Path rootDir, Consumer<Path> directoryHandler) {
-        Preferences preferences = preferencesSupplier.get();
+        var preferences = preferencesSupplier.get();
         asUnchecked(() -> Files.walkFileTree(rootDir, new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
@@ -43,9 +42,9 @@ final class FilesystemManagerImpl implements FilesystemManager {
 
     @Override
     public List<Path> listFiles(Path directory) {
-        Preferences preferences = preferencesSupplier.get();
+        var preferences = preferencesSupplier.get();
         return getAsUnchecked(() -> {
-            try (Stream<Path> pathStream = Files.list(directory)) {
+            try (var pathStream = Files.list(directory)) {
                 return pathStream
                         .filter(Files::isRegularFile)
                         .filter(preferences::noneMatch)

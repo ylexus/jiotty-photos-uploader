@@ -35,11 +35,11 @@ public final class DependenciesModule extends AbstractModule {
         install(new ExecutorModule());
         install(new VarStoreModule(APPLICATION_NAME));
 
-        Path authDataStoreRootDir = Paths.get(System.getProperty("user.home")).resolve("." + APPLICATION_NAME).resolve("auth");
+        var authDataStoreRootDir = Paths.get(System.getProperty("user.home")).resolve("." + APPLICATION_NAME).resolve("auth");
         bind(Restarter.class).to(RestarterImpl.class);
         bind(Path.class).annotatedWith(RestarterImpl.GoogleAuthRootDir.class).toInstance(authDataStoreRootDir);
 
-        GoogleApiAuthSettings.Builder googleApiSettingsBuilder = GoogleApiAuthSettings.builder()
+        var googleApiSettingsBuilder = GoogleApiAuthSettings.builder()
                 .setAuthDataStoreRootDir(authDataStoreRootDir)
                 .setApplicationName(APP_TITLE)
                 .setCredentialsUrl(getResource("client_secret_641898159424-0tmk9ngs1aog13ef0v4bg1njtnndj1c3.apps.googleusercontent.com.json"));

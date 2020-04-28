@@ -13,6 +13,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.toList;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 
 final class CloudAlbumsProviderImpl extends BaseLifecycleComponent implements CloudAlbumsProvider {
@@ -42,17 +44,17 @@ final class CloudAlbumsProviderImpl extends BaseLifecycleComponent implements Cl
     public CompletableFuture<Map<String, List<GooglePhotosAlbum>>> listCloudAlbums() {
         checkStarted();
         logger.info("Loading albums in cloud (may take several minutes)...");
-        ProgressStatus progressStatus = progressStatusFactory.create(resourceBundle.getString("cloudAlbumsProviderProgressTitle"), Optional.empty());
+        var progressStatus = progressStatusFactory.create(resourceBundle.getString("cloudAlbumsProviderProgressTitle"), Optional.empty());
         return cloudOperationHelper.withBackOffAndRetry(
                 "get all albums",
                 () -> googlePhotosClient.listAlbums(progressStatus::updateSuccess, executorService),
                 progressStatus::onBackoffDelay)
-                .thenApply(albumsInCloud -> {
+                .<Map<String, List<GooglePhotosAlbum>>>thenApply(albumsInCloud -> {
                     logger.info("... loaded {} album(s) in cloud", albumsInCloud.size());
-                    Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle = new HashMap<>(albumsInCloud.size());
-                    albumsInCloud.forEach(googlePhotosAlbum ->
-                            cloudAlbumsByTitle.computeIfAbsent(googlePhotosAlbum.getTitle(), title -> new ArrayList<>()).add(googlePhotosAlbum));
-                    return cloudAlbumsByTitle;
+                    return albumsInCloud.stream()
+                            .collect(groupingBy(GooglePhotosAlbum::getTitle,
+                                    () -> new HashMap<>(albumsInCloud.size()),
+                                    toList()));
                 })
                 .whenComplete((ignored, e) -> progressStatus.close(e == null));
     }

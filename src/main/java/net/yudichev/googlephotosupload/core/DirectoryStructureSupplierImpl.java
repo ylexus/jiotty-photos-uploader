@@ -37,9 +37,9 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
     }
 
     private static Optional<String> toAlbumTitle(Path path, int rootNameCount) {
-        int nameCount = path.getNameCount();
+        var nameCount = path.getNameCount();
         if (nameCount > rootNameCount) {
-            Path albumNamePath = path.subpath(rootNameCount, nameCount);
+            var albumNamePath = path.subpath(rootNameCount, nameCount);
             return Optional.of(String.join(": ", Streams.stream(albumNamePath.iterator())
                     .map(Path::toString)
                     .collect(toImmutableList())));
@@ -51,8 +51,8 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
     @Override
     public CompletableFuture<List<AlbumDirectory>> listAlbumDirectories(Path rootDir) {
         checkArgument(Files.isDirectory(rootDir), "Path is not a directory: %s", rootDir);
-        ProgressStatus progressStatus = progressStatusFactory.create(resourceBundle.getString("directoryStructureSupplierProgressTitle"), Optional.empty());
-        int rootNameCount = rootDir.getNameCount();
+        var progressStatus = progressStatusFactory.create(resourceBundle.getString("directoryStructureSupplierProgressTitle"), Optional.empty());
+        var rootNameCount = rootDir.getNameCount();
         return CompletableFuture.supplyAsync(() -> {
             logger.info("Building album list from the file system...");
             ImmutableList.Builder<AlbumDirectory> listBuilder = ImmutableList.builder();

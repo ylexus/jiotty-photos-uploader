@@ -18,7 +18,7 @@ final class UiProgressStatusFactory implements ProgressValueUpdaterFactory {
 
     @Override
     public ProgressValueUpdater create(String name, Optional<Integer> totalCount) {
-        ProgressStatusBar progressStatusBar = progressStatusBarFactory.create(name, totalCount);
+        var progressStatusBar = progressStatusBarFactory.create(name, totalCount);
         uploadPaneController.addProgressBox(progressStatusBar);
         return progressStatusBar;
     }

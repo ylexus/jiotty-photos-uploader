@@ -50,3 +50,7 @@
     -fx-background-insets: 0px ;
     -fx-padding: 0;
 }
+
+.hyperlink {
+    -fx-padding: 0;
+}

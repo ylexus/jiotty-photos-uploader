@@ -7,5 +7,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 interface AlbumManager {
-    CompletableFuture<Map<String, GooglePhotosAlbum>> listAlbumsByTitle(List<AlbumDirectory> albumDirectories, Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle);
+    CompletableFuture<Map<String, GooglePhotosAlbum>> listAlbumsByTitle(List<AlbumDirectory> albumDirectories,
+                                                                        Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle);
 }

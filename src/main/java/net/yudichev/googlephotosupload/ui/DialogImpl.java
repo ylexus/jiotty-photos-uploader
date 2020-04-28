@@ -18,9 +18,9 @@ final class DialogImpl implements Dialog {
                @Assisted("title") String title,
                @Assisted("fxmlPath") String fxmlPath,
                @Assisted Consumer<Stage> customizer) {
-        FxmlContainer preferencesDialogFxContainer = fxmlContainerFactory.create(fxmlPath);
+        var preferencesDialogFxContainer = fxmlContainerFactory.create(fxmlPath);
         fxController = preferencesDialogFxContainer.controller();
-        Stage primaryStage = primaryStageProvider.get().primaryStage();
+        var primaryStage = primaryStageProvider.get().primaryStage();
         dialog = new Stage();
         dialog.setTitle(title);
         dialog.setScene(new Scene(preferencesDialogFxContainer.root()));

@@ -1,6 +1,5 @@
 package net.yudichev.googlephotosupload.ui;
 
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
 import javafx.scene.control.MenuBar;
@@ -48,12 +47,12 @@ public final class MainScreenControllerImpl implements MainScreenController {
         this.platformSpecificMenu = checkNotNull(platformSpecificMenu);
         this.resourceBundle = checkNotNull(resourceBundle);
 
-        FxmlContainer folderSelectorFxmlContainer = fxmlContainerFactory.create("FolderSelector.fxml");
+        var folderSelectorFxmlContainer = fxmlContainerFactory.create("FolderSelector.fxml");
         FolderSelectorController folderSelectorController = folderSelectorFxmlContainer.controller();
         folderSelectorController.setFolderSelectedAction(this::onFolderSelected);
         folderSelectionPane = folderSelectorFxmlContainer.root();
 
-        FxmlContainer uploadPaneFxmlContainer = fxmlContainerFactory.create("UploadPane.fxml");
+        var uploadPaneFxmlContainer = fxmlContainerFactory.create("UploadPane.fxml");
         uploadPaneController = uploadPaneFxmlContainer.controller();
         uploadPane = uploadPaneFxmlContainer.root();
     }
@@ -74,7 +73,7 @@ public final class MainScreenControllerImpl implements MainScreenController {
     @Override
     public void toFolderSelectionMode() {
         runLater(() -> {
-            ObservableList<Node> children = root.getChildren();
+            var children = root.getChildren();
             children.remove(uploadPane);
             if (!children.contains(folderSelectionPane)) {
                 children.add(folderSelectionPane);
@@ -96,7 +95,10 @@ public final class MainScreenControllerImpl implements MainScreenController {
             aboutDialog = dialogFactory.create(
                     resourceBundle.getString("mainScreenAboutDialogTitle"),
                     "AboutDialog.fxml",
-                    stage -> stage.initModality(APPLICATION_MODAL));
+                    stage -> {
+                        stage.initModality(APPLICATION_MODAL);
+                        stage.setResizable(false);
+                    });
         }
         aboutDialog.show();
         actionEvent.consume();
@@ -124,7 +126,7 @@ public final class MainScreenControllerImpl implements MainScreenController {
     }
 
     private void onFolderSelected(Path path, boolean resume) {
-        ObservableList<Node> children = root.getChildren();
+        var children = root.getChildren();
         children.remove(folderSelectionPane);
         children.add(uploadPane);
 

@@ -6,7 +6,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.LongConsumer;
 import java.util.function.Supplier;
@@ -30,7 +29,7 @@ final class CloudOperationHelperImpl implements CloudOperationHelper {
                     return Either.<T, RetryableFailure>left(value);
                 })
                 .exceptionally(exception -> {
-                    Optional<Long> backoffDelayMs = backOffHandler.handle(operationName, exception);
+                    var backoffDelayMs = backOffHandler.handle(operationName, exception);
                     return Either.right(RetryableFailure.of(exception, backoffDelayMs));
                 })
                 .thenCompose(eitherValueOrRetryableFailure -> eitherValueOrRetryableFailure.map(

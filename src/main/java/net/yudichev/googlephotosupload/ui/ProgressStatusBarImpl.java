@@ -17,7 +17,7 @@ final class ProgressStatusBarImpl implements ProgressStatusBar {
     ProgressStatusBarImpl(FxmlContainerFactory fxmlContainerFactory,
                           @Assisted String name,
                           @Assisted Optional<Integer> totalCount) {
-        FxmlContainer fxmlContainer = fxmlContainerFactory.create("ProgressBox.fxml");
+        var fxmlContainer = fxmlContainerFactory.create("ProgressBox.fxml");
         controller = fxmlContainer.controller();
         controller.init(name, totalCount);
         root = fxmlContainer.root();

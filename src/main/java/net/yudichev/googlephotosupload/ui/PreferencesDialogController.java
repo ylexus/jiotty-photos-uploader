@@ -1,11 +1,9 @@
 package net.yudichev.googlephotosupload.ui;
 
 import javafx.collections.ListChangeListener;
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
-import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -37,7 +35,7 @@ public final class PreferencesDialogController implements PreferencesSupplier {
 
     public void initialize() {
         listView.getItems().addAll(preferences.scanExclusionPatterns());
-        MultipleSelectionModel<String> selectionModel = listView.getSelectionModel();
+        var selectionModel = listView.getSelectionModel();
         selectionModel.setSelectionMode(MULTIPLE);
         selectionModel.getSelectedItems().addListener(this::onIgnorePatternListSelectionChanged);
         listView.setCellFactory(param -> new TextFieldListCell<>(new DefaultStringConverter()) {
@@ -64,9 +62,9 @@ public final class PreferencesDialogController implements PreferencesSupplier {
     }
 
     public void onPlusButtonAction(ActionEvent actionEvent) {
-        ObservableList<String> items = listView.getItems();
+        var items = listView.getItems();
         items.add("");
-        int newItemIndex = items.size() - 1;
+        var newItemIndex = items.size() - 1;
         // TODO the call to layout is a workaround for a javafx bug https://stackoverflow.com/a/32701064
         listView.layout();
         listView.edit(newItemIndex);
@@ -89,7 +87,7 @@ public final class PreferencesDialogController implements PreferencesSupplier {
     }
 
     private void deleteSelectedItems() {
-        ObservableList<String> selectedItems = listView.getSelectionModel().getSelectedItems();
+        var selectedItems = listView.getSelectionModel().getSelectedItems();
         listView.getItems().removeAll(selectedItems);
     }
 
@@ -99,7 +97,7 @@ public final class PreferencesDialogController implements PreferencesSupplier {
     }
 
     private void onCellEditCancel(ListView.EditEvent<String> editEvent) {
-        ObservableList<String> items = listView.getItems();
+        var items = listView.getItems();
         items.remove("");
         plusButton.setDisable(false);
         editEvent.consume();

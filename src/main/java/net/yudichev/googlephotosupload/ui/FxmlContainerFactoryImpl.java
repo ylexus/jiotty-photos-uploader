@@ -4,7 +4,6 @@ import com.google.inject.Injector;
 import javafx.fxml.FXMLLoader;
 
 import javax.inject.Inject;
-import java.io.InputStream;
 import java.util.ResourceBundle;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -21,11 +20,11 @@ final class FxmlContainerFactoryImpl implements FxmlContainerFactory {
 
     @Override
     public FxmlContainer create(String fxmlResourcePath) {
-        FXMLLoader fxmlLoader = new FXMLLoader();
+        var fxmlLoader = new FXMLLoader();
         fxmlLoader.setResources(injector.getInstance(ResourceBundle.class));
         fxmlLoader.setControllerFactory(injector::getInstance);
         return getAsUnchecked(() -> {
-            try (InputStream fxmlInputStream = ClassLoader.getSystemResourceAsStream(fxmlResourcePath)) {
+            try (var fxmlInputStream = ClassLoader.getSystemResourceAsStream(fxmlResourcePath)) {
                 checkArgument(fxmlInputStream != null, "Resource not found: %s", fxmlResourcePath);
                 fxmlLoader.load(fxmlInputStream);
 

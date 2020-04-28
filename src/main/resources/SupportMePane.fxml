@@ -7,5 +7,5 @@
       xmlns="http://javafx.com/javafx/10.0.2-internal"
       fx:controller="net.yudichev.googlephotosupload.ui.SupportMePaneController">
     <Label text="%supportMePaneFirstSentence"/>
-    <Hyperlink onAction="#onSupportLinkAction" text="%supportMePaneSupportLinkSentence"/>
+    <Hyperlink styleClass="hyperlink" onAction="#onSupportLinkAction" text="%supportMePaneSupportLinkSentence"/>
 </HBox>

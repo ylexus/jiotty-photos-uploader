@@ -1,8 +1,6 @@
 package net.yudichev.googlephotosupload.ui;
 
-import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
@@ -106,7 +104,7 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
                 stopButton.setDisable(true);
                 uploadMoreButton.setDisable(false);
                 logArea.setVisible(true);
-                ObservableList<Node> logAreaChildren = logArea.getChildren();
+                var logAreaChildren = logArea.getChildren();
                 if (exception == null) {
                     logArea.getStyleClass().add("success-background");
                     logAreaChildren.add(new Text(resourceBundle.getString("uploadPaneLogAreaSuccessLabel")));
@@ -114,7 +112,7 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
                     logger.error("Upload failed", exception);
                     logArea.getStyleClass().add("failed-background");
                     logAreaChildren.add(new Text(resourceBundle.getString("uploadPaneLogAreaFailurePrefix") + " "));
-                    Text failureText = new Text(humanReadableMessage(exception));
+                    var failureText = new Text(humanReadableMessage(exception));
                     failureText.getStyleClass().add("failed-text");
                     logAreaChildren.add(failureText);
                 }
