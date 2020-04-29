@@ -44,9 +44,9 @@ function sign_jar_internals() {
 }
 
 sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/grpc-netty-shaded-1.21.0.jar"
-sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/javafx-graphics-14-mac.jar"
-sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/javafx-media-14-mac.jar"
-sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/javafx-web-14-mac.jar"
+sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/javafx-graphics-14.0.1-mac.jar"
+sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/javafx-media-14.0.1-mac.jar"
+sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/javafx-web-14.0.1-mac.jar"
 
 find "${BUILD_DIR}/jpackage/${APP_NAME}.app" -type f \
   -not -path "*/Contents/runtime/*" \
