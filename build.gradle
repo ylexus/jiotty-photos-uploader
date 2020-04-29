@@ -13,7 +13,7 @@ plugins {
 version = readEnvOrDefault('VERSION', 'DEVELOPMENT')
 //noinspection GroovyUnusedAssignment
 sourceCompatibility = '14'
-ext.javafxVersion = '14'
+ext.javafxVersion = '14.0.1'
 
 application {
     mainClassName = 'net.yudichev.googlephotosupload.ui.Launcher'
@@ -103,7 +103,7 @@ dependencies {
     permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion"
     permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:mac"
     permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:linux"
-    permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:windows"
+    permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:win"
 }
 
 repositories {
