@@ -2,10 +2,9 @@
 
 <?import javafx.scene.control.Hyperlink?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.HBox?>
-<HBox xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER" styleClass="side-note" stylesheets="@style.css"
-      xmlns="http://javafx.com/javafx/10.0.2-internal"
-      fx:controller="net.yudichev.googlephotosupload.ui.SupportMePaneController">
+<?import javafx.scene.layout.FlowPane?>
+<FlowPane xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER" hgap="5.0" styleClass="side-note" stylesheets="@style.css"
+          xmlns="http://javafx.com/javafx/10.0.2-internal" fx:controller="net.yudichev.googlephotosupload.ui.SupportMePaneController">
     <Label text="%supportMePaneFirstSentence"/>
-    <Hyperlink styleClass="hyperlink" onAction="#onSupportLinkAction" text="%supportMePaneSupportLinkSentence"/>
-</HBox>
+    <Hyperlink onAction="#onSupportLinkAction" styleClass="hyperlink" text="%supportMePaneSupportLinkSentence"/>
+</FlowPane>
