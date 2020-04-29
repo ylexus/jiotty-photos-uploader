@@ -2,6 +2,7 @@ package net.yudichev.googlephotosupload.ui;
 
 import com.google.inject.assistedinject.Assisted;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 import javax.inject.Inject;
@@ -22,6 +23,7 @@ final class DialogImpl implements Dialog {
         fxController = preferencesDialogFxContainer.controller();
         var primaryStage = primaryStageProvider.get().primaryStage();
         dialog = new Stage();
+        dialog.getIcons().add(new Image(getClass().getResourceAsStream("/Icon1024.png")));
         dialog.setTitle(title);
         dialog.setScene(new Scene(preferencesDialogFxContainer.root()));
         dialog.initOwner(primaryStage);
