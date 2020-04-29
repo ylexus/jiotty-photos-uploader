@@ -41,8 +41,7 @@ final class UploaderImpl implements Uploader {
         if (!resume) {
             googlePhotosUploader.doNotResume();
         }
-        var albumDirectoriesFuture = directoryStructureSupplier.listAlbumDirectories(
-                rootDir);
+        var albumDirectoriesFuture = directoryStructureSupplier.listAlbumDirectories(rootDir);
         var cloudAlbumsByTitleFuture = cloudAlbumsProvider.listCloudAlbums();
         return albumDirectoriesFuture
                 .thenCompose(albumDirectories -> cloudAlbumsByTitleFuture

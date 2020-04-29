@@ -53,15 +53,33 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
         this.resourceBundle = checkNotNull(resourceBundle);
     }
 
-    private static List<GoogleMediaItem> without(List<GoogleMediaItem> mediaItems, List<GoogleMediaItem> itemsToExclude) {
-        List<GoogleMediaItem> result = new ArrayList<>(mediaItems);
-        result.removeAll(itemsToExclude);
-        return result;
-    }
-
     @Override
     protected void doStart() {
         executorService = executorServiceProvider.get();
+    }
+
+    @Override
+    public CompletableFuture<Map<String, GooglePhotosAlbum>> listAlbumsByTitle(List<AlbumDirectory> albumDirectories,
+                                                                               Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle) {
+        checkStarted();
+        // root directory is excluded from progress as it does not need to be reconciled
+        var reconcilableAlbumCount = albumDirectories.size() - 1;
+        logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", reconcilableAlbumCount);
+        var progressStatus = progressStatusFactory.create(
+                String.format(resourceBundle.getString("albumManagerProgressStatusTitlePattern"), reconcilableAlbumCount),
+                Optional.of(reconcilableAlbumCount));
+        return albumDirectories.stream()
+                .map(albumDirectory -> albumDirectory.albumTitle()
+                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path(), progressStatus::onBackoffDelay)
+                                .whenComplete((album, e) -> progressStatus.incrementSuccess())))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(toFutureOfList())
+                .<Map<String, GooglePhotosAlbum>>thenApply(googlePhotosAlbums -> googlePhotosAlbums.stream()
+                        .collect(toImmutableMap(
+                                GooglePhotosAlbum::getTitle,
+                                Function.identity())))
+                .whenComplete((ignored, e) -> progressStatus.close(e == null));
     }
 
     private static String mediaItemsToIds(List<GoogleMediaItem> items) {
@@ -129,27 +147,10 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                         .thenApply(list -> null));
     }
 
-    @Override
-    public CompletableFuture<Map<String, GooglePhotosAlbum>> listAlbumsByTitle(List<AlbumDirectory> albumDirectories, Map<String,
-            List<GooglePhotosAlbum>> cloudAlbumsByTitle) {
-        checkStarted();
-        var reconcilableAlbumCount = albumDirectories.size() - 1;
-        logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", reconcilableAlbumCount);
-        var progressStatus = progressStatusFactory.create(
-                String.format(resourceBundle.getString("albumManagerProgressStatusTitlePattern"), reconcilableAlbumCount),
-                Optional.of(reconcilableAlbumCount)); // root directory is excluded from progress as it does not need to be reconciled
-        return albumDirectories.stream()
-                .map(albumDirectory -> albumDirectory.albumTitle()
-                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path(), progressStatus::onBackoffDelay)
-                                .whenComplete((album, e) -> progressStatus.incrementSuccess())))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(toFutureOfList())
-                .<Map<String, GooglePhotosAlbum>>thenApply(googlePhotosAlbums -> googlePhotosAlbums.stream()
-                        .collect(toImmutableMap(
-                                GooglePhotosAlbum::getTitle,
-                                Function.identity())))
-                .whenComplete((ignored, e) -> progressStatus.close(e == null));
+    private static List<GoogleMediaItem> without(List<GoogleMediaItem> mediaItems, List<GoogleMediaItem> itemsToExclude) {
+        List<GoogleMediaItem> result = new ArrayList<>(mediaItems);
+        result.removeAll(itemsToExclude);
+        return result;
     }
 
     private CompletableFuture<List<GoogleMediaItem>> getItemsInAlbum(GooglePhotosAlbum sourceAlbum, LongConsumer backoffEventConsumer) {

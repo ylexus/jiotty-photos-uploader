@@ -444,6 +444,24 @@ final class IntegrationTest {
         assertThat(getLastFailure(), emptyOptional());
     }
 
+    @Test
+    void doesNotCreateAlbumsForDirectoriesWithOnlySkippableFiles() throws Exception {
+        var skippableDir = root.resolve("skippable-dir");
+        Files.createDirectory(skippableDir);
+        Files.write(skippableDir.resolve(".hiddenfile"), new byte[]{0});
+        var skippableSubDir = skippableDir.resolve("skippable-sub-dir");
+        Files.createDirectory(skippableSubDir);
+        Files.write(skippableSubDir.resolve(".hiddenfile2"), new byte[]{0});
+        var skippableSubDir2 = skippableDir.resolve("skippable-sub-dir2-empty");
+        Files.createDirectory(skippableSubDir2);
+
+        doExecuteUpload();
+        assertThat(googlePhotosClient.getAllAlbums(), allOf(
+                not(hasItem(albumWithId("skippable-dir"))),
+                not(hasItem(albumWithId("skippable-sub-dir"))),
+                not(hasItem(albumWithId("skippable-sub-dir2-empty")))));
+    }
+
     private VarStoreData readVarStoreDirectly() throws IOException {
         return Json.parse(Files.readString(varStoreDir.resolve("data.json")), VarStoreData.class);
     }
