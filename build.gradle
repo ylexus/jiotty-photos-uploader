@@ -102,6 +102,8 @@ dependencies {
     permitUnusedDeclared "org.openjfx:javafx-graphics:$javafxVersion"
     permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion"
     permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:mac"
+    permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:linux"
+    permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:windows"
 }
 
 repositories {
