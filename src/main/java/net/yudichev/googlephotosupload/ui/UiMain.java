@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.ui;
 
 import javafx.application.Platform;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import net.yudichev.googlephotosupload.core.DependenciesModule;
 import net.yudichev.googlephotosupload.core.ResourceBundleModule;
@@ -43,6 +44,7 @@ public final class UiMain extends javafx.application.Application {
     public void start(Stage primaryStage) {
         primaryStage.setMinWidth(500);
         primaryStage.setMinHeight(500);
+        primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/Icon1024.png")));
         javafxApplicationResourcesHandler.get().accept(JavafxApplicationResources.builder()
                 .setHostServices(getHostServices())
                 .setPrimaryStage(primaryStage)
