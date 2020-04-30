@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -26,6 +25,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.Lists.partition;
 import static java.time.temporal.ChronoUnit.HOURS;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
@@ -38,6 +38,8 @@ import static net.yudichev.jiotty.common.lang.ResultOrFailure.failure;
 import static net.yudichev.jiotty.common.lang.ResultOrFailure.success;
 
 final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements GooglePhotosUploader {
+    private static final int CREATE_MEDIA_ITEMS_BATCH_SIZE = 50;
+
     private static final Logger logger = LoggerFactory.getLogger(GooglePhotosUploaderImpl.class);
 
     private final GooglePhotosClient googlePhotosClient;
@@ -90,12 +92,15 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                                     return PathState.of(path, itemState);
                                 }))
                         .collect(toFutureOfList())
-                        .thenCompose(createMediaDataResults -> createMediaItems(googlePhotosAlbum, fileProgressStatus, createMediaDataResults)));
+                        .thenCompose(createMediaDataResults -> partition(createMediaDataResults, CREATE_MEDIA_ITEMS_BATCH_SIZE).stream()
+                                .map(pathStates -> createMediaItems(googlePhotosAlbum, fileProgressStatus, pathStates))
+                                .collect(toFutureOfList())
+                                .thenApply(voids -> null)));
     }
 
-    private CompletionStage<Void> createMediaItems(Optional<GooglePhotosAlbum> googlePhotosAlbum,
-                                                   ProgressStatus fileProgressStatus,
-                                                   List<PathState> createMediaDataResults) {
+    private CompletableFuture<Void> createMediaItems(Optional<GooglePhotosAlbum> googlePhotosAlbum,
+                                                     ProgressStatus fileProgressStatus,
+                                                     List<PathState> createMediaDataResults) {
         List<PathState> pendingPathStates = createMediaDataResults.stream()
                 .filter(pathState -> {
                     var itemStateOptional = pathState.state().toSuccess();

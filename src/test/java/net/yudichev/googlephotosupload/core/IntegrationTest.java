@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.of;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.nio.file.FileVisitResult.CONTINUE;
@@ -460,6 +461,21 @@ final class IntegrationTest {
                 not(hasItem(albumWithId("skippable-dir"))),
                 not(hasItem(albumWithId("skippable-sub-dir"))),
                 not(hasItem(albumWithId("skippable-sub-dir2-empty")))));
+    }
+
+    @Test
+    void worksForMoreThan50ItemsInDirectory() throws Exception {
+        var largeDirPath = root.resolve("dirWith55Files").toAbsolutePath();
+        Files.createDirectory(largeDirPath);
+        var filesPaths = IntStream.range(0, 55)
+                .mapToObj(i -> largeDirPath.resolve("file" + i + ".jpg"))
+                .peek(path -> asUnchecked(() -> Files.write(path, new byte[]{0})))
+                .collect(toImmutableList());
+
+        doExecuteUpload();
+
+        filesPaths.forEach(path -> assertThat(googlePhotosClient.getAllItems(), hasItem(itemForFile(path))));
+        assertThat(getLastFailure(), emptyOptional());
     }
 
     private VarStoreData readVarStoreDirectly() throws IOException {

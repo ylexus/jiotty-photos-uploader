@@ -75,6 +75,12 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
                 checkArgument(!newMediaItems.isEmpty(), "the list of media items is empty");
+                if (newMediaItems.size() > 50) {
+                    throw new InvalidArgumentException(new StatusRuntimeException(
+                            INVALID_ARGUMENT.withDescription("Request must have less than 50 items")),
+                            GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
+                            false);
+                }
                 simulateResourceExhaustion(ImmutableSet.of("createMediaItems", albumId, newMediaItems));
 
                 albumId
