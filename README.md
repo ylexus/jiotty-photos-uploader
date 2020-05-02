@@ -1,1 +1,1 @@
-Jiotty Photos Uploader is a Google Photos media uploader. See [Wiki](https://github.com/ylexus/jiotty-photos-uploader/wiki) for more information.
+Jiotty Photos Uploader is a simple desktop Google Photos media uploader that creates albums according to your directory structure and can resume failed uploads. See [Wiki](https://github.com/ylexus/jiotty-photos-uploader/wiki) for more information.
