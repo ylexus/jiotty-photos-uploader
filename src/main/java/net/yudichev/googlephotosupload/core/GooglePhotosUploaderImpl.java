@@ -88,7 +88,9 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                 .thenCompose(paths -> paths.stream()
                         .map(path -> createMediaData(path)
                                 .thenApply(itemState -> {
-                                    itemState.toFailure().ifPresent(error -> fileProgressStatus.addFailure(KeyedError.of(path, error)));
+                                    itemState.toFailure().ifPresentOrElse(
+                                            error -> fileProgressStatus.addFailure(KeyedError.of(path, error)),
+                                            fileProgressStatus::incrementSuccess);
                                     return PathState.of(path, itemState);
                                 }))
                         .collect(toFutureOfList())
@@ -129,11 +131,8 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                         var mediaItemOrError = mediaItemOrErrors.get(i);
                         mediaItemOrError.errorStatus().ifPresent(status -> fileProgressStatus.addFailure(
                                 KeyedError.of(pathState.path(), status.getCode() + ": " + status.getMessage())));
-                        mediaItemOrError.item().ifPresent(item -> {
-                            uploadedItemStateByPath.compute(pathState.path(),
-                                    (path, itemStateFuture) -> checkNotNull(itemStateFuture).thenApply(itemState -> itemState.withMediaId(item.getId())));
-                            fileProgressStatus.incrementSuccess();
-                        });
+                        mediaItemOrError.item().ifPresent(item -> uploadedItemStateByPath.compute(pathState.path(),
+                                (path, itemStateFuture) -> checkNotNull(itemStateFuture).thenApply(itemState -> itemState.withMediaId(item.getId()))));
                     }
                 })
                 .exceptionally(throwable -> {

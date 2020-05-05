@@ -12,7 +12,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static net.yudichev.jiotty.common.lang.Locks.inLock;
-import static net.yudichev.jiotty.common.lang.Optionals.ifPresent;
 
 final class LoggingProgressStatusFactory implements ProgressStatusFactory {
     private static final long BACKOFF_DELAY_MS_BEFORE_NOTICE_APPEARS = Duration.ofMinutes(1).toMillis();
@@ -63,9 +62,9 @@ final class LoggingProgressStatusFactory implements ProgressStatusFactory {
             }
 
             private void log() {
-                inLock(lock, () -> ifPresent(totalCount,
-                        totalCount -> logger.info("{}: progress {}%", name, (successCount + failureCount) * 100 / totalCount))
-                        .orElse(() -> logger.info("{}: completed {}", name, successCount + failureCount)));
+                inLock(lock, () -> totalCount.ifPresentOrElse(
+                        totalCount -> logger.info("{}: progress {}%", name, (successCount + failureCount) * 100 / totalCount),
+                        () -> logger.info("{}: completed {}", name, successCount + failureCount)));
             }
         };
     }
