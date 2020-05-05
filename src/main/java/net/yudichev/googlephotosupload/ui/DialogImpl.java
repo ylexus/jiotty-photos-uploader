@@ -43,6 +43,11 @@ final class DialogImpl implements Dialog {
     }
 
     @Override
+    public void sizeToScene() {
+        dialog.sizeToScene();
+    }
+
+    @Override
     public void close() {
         dialog.close();
     }

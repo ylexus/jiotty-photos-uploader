@@ -1,8 +1,8 @@
 plugins {
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.0.8'
-    id 'org.beryx.runtime' version '1.8.0'
-    id "name.remal.check-updates" version "1.0.171"
+    id 'org.beryx.runtime' version '1.8.3'
+    id "name.remal.check-updates" version "1.0.187"
 
     // TODO no good alternative to maven duplicate finder
     // id "net.idlestate.gradle-duplicate-classes-check" version "1.0.2"
@@ -47,7 +47,7 @@ dependencies {
     ext.orgJunitJupiterVersion = '5.6.0'
     ext.orgMockitoVersion = '3.2.4'
     ext.orgImmutablesVersion = '2.8.3'
-    ext.netYudichevJiottyVersion = '1.4.1'
+    ext.netYudichevJiottyVersion = '1.4.3'
 
     annotationProcessor "org.immutables:value:$orgImmutablesVersion"
     testAnnotationProcessor "org.immutables:value:$orgImmutablesVersion"
@@ -79,6 +79,8 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind:2.9.9"
     implementation "de.codecentric.centerdevice:centerdevice-nsmenufx:2.1.7"
     implementation "io.grpc:grpc-api"
+    implementation "com.squareup.okhttp3:okhttp"
+    implementation "com.sandec:mdfx:0.1.6"
 
     // This is to test dependency analyser
     //implementation "org.apache.commons:commons-skin:4.2"
@@ -122,6 +124,9 @@ repositories {
             snapshotsOnly()
         }
     }
+    maven {
+        url "http://sandec.bintray.com/repo"
+    }
 }
 
 test {
@@ -129,13 +134,14 @@ test {
 }
 
 runtime {
-    //noinspection GroovyAssignabilityCheck
+    //noinspection GroovyAssignabilityCheck, GroovyAccessibility
     options = ['--strip-debug',
                '--compress', '2',
                '--no-header-files',
                '--no-man-pages']
 
     // required by httpclient, missed by default when building and running on Windows
+    //noinspection GroovyAssignabilityCheck,GroovyAccessibility
     modules = [
             // required by httpclient, missed by default when building and running on Windows
             'java.naming',

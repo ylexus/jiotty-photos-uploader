@@ -5,6 +5,7 @@
     -fx-control-inner-background: derive(-fx-base,50%);
     -fx-control-inner-background-alt: derive(-fx-control-inner-background, 30%);
     -fx-font-size: 14pt;
+    -mdfx-font-color: white;
 }
 
 .progress-box {
@@ -53,4 +54,10 @@
 
 .hyperlink {
     -fx-padding: 0;
+}
+
+.release-notes {
+    -fx-border-style: round;
+    -fx-border-radius: 5;
+    -fx-border-width: 3;
 }

@@ -33,7 +33,7 @@ final class UiModule extends BaseLifecycleComponentModule {
 
         bindControllers();
 
-        bind(SupportMePaneController.class).in(Singleton.class);
+        bind(SupportPaneController.class).in(Singleton.class);
 
         bind(JavafxApplicationResources.class).toProvider(boundLifecycleComponent(UserInterface.class)).in(Singleton.class);
         expose(JavafxApplicationResources.class);
@@ -48,6 +48,9 @@ final class UiModule extends BaseLifecycleComponentModule {
         install(new FactoryModuleBuilder()
                 .implement(ProgressStatus.class, ThrottlingProgressStatus.class)
                 .build(ProgressStatusFactory.class));
+
+        boundLifecycleComponent(VersionCheck.class);
+
         expose(ProgressStatusFactory.class);
         expose(FxmlContainerFactory.class);
         expose(MainScreenController.class);
@@ -78,7 +81,7 @@ final class UiModule extends BaseLifecycleComponentModule {
         expose(LoginDialogControllerImpl.class);
         expose(FolderSelectorControllerImpl.class);
         expose(PreferencesDialogController.class);
-        expose(SupportMePaneController.class);
+        expose(SupportPaneController.class);
         expose(uploadPaneControllerKey);
     }
 }

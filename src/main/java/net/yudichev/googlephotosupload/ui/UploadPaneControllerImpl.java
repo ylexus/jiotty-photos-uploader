@@ -56,8 +56,8 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     }
 
     public void initialize() {
-        Pane supportMePane = fxmlContainerFactory.create("SupportMePane.fxml").root();
-        topVBox.getChildren().add(supportMePane);
+        Pane supportPane = fxmlContainerFactory.create("SupportPane.fxml").root();
+        topVBox.getChildren().add(supportPane);
     }
 
     @Override

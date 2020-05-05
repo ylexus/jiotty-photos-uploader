@@ -16,7 +16,7 @@ public final class AboutDialogFxController {
     private final FxmlContainerFactory fxmlContainerFactory;
     private final Provider<JavafxApplicationResources> javafxApplicationResourcesProvider;
     public Hyperlink titleHyperlink;
-    public Pane supportMePane;
+    public Pane supportPane;
     public TextField versionLabel;
 
     @Inject
@@ -29,7 +29,7 @@ public final class AboutDialogFxController {
     public void initialize() {
         titleHyperlink.setText(APP_TITLE);
         versionLabel.setText(buildVersion());
-        supportMePane.getChildren().add(fxmlContainerFactory.create("SupportMePane.fxml").root());
+        supportPane.getChildren().add(fxmlContainerFactory.create("SupportPane.fxml").root());
     }
 
     public void onTitleHyperlinkLinkAction(ActionEvent actionEvent) {

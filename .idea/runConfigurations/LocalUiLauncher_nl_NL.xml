@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="LocalUiLauncher nl_NL" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="net.yudichev.googlephotosupload.core.LocalUiLauncher" />
+    <module name="Jiotty_Photos_Uploader.test" />
+    <option name="VM_PARAMETERS" value="-Duser.language=nl -Duser.country=nl" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

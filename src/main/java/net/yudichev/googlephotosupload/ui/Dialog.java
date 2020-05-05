@@ -6,4 +6,6 @@ interface Dialog extends Closeable {
     void show();
 
     <T> T controller();
+
+    void sizeToScene();
 }

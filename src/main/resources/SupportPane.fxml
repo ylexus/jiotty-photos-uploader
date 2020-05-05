@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.VBox?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" styleClass="side-note" stylesheets="@style.css"
+      xmlns="http://javafx.com/javafx/10.0.2-internal" fx:controller="net.yudichev.googlephotosupload.ui.SupportPaneController">
+    <FlowPane hgap="5.0" alignment="CENTER">
+        <Label text="%supportPaneReportIssueSentence"/>
+        <Hyperlink onAction="#onReportIssueAction" styleClass="hyperlink" text="%supportPaneReportIssueLinkSentence"/>
+    </FlowPane>
+    <FlowPane hgap="5.0" alignment="CENTER">
+        <Label text="%supportPanePaymentSentence"/>
+        <Hyperlink onAction="#onPaymentLinkAction" styleClass="hyperlink" text="%supportPanePaymentLinkSentence"/>
+    </FlowPane>
+</VBox>

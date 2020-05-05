@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.VBox?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" prefWidth="800.0" spacing="5.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/10.0.2-internal"
+      fx:controller="net.yudichev.googlephotosupload.ui.UpgradeNotificationDialogControllerImpl">
+    <Label fx:id="label" maxHeight="Infinity" minHeight="-Infinity" wrapText="true"/>
+    <FlowPane alignment="CENTER" hgap="10.0" vgap="4.0">
+        <Button onAction="#onDownloadButtonAction" text="%upgradeDownloadButtonText"/>
+        <Button onAction="#onAskLaterButtonAction" text="%upgradeAskLaterButtonText"/>
+        <Button onAction="#onIgnoreButtonAction" text="%upgradeIgnoreVersionButton"/>
+    </FlowPane>
+    <TitledPane fx:id="releaseNotesPane" expanded="false" text="%upgradeReleaseNotes" VBox.vgrow="ALWAYS">
+        <ScrollPane fx:id="releaseNotesScrollPane" fitToWidth="true"/>
+    </TitledPane>
+    <padding>
+        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+    </padding>
+</VBox>
