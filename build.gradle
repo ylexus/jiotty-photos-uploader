@@ -197,6 +197,11 @@ task fullpackage {
     dependsOn build
     dependsOn jpackage
     tasks.findByName('jpackage').mustRunAfter 'test'
+    doFirst {
+        if (!clientSecretPath) {
+            throw new StopExecutionException("Client secret path environment variable missing")
+        }
+    }
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             exec {
