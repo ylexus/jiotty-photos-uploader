@@ -210,7 +210,9 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     @Override
     public int canResume() {
-        return uploadStateManager.get().uploadedMediaItemIdByAbsolutePath().size();
+        return (int) uploadStateManager.get().uploadedMediaItemIdByAbsolutePath().values().stream()
+                .filter(itemState -> itemState.mediaId().isPresent())
+                .count();
     }
 
     @Override
