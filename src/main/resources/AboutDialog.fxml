@@ -7,9 +7,8 @@
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
-<GridPane xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER" hgap="10.0" prefHeight="200.0" prefWidth="500.0" stylesheets="@style.css"
-          vgap="10.0" xmlns="http://javafx.com/javafx/10.0.2-internal"
-          fx:controller="net.yudichev.googlephotosupload.ui.AboutDialogFxController">
+<GridPane xmlns:fx="http://javafx.com/fxml/1" alignment="CENTER" hgap="10.0" prefWidth="500.0" stylesheets="@style.css" vgap="10.0"
+          xmlns="http://javafx.com/javafx/10.0.2-internal" fx:controller="net.yudichev.googlephotosupload.ui.AboutDialogFxController">
     <ImageView fitWidth="100.0" preserveRatio="true" GridPane.rowSpan="4" GridPane.valignment="TOP">
         <Image url="@Icon1024.png"/>
     </ImageView>
@@ -30,7 +29,7 @@
     <rowConstraints>
         <RowConstraints/>
         <RowConstraints/>
-        <RowConstraints/>
+        <RowConstraints vgrow="ALWAYS"/>
         <RowConstraints/>
     </rowConstraints>
 </GridPane>
