@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -e
 
 NOTARIZATION_TIMEOUT_SEC=600
 NOTARIZATION_TIME_INCREMENT_SEC=5
@@ -20,11 +19,30 @@ VERSION="${2}"
 echo "Signing and notarizing $1 version $2"
 
 function sign_jar_internals() {
-  local jar_path="$1"
+  local jar_dir="$1"
+  local jar_file_pattern="$2"
+  local jar_path
+  jar_path="$(find "${jar_dir}" -name "${jar_file_pattern}")"
   local tmp_unpacked_path="${BUILD_DIR}/tmp/${jar_path}_unpacked"
+
   rm -rf "${tmp_unpacked_path}"
+  if [[ $? -ne 0 ]]; then
+    echo >&2 "Failed to delete ${tmp_unpacked_path}"
+    exit $?
+  fi
+
   mkdir -p "${tmp_unpacked_path}"
+  if [[ $? -ne 0 ]]; then
+    echo >&2 "Failed to create ${tmp_unpacked_path}"
+    exit $?
+  fi
+
   unzip -q "${jar_path}" -d "${tmp_unpacked_path}"
+  if [[ $? -ne 0 ]]; then
+    echo >&2 "Failed to unzip"
+    exit $?
+  fi
+
   find "${tmp_unpacked_path}" \
     -type f \
     -name "*lib" \
@@ -37,20 +55,34 @@ function sign_jar_internals() {
     --options runtime \
     -vvvv \
     {} \;
+  if [[ $? -ne 0 ]]; then
+    echo >&2 "Failed to sign"
+    exit $?
+  fi
 
   rm -f "${jar_path}"
+  if [[ $? -ne 0 ]]; then
+    echo >&2 "Failed to delete ${jar_path}"
+    exit $?
+  fi
+
   (cd "${tmp_unpacked_path}" && zip -q -r "${jar_path}" ./*)
+  if [[ $? -ne 0 ]]; then
+    echo >&2 "Failed to zip"
+    exit $?
+  fi
+
   echo "signed ${jar_path}"
 }
 
-sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/grpc-netty-shaded-1.21.0.jar"
-sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/javafx-graphics-14.0.1-mac.jar"
-sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/javafx-media-14.0.1-mac.jar"
-sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app/javafx-web-14.0.1-mac.jar"
+sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app" "grpc-netty-shaded-*.jar"
+sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app" "javafx-graphics-*-mac.jar"
+sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app" "javafx-media-*-mac.jar"
+sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app" "javafx-web-*-mac.jar"
 
 find "${BUILD_DIR}/jpackage/${APP_NAME}.app" -type f \
   -not -path "*/Contents/runtime/*" \
-  -not -path "*/Contents/MacOS/my-app" \
+  -not -path "*/Contents/MacOS/${APP_NAME}" \
   -not -path "*libapplauncher.dylib" \
   -exec codesign \
   --timestamp \
@@ -60,6 +92,10 @@ find "${BUILD_DIR}/jpackage/${APP_NAME}.app" -type f \
   --options runtime \
   -vvvv \
   {} \;
+if [[ $? -ne 0 ]]; then
+  echo >&2 "Failed to sign"
+  exit $?
+fi
 
 find "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/runtime" -type f \
   -not -path "*/legal/*" \
@@ -73,6 +109,10 @@ find "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/runtime" -type f \
   --options runtime \
   -vvvv \
   {} \;
+if [[ $? -ne 0 ]]; then
+  echo >&2 "Failed to sign"
+  exit $?
+fi
 
 codesign \
   -f \
@@ -83,6 +123,10 @@ codesign \
   --options runtime \
   -vvvv \
   "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/runtime"
+if [[ $? -ne 0 ]]; then
+  echo >&2 "Failed to sign"
+  exit $?
+fi
 
 codesign \
   -f \
@@ -93,6 +137,10 @@ codesign \
   --options runtime \
   -vvvv \
   "${BUILD_DIR}/jpackage/${APP_NAME}.app"
+if [[ $? -ne 0 ]]; then
+  echo >&2 "Failed to sign"
+  exit $?
+fi
 
 /Library/Java/JavaVirtualMachines/jdk-14.jdk/Contents/Home/bin/jpackage \
   --type dmg \
@@ -101,6 +149,10 @@ codesign \
   --app-version "${VERSION}" \
   --app-image "${BUILD_DIR}/jpackage/${APP_NAME}.app" \
   --resource-dir "${PROJECT_DIR}/src/main/packaging-resources/macOS/out"
+if [[ $? -ne 0 ]]; then
+  echo >&2 "jpackage failed"
+  exit $?
+fi
 
 echo "Uploading package for notarization..."
 notarize_output="$(xcrun altool \
@@ -108,6 +160,10 @@ notarize_output="$(xcrun altool \
   --primary-bundle-id "net.yudichev.jiottyphotosupload.dmg" \
   --username "a@yudichev.net" --password "@keychain:Apple Notarization Tool App Password" \
   --file "${BUILD_DIR}/jpackage/${APP_NAME}-${VERSION}.dmg")"
+if [[ $? -ne 0 ]]; then
+  echo >&2 "failed to invoke notarization"
+  exit $?
+fi
 
 request_uuid="$(echo "${notarize_output}" | grep "RequestUUID = " | awk '{print $3}')"
 if [[ -z "${request_uuid}" ]]; then
@@ -120,20 +176,28 @@ echo "${notarize_output}"
 
 notarization_waited_sec=0
 echo "Waiting for a max of ${NOTARIZATION_TIMEOUT_SEC} seconds for the package to be notarized..."
-while [[ $notarization_waited_sec -lt $NOTARIZATION_TIMEOUT_SEC ]] && [[ "${notaizaiton_status}" != "success" ]]; do
+while [[ $notarization_waited_sec -lt $NOTARIZATION_TIMEOUT_SEC ]] && [[ "${notarization_status}" != "success" ]]; do
   sleep $NOTARIZATION_TIME_INCREMENT_SEC
   notarization_waited_sec=$((notarization_waited_sec + NOTARIZATION_TIME_INCREMENT_SEC))
-  notaizaiton_status_str="$(xcrun altool --notarization-history 0 --username "a@yudichev.net" --password "@keychain:Apple Notarization Tool App Password" |
-    grep "${request_uuid}")"
-  echo "${notaizaiton_status_str}"
-  notaizaiton_status="$(echo "${notaizaiton_status_str}" | awk '{print $5}')"
+  notarization_status_str="$(xcrun altool --notarization-history 0 --username "a@yudichev.net" --password "@keychain:Apple Notarization Tool App Password")"
+  if [[ $? -ne 0 ]]; then
+    echo >&2 "WARN: failed to check notarization history, output was: ${notarization_status_str}"
+  else
+    notarization_status_str="$(echo "${notarization_status_str}" | grep "${request_uuid}")"
+  fi
+  echo "${notarization_status_str}"
+  notarization_status="$(echo "${notarization_status_str}" | awk '{print $5}')"
 done
-if [[ "${notaizaiton_status}" != "success" ]]; then
+if [[ "${notarization_status}" != "success" ]]; then
   echo >&2 "Failed to notarize"
   exit 1
 fi
 
 echo "Notarized, stapling..."
 xcrun stapler staple "${BUILD_DIR}/jpackage/${APP_NAME}-${VERSION}.dmg"
+if [[ $? -ne 0 ]]; then
+  echo >&2 "Failed to staple"
+  exit $?
+fi
 
 echo "All done"

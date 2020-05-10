@@ -1,3 +1,5 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
 plugins {
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.0.8'
@@ -155,7 +157,7 @@ runtime {
             installerType = 'dmg'
             imageOptions = ['--verbose', /*'--mac-sign',*/ '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)']
             installerOptions = ['--verbose']
-            resourceDir = file("$rootDir/src/main/packaging-resources/macOS/out")
+            resourceDir = file("$buildDir/packaging-resources/macOS/out")
         }
         if (org.gradle.internal.os.OperatingSystem.current().windows) {
             installerType = 'msi'
@@ -193,10 +195,28 @@ runtime {
     }
 }
 
+task copyMacOsPackagingResources(type: Copy) {
+    from("$rootDir/src/main/packaging-resources/macOS/out") {
+        exclude '**/*.plist'
+    }
+    from("$rootDir/src/main/packaging-resources/macOS/out") {
+        include '**/*.plist'
+        filter(ReplaceTokens, tokens: [version: version])
+    }
+    into "$buildDir/packaging-resources/macOS/out"
+}
+
 task fullpackage {
     dependsOn build
     dependsOn jpackage
+
     tasks.findByName('jpackage').mustRunAfter 'test'
+
+    if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+        dependsOn copyMacOsPackagingResources
+        tasks.findByName('jpackage').mustRunAfter 'copyMacOsPackagingResources'
+    }
+
     doFirst {
         if (!clientSecretPath) {
             throw new StopExecutionException("Client secret path environment variable missing")
