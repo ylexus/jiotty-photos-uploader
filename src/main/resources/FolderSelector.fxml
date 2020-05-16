@@ -2,15 +2,21 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.effect.DropShadow?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="folderSelector" alignment="CENTER" onDragDropped="#folderSelectorOnDragDropped"
       onDragEntered="#folderSelectorOnDragEnter" onDragExited="#folderSelectorOnDragExit" onDragOver="#folderSelectorOnDragOver" spacing="10.0"
-      stylesheets="@style.css"
-      VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/10.0.2-internal"
+      stylesheets="@style.css" VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/10.0.2-internal"
       fx:controller="net.yudichev.googlephotosupload.ui.FolderSelectorControllerImpl">
     <VBox alignment="CENTER" spacing="10.0" VBox.vgrow="ALWAYS">
+        <ImageView fitWidth="250.0" preserveRatio="true" VBox.vgrow="NEVER">
+            <effect>
+                <DropShadow/>
+            </effect>
+            <Image url="@folder-structure-hint.png"/>
+        </ImageView>
         <Label alignment="CENTER" contentDisplay="CENTER" text="%folderSelectorDragHereLabel" textAlignment="CENTER" wrapText="true"/>
         <Button alignment="CENTER" mnemonicParsing="false" onAction="#onBrowseButtonClick" text="%folderSelectorBrowseButtonLabel"/>
     </VBox>
