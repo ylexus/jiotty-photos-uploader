@@ -243,6 +243,14 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
             return id;
         }
 
+        @Override
+        public Instant getCreationTime() {
+            var fileName = uploadedGoogleMediaBinary.getFile().getFileName().toString();
+            return fileName.startsWith("creation-time") ?
+                    Instant.parse(fileName.substring("creation-time".length(), fileName.lastIndexOf('.'))) :
+                    Instant.EPOCH;
+        }
+
         public int getUploadCount() {
             return uploadCount.get();
         }
@@ -355,6 +363,14 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
             }
         }
 
+        public List<UploadedGoogleMediaItem> getItems() {
+            synchronized (lock) {
+                return itemsById.values().stream()
+                        .filter(uploadedGoogleMediaItem -> uploadedGoogleMediaItem.getAlbumIds().contains(id))
+                        .collect(toImmutableList());
+            }
+        }
+
         @Override
         public String getAlbumUrl() {
             return "http://photos.com/" + id;
@@ -365,7 +381,13 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
             return CompletableFuture.runAsync(
                     () -> {
                         checkArgument(!mediaItemsIds.isEmpty(), "list must contain at least one media item");
-                        checkArgument(mediaItemsIds.size() < 50, "Request must have less than 50 items, but was %s", mediaItemsIds.size());
+                        if (mediaItemsIds.size() > 50) {
+                            throw new InvalidArgumentException(new StatusRuntimeException(
+                                    INVALID_ARGUMENT.withDescription("Request must have less than 50 items")),
+                                    GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
+                                    false);
+
+                        }
                         synchronized (lock) {
                             simulateResourceExhaustion(ImmutableSet.of("addMediaItemsByIds", mediaItemsIds));
                             mediaItemsIds.stream()

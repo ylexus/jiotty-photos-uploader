@@ -19,6 +19,7 @@ import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
 import org.immutables.value.Value.Immutable;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -104,7 +105,7 @@ final class IntegrationTest {
     void testUploadsCorrectly() throws Exception {
         doUploadTest();
 
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -122,7 +123,7 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
         assertThat(googlePhotosClient.getAllItems(), not(hasItem(itemForFile(outerAlbumPhoto))));
     }
 
@@ -132,7 +133,7 @@ final class IntegrationTest {
 
         doUploadTest();
 
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -142,7 +143,7 @@ final class IntegrationTest {
 
         doUploadTest();
 
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -166,7 +167,7 @@ final class IntegrationTest {
                 uploadMediaItemStateHavingInstant(equalTo(EPOCH))))));
 
         doVerifyJpegFilesInVarStore(varStoreData);
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -183,7 +184,7 @@ final class IntegrationTest {
         assertThat(uploadedMediaItemIdByAbsolutePath.values(), hasSize(3));
 
         doVerifyJpegFilesInVarStore(varStoreData);
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -192,7 +193,7 @@ final class IntegrationTest {
 
         doExecuteUpload();
         doVerifyGoogleClientState();
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -208,7 +209,7 @@ final class IntegrationTest {
                 albumWithId("outer-album"),
                 albumWithId("outer-album1"),
                 albumWithId("outer-album: inner-album")));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -236,7 +237,7 @@ final class IntegrationTest {
                 albumWithId("outer-album: inner-album")));
         assertThat(preExistingAlbum2, is(emptyAlbum()));
         assertThat(preExistingAlbum3, is(emptyAlbum()));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -253,7 +254,7 @@ final class IntegrationTest {
 
         assertThat(preExistingAlbum1, is(albumWithItems(contains(itemForFile(preExistingPhoto1)))));
         assertThat(preExistingAlbum2, is(emptyAlbum()));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -274,7 +275,7 @@ final class IntegrationTest {
         assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
 
         assertThat(preExistingAlbum2, is(emptyAlbum()));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -295,7 +296,7 @@ final class IntegrationTest {
         assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
 
         assertThat(preExistingAlbum2, is(emptyAlbum()));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -318,7 +319,7 @@ final class IntegrationTest {
                         albumWithItems(containsInAnyOrder(itemForFile(outerAlbumPhoto), itemForFile(preExistingPhoto2)))),
                 allOf(albumWithId("outer-album"), emptyAlbum()),
                 allOf(albumWithId("outer-album: inner-album"), albumWithItems(contains(itemForFile(innerAlbumPhoto))))));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -341,7 +342,7 @@ final class IntegrationTest {
                 allOf(equalTo(preExistingAlbum1), albumWithItems(containsInAnyOrder(itemForFile(outerAlbumPhoto), itemForFile(preExistingPhoto1)))),
                 allOf(equalTo(preExistingAlbum2), albumWithItems(contains(itemForFile(preExistingPhoto2)))),
                 allOf(albumWithId("outer-album: inner-album"), albumWithItems(contains(itemForFile(innerAlbumPhoto))))));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -374,7 +375,7 @@ final class IntegrationTest {
 
         doUploadTest("-no-resume");
         googlePhotosClient.getAllItems().forEach(uploadedGoogleMediaItem -> assertThat(uploadedGoogleMediaItem.getUploadCount(), is(2)));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -396,7 +397,7 @@ final class IntegrationTest {
         var invalidItemPathString = invalidMediaItemPath.toAbsolutePath().toString();
         var invalidItemState = uploadedMediaItemIdByAbsolutePath.get(invalidItemPathString);
         assertThat(invalidItemState, itemStateHavingMediaId(optionalWithValue(equalTo(invalidItemPathString))));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -405,7 +406,7 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -429,7 +430,7 @@ final class IntegrationTest {
                 itemWithNoAlbum(),
                 itemWithDescription(optionalWithValue(equalTo(invalidMediaItemPath.getFileName().toString())))));
         googlePhotosClient.getAllItems().forEach(item -> assertThat(item.getUploadCount(), is(1)));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -442,7 +443,7 @@ final class IntegrationTest {
         doExecuteUpload();
 
         assertThat(googlePhotosClient.getAllItems(), not(hasItem(itemForFile(photoInPreExistingAlbumPath))));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -475,7 +476,31 @@ final class IntegrationTest {
         doExecuteUpload();
 
         filesPaths.forEach(path -> assertThat(googlePhotosClient.getAllItems(), hasItem(itemForFile(path))));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
+    }
+
+    @Test
+    void addsItemsToAlbumInTheOrderOfTheirCreationTime() throws Exception {
+        var albumWithSortedFilesPath = root.resolve("albumWithSortedFiles").toAbsolutePath();
+        Files.createDirectory(albumWithSortedFilesPath);
+        var file3 = albumWithSortedFilesPath.resolve("creation-time-2020-01-03T00:00:00Z.jpg");
+        var file1 = albumWithSortedFilesPath.resolve("creation-time-2020-01-01T00:00:00Z.jpg");
+        var file2 = albumWithSortedFilesPath.resolve("creation-time-2020-01-02T00:00:00Z.jpg");
+
+        Files.write(file3, new byte[]{0});
+        Files.write(file1, new byte[]{0});
+        Files.write(file2, new byte[]{0});
+
+        doExecuteUpload();
+
+        var album = (CreatedGooglePhotosAlbum) googlePhotosClient.getAllAlbums().stream()
+                .filter(createdGooglePhotosAlbum -> createdGooglePhotosAlbum.getTitle().equals("albumWithSortedFiles"))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Could not find album 'albumWithSortedFiles'"));
+        assertThat(album.getItems(), contains(
+                itemForFile(file1),
+                itemForFile(file2),
+                itemForFile(file3)));
     }
 
     private VarStoreData readVarStoreDirectly() throws IOException {

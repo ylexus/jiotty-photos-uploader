@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.core;
 
+import com.google.common.collect.ImmutableList;
 import com.google.rpc.Status;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
@@ -22,6 +23,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Lists.partition;
@@ -38,7 +40,7 @@ import static net.yudichev.jiotty.common.lang.ResultOrFailure.failure;
 import static net.yudichev.jiotty.common.lang.ResultOrFailure.success;
 
 final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements GooglePhotosUploader {
-    private static final int CREATE_MEDIA_ITEMS_BATCH_SIZE = 50;
+    private static final int GOOGLE_PHOTOS_API_BATCH_SIZE = 50;
 
     private static final Logger logger = LoggerFactory.getLogger(GooglePhotosUploaderImpl.class);
 
@@ -94,32 +96,38 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                                     return PathState.of(path, itemState);
                                 }))
                         .collect(toFutureOfList())
-                        .thenCompose(createMediaDataResults -> partition(createMediaDataResults, CREATE_MEDIA_ITEMS_BATCH_SIZE).stream()
+                        .thenCompose(createMediaDataResults -> partition(createMediaDataResults, GOOGLE_PHOTOS_API_BATCH_SIZE).stream()
                                 .collect(toFutureOfListChaining(pathStates -> createMediaItems(fileProgressStatus, pathStates)))
                                 .thenApply(lists -> lists.stream().flatMap(Collection::stream)))
-                        .thenCompose(mediaItemOrErrors -> addToAlbum(googlePhotosAlbum, mediaItemOrErrors, fileProgressStatus)));
+                        .thenCompose(pathMediaItemOrErrorStream -> addToAlbum(googlePhotosAlbum, pathMediaItemOrErrorStream, fileProgressStatus)));
     }
 
     private CompletionStage<Void> addToAlbum(Optional<GooglePhotosAlbum> googlePhotosAlbum,
-                                             Stream<MediaItemOrError> mediaItemOrErrors,
+                                             Stream<PathMediaItemOrError> pathMediaItemOrErrorStream,
                                              ProgressStatus fileProgressStatus) {
-        // TODO heed uploadedItemStateByPath
-        var itemsToAddToAlbum = mediaItemOrErrors
-                .map(mediaItemOrError -> mediaItemOrError.item())
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .filter(googleMediaItem -> uploadedItemStateByPath.get())
-                .sorted(Comparator.comparing(GoogleMediaItem::getCreationTime))
-                .collect(toImmutableList());
         return googlePhotosAlbum
-                .map(album -> cloudOperationHelper.withBackOffAndRetry("add items to album",
-                        () -> album.addMediaItems(itemsToAddToAlbum, executorService),
-                        fileProgressStatus::onBackoffDelay))
+                .map(album -> {
+                    var itemsToAddToAlbum = pathMediaItemOrErrorStream
+                            .filter(pathMediaItemOrError -> pathMediaItemOrError.mediaItemOrError().item().isPresent())
+                            .filter(pathMediaItemOrError -> {
+                                var itemState = uploadedItemStateByPath.get(pathMediaItemOrError.path()).getNow(null);
+                                checkState(itemState != null, "item state future must be completed by the time addToAlbum() is called");
+                                return itemState.albumId().isEmpty();
+                            })
+                            .map(pathMediaItemOrError -> pathMediaItemOrError.mediaItemOrError().item().get())
+                            .sorted(Comparator.comparing(GoogleMediaItem::getCreationTime))
+                            .collect(toImmutableList());
+                    return cloudOperationHelper.withBackOffAndRetry("add items to album",
+                            () -> partition(itemsToAddToAlbum, GOOGLE_PHOTOS_API_BATCH_SIZE).stream()
+                                    .collect(toFutureOfListChaining(googleMediaItems -> album.addMediaItems(googleMediaItems, executorService)))
+                                    .<Void>thenApply(ignored -> null),
+                            fileProgressStatus::onBackoffDelay);
+                })
                 .orElseGet(CompletableFutures::completedFuture);
     }
 
-    private CompletableFuture<List<MediaItemOrError>> createMediaItems(ProgressStatus fileProgressStatus,
-                                                                       List<PathState> createMediaDataResults) {
+    private CompletableFuture<List<PathMediaItemOrError>> createMediaItems(ProgressStatus fileProgressStatus,
+                                                                           List<PathState> createMediaDataResults) {
         List<PathState> pendingPathStates = createMediaDataResults.stream()
                 .filter(pathState -> {
                     var itemStateOptional = pathState.state().toSuccess();
@@ -139,7 +147,8 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                 "create media items",
                 () -> googlePhotosClient.createMediaItems(Optional.empty(), pendingNewMediaItems, executorService),
                 fileProgressStatus::onBackoffDelay)
-                .thenApply(mediaItemOrErrors -> {
+                .<List<PathMediaItemOrError>>thenApply(mediaItemOrErrors -> {
+                    ImmutableList.Builder<PathMediaItemOrError> resultListBuilder = ImmutableList.builder();
                     for (var i = 0; i < pendingPathStates.size(); i++) {
                         var pathState = pendingPathStates.get(i);
                         var mediaItemOrError = mediaItemOrErrors.get(i);
@@ -147,19 +156,21 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                                 KeyedError.of(pathState.path(), status.getCode() + ": " + status.getMessage())));
                         mediaItemOrError.item().ifPresent(item -> uploadedItemStateByPath.compute(pathState.path(),
                                 (path, itemStateFuture) -> checkNotNull(itemStateFuture).thenApply(itemState -> itemState.withMediaId(item.getId()))));
+                        resultListBuilder.add(PathMediaItemOrError.of(pathState.path(), mediaItemOrError));
                     }
-                    return mediaItemOrErrors;
+                    return resultListBuilder.build();
                 })
                 .exceptionally(throwable -> {
                     if (fatalUserCorrectableHandler.handle("create media items", throwable)) {
-                        //noinspection Convert2MethodRef, interestingly, compiler fails
                         return pendingPathStates.stream()
                                 .map(PathState::path)
-                                .map(path -> KeyedError.of(path, humanReadableMessage(throwable)))
-                                .peek(keyedError -> fileProgressStatus.addFailure(keyedError))
-                                .map(keyedError -> MediaItemOrError.error(Status.newBuilder()
-                                        .setMessage(keyedError.getError())
-                                        .build()))
+                                .map(path -> {
+                                    var keyedError = KeyedError.of(path, humanReadableMessage(throwable));
+                                    fileProgressStatus.addFailure(keyedError);
+                                    return PathMediaItemOrError.of(path, MediaItemOrError.error(Status.newBuilder()
+                                            .setMessage(keyedError.getError())
+                                            .build()));
+                                })
                                 .collect(toImmutableList());
                     } else {
                         throw new RuntimeException(throwable);
