@@ -185,10 +185,11 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                 })
                 .exceptionally(throwable -> {
                     if (fatalUserCorrectableHandler.handle("create media items", throwable)) {
+                        //noinspection Convert2MethodRef compiler fails for some reason
                         pendingPathStates.stream()
                                 .map(PathState::path)
                                 .map(path -> KeyedError.of(path, humanReadableMessage(throwable)))
-                                .forEach(fileProgressStatus::addFailure);
+                                .forEach(keyedError -> fileProgressStatus.addFailure(keyedError));
                         return ImmutableList.of();
                     } else {
                         throw new RuntimeException(throwable);
