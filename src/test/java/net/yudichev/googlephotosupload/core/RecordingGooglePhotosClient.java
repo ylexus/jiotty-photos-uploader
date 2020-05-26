@@ -388,6 +388,12 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                                     false);
 
                         }
+                        if (fileNameBasedFailuresEnabled && id.contains("fail-on-me-pre-existing-album")) {
+                            throw new InvalidArgumentException(new StatusRuntimeException(
+                                    INVALID_ARGUMENT.withDescription("No permission to add media items to this album")),
+                                    GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
+                                    false);
+                        }
                         synchronized (lock) {
                             simulateResourceExhaustion(ImmutableSet.of("addMediaItemsByIds", mediaItemsIds));
                             mediaItemsIds.stream()

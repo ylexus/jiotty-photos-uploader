@@ -1,7 +1,7 @@
 package net.yudichev.googlephotosupload.core;
 
 import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
-import net.yudichev.jiotty.connector.google.photos.MediaItemOrError;
+import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
 import org.immutables.value.Value;
 
 import java.nio.file.Path;
@@ -13,5 +13,5 @@ interface BasePathMediaItemOrError {
     Path path();
 
     @Value.Parameter
-    MediaItemOrError mediaItemOrError();
+    GoogleMediaItem mediaItem();
 }

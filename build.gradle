@@ -54,7 +54,7 @@ dependencies {
     ext.orgJunitJupiterVersion = '5.6.0'
     ext.orgMockitoVersion = '3.2.4'
     ext.orgImmutablesVersion = '2.8.3'
-    ext.netYudichevJiottyVersion = '1.4.4-SNAPSHOT'
+    ext.netYudichevJiottyVersion = '1.5.0'
 
     annotationProcessor "org.immutables:value:$orgImmutablesVersion"
     testAnnotationProcessor "org.immutables:value:$orgImmutablesVersion"

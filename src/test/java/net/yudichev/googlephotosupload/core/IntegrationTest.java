@@ -434,7 +434,7 @@ final class IntegrationTest {
     }
 
     @Test
-    void albumPermissionErrorOnMediaItemCreationSkipsAlbumAndIsIgnored() throws Exception {
+    void albumPermissionErrorUploadsItemButDoesNotAddToAlbum() throws Exception {
         var preExistingAlbumPath = root.resolve("fail-on-me-pre-existing-album");
         Files.createDirectory(preExistingAlbumPath);
         var photoInPreExistingAlbumPath = preExistingAlbumPath.resolve("photoInPreExistingAlbum.jpg");
@@ -442,8 +442,10 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
-        assertThat(googlePhotosClient.getAllItems(), not(hasItem(itemForFile(photoInPreExistingAlbumPath))));
         getLastFailure().ifPresent(Assertions::fail);
+        assertThat(googlePhotosClient.getAllItems(), hasItem(
+                allOf(itemForFile(photoInPreExistingAlbumPath), itemWithNoAlbum())
+        ));
     }
 
     @Test
@@ -494,7 +496,7 @@ final class IntegrationTest {
         doExecuteUpload();
 
         var album = (CreatedGooglePhotosAlbum) googlePhotosClient.getAllAlbums().stream()
-                .filter(createdGooglePhotosAlbum -> createdGooglePhotosAlbum.getTitle().equals("albumWithSortedFiles"))
+                .filter(createdGooglePhotosAlbum -> "albumWithSortedFiles".equals(createdGooglePhotosAlbum.getTitle()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Could not find album 'albumWithSortedFiles'"));
         assertThat(album.getItems(), contains(
