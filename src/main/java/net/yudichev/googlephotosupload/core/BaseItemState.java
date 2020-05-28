@@ -22,7 +22,6 @@ interface BaseItemState {
 
     Optional<String> mediaId();
 
-    @Deprecated
     Optional<String> albumId();
 
     @Immutable

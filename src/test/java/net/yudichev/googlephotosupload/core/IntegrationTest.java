@@ -3,7 +3,7 @@ package net.yudichev.googlephotosupload.core;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
-import net.yudichev.googlephotosupload.core.RecordingGooglePhotosClient.CreatedGooglePhotosAlbum;
+import net.yudichev.googlephotosupload.core.RecordingGooglePhotosClient.Album;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.lang.Json;
@@ -19,6 +19,7 @@ import org.hamcrest.FeatureMatcher;
 import org.hamcrest.Matcher;
 import org.immutables.value.Value.Immutable;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,7 +49,6 @@ import static net.yudichev.googlephotosupload.cli.CliOptions.OPTIONS;
 import static net.yudichev.googlephotosupload.core.IntegrationTestUploadStarter.getLastFailure;
 import static net.yudichev.googlephotosupload.core.OptionalMatchers.emptyOptional;
 import static net.yudichev.googlephotosupload.core.OptionalMatchers.optionalWithValue;
-import static net.yudichev.googlephotosupload.core.RecordingGooglePhotosClient.UploadedGoogleMediaItem;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -104,7 +104,7 @@ final class IntegrationTest {
     void testUploadsCorrectly() throws Exception {
         doUploadTest();
 
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -122,7 +122,7 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
         assertThat(googlePhotosClient.getAllItems(), not(hasItem(itemForFile(outerAlbumPhoto))));
     }
 
@@ -132,7 +132,7 @@ final class IntegrationTest {
 
         doUploadTest();
 
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -142,7 +142,7 @@ final class IntegrationTest {
 
         doUploadTest();
 
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -166,7 +166,7 @@ final class IntegrationTest {
                 uploadMediaItemStateHavingInstant(equalTo(EPOCH))))));
 
         doVerifyJpegFilesInVarStore(varStoreData);
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -183,7 +183,7 @@ final class IntegrationTest {
         assertThat(uploadedMediaItemIdByAbsolutePath.values(), hasSize(3));
 
         doVerifyJpegFilesInVarStore(varStoreData);
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -192,7 +192,7 @@ final class IntegrationTest {
 
         doExecuteUpload();
         doVerifyGoogleClientState();
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -208,7 +208,7 @@ final class IntegrationTest {
                 albumWithId("outer-album"),
                 albumWithId("outer-album1"),
                 albumWithId("outer-album: inner-album")));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -236,7 +236,7 @@ final class IntegrationTest {
                 albumWithId("outer-album: inner-album")));
         assertThat(preExistingAlbum2, is(emptyAlbum()));
         assertThat(preExistingAlbum3, is(emptyAlbum()));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -253,7 +253,7 @@ final class IntegrationTest {
 
         assertThat(preExistingAlbum1, is(albumWithItems(contains(itemForFile(preExistingPhoto1)))));
         assertThat(preExistingAlbum2, is(emptyAlbum()));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -274,7 +274,7 @@ final class IntegrationTest {
         assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
 
         assertThat(preExistingAlbum2, is(emptyAlbum()));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -295,7 +295,7 @@ final class IntegrationTest {
         assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
 
         assertThat(preExistingAlbum2, is(emptyAlbum()));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -318,30 +318,34 @@ final class IntegrationTest {
                         albumWithItems(containsInAnyOrder(itemForFile(outerAlbumPhoto), itemForFile(preExistingPhoto2)))),
                 allOf(albumWithId("outer-album"), emptyAlbum()),
                 allOf(albumWithId("outer-album: inner-album"), albumWithItems(contains(itemForFile(innerAlbumPhoto))))));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
-    void mergesPreExistingAlbumsSameNameWithPreexistingProtectedItemIgnoresError() throws Exception {
+    void mergesPreExistingAlbumsSameNameWithPreexistingItems() throws Exception {
         var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
         var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
 
-        var preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "protected1.jpg");
-        var preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "protected2.jpg");
+        var preExistingPhoto1 = uploadPhoto(preExistingAlbum1, "pre-existing-photo1.jpg");
+        var preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "pre-existing-photo2.jpg");
 
         doExecuteUpload();
+
+        getLastFailure().ifPresent(Assertions::fail);
         assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
                 allOf(itemForFile(rootPhoto), itemWithNoAlbum()),
                 allOf(itemForFile(outerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album"))),
                 allOf(itemForFile(innerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album: inner-album"))),
                 allOf(itemForFile(preExistingPhoto1), itemInAlbumWithId(equalTo(preExistingAlbum1.getId()))),
-                allOf(itemForFile(preExistingPhoto2), itemInAlbumWithId(equalTo(preExistingAlbum2.getId())))));
+                allOf(itemForFile(preExistingPhoto2), itemInAlbumWithId(equalTo(preExistingAlbum1.getId())))));
         assertThat(googlePhotosClient.getAllAlbums(), containsInAnyOrder(
                 albumWithId("fail-on-me-pre-existing-album"),
-                allOf(equalTo(preExistingAlbum1), albumWithItems(containsInAnyOrder(itemForFile(outerAlbumPhoto), itemForFile(preExistingPhoto1)))),
-                allOf(equalTo(preExistingAlbum2), albumWithItems(contains(itemForFile(preExistingPhoto2)))),
+                allOf(equalTo(preExistingAlbum1), albumWithItems(containsInAnyOrder(
+                        itemForFile(outerAlbumPhoto),
+                        itemForFile(preExistingPhoto1),
+                        itemForFile(preExistingPhoto2)))),
+                allOf(equalTo(preExistingAlbum2), emptyAlbum()),
                 allOf(albumWithId("outer-album: inner-album"), albumWithItems(contains(itemForFile(innerAlbumPhoto))))));
-        assertThat(getLastFailure(), emptyOptional());
     }
 
     @Test
@@ -373,8 +377,8 @@ final class IntegrationTest {
         doUploadTest();
 
         doUploadTest("-no-resume");
-        googlePhotosClient.getAllItems().forEach(uploadedGoogleMediaItem -> assertThat(uploadedGoogleMediaItem.getUploadCount(), is(2)));
-        assertThat(getLastFailure(), emptyOptional());
+        googlePhotosClient.getAllItems().forEach(mediaItem -> assertThat(mediaItem.getUploadCount(), is(2)));
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -396,7 +400,7 @@ final class IntegrationTest {
         var invalidItemPathString = invalidMediaItemPath.toAbsolutePath().toString();
         var invalidItemState = uploadedMediaItemIdByAbsolutePath.get(invalidItemPathString);
         assertThat(invalidItemState, itemStateHavingMediaId(optionalWithValue(equalTo(invalidItemPathString))));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -405,7 +409,7 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -429,11 +433,11 @@ final class IntegrationTest {
                 itemWithNoAlbum(),
                 itemWithDescription(optionalWithValue(equalTo(invalidMediaItemPath.getFileName().toString())))));
         googlePhotosClient.getAllItems().forEach(item -> assertThat(item.getUploadCount(), is(1)));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
-    void albumPermissionErrorOnMediaItemCreationSkipsAlbumAndIsIgnored() throws Exception {
+    void albumPermissionErrorUploadsItemButDoesNotAddToAlbum() throws Exception {
         var preExistingAlbumPath = root.resolve("fail-on-me-pre-existing-album");
         Files.createDirectory(preExistingAlbumPath);
         var photoInPreExistingAlbumPath = preExistingAlbumPath.resolve("photoInPreExistingAlbum.jpg");
@@ -441,8 +445,10 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
-        assertThat(googlePhotosClient.getAllItems(), not(hasItem(itemForFile(photoInPreExistingAlbumPath))));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
+        assertThat(googlePhotosClient.getAllItems(), hasItem(
+                allOf(itemForFile(photoInPreExistingAlbumPath), itemWithNoAlbum())
+        ));
     }
 
     @Test
@@ -475,7 +481,31 @@ final class IntegrationTest {
         doExecuteUpload();
 
         filesPaths.forEach(path -> assertThat(googlePhotosClient.getAllItems(), hasItem(itemForFile(path))));
-        assertThat(getLastFailure(), emptyOptional());
+        getLastFailure().ifPresent(Assertions::fail);
+    }
+
+    @Test
+    void addsItemsToAlbumInTheOrderOfTheirCreationTime() throws Exception {
+        var albumWithSortedFilesPath = root.resolve("albumWithSortedFiles").toAbsolutePath();
+        Files.createDirectory(albumWithSortedFilesPath);
+        var file3 = albumWithSortedFilesPath.resolve("creation-time-2020-01-03T00:00:00Z.jpg");
+        var file1 = albumWithSortedFilesPath.resolve("creation-time-2020-01-01T00:00:00Z.jpg");
+        var file2 = albumWithSortedFilesPath.resolve("creation-time-2020-01-02T00:00:00Z.jpg");
+
+        Files.write(file3, new byte[]{0});
+        Files.write(file1, new byte[]{0});
+        Files.write(file2, new byte[]{0});
+
+        doExecuteUpload();
+
+        var album = (Album) googlePhotosClient.getAllAlbums().stream()
+                .filter(createdGooglePhotosAlbum -> "albumWithSortedFiles".equals(createdGooglePhotosAlbum.getTitle()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Could not find album 'albumWithSortedFiles'"));
+        assertThat(album.getItems(), contains(
+                itemForFile(file1),
+                itemForFile(file2),
+                itemForFile(file3)));
     }
 
     private VarStoreData readVarStoreDirectly() throws IOException {
@@ -607,33 +637,33 @@ final class IntegrationTest {
         }));
     }
 
-    private static Matcher<UploadedGoogleMediaItem> itemInAlbumWithId(Matcher<String> albumIdMatcher) {
+    private static Matcher<RecordingGooglePhotosClient.MediaItem> itemInAlbumWithId(Matcher<String> albumIdMatcher) {
         return new FeatureMatcher<>(albumIdMatcher, "item in album", "item in album") {
             @Override
-            protected String featureValueOf(UploadedGoogleMediaItem actual) {
+            protected String featureValueOf(RecordingGooglePhotosClient.MediaItem actual) {
                 return getOnlyElement(actual.getAlbumIds());
             }
         };
     }
 
     @SuppressWarnings("TypeParameterExtendsFinalClass")
-    private static Matcher<UploadedGoogleMediaItem> itemWithDescription(Matcher<Optional<? extends String>> descriptionMatcher) {
+    private static Matcher<RecordingGooglePhotosClient.MediaItem> itemWithDescription(Matcher<Optional<? extends String>> descriptionMatcher) {
         return new FeatureMatcher<>(descriptionMatcher, "item description", "item description") {
             @Override
-            protected Optional<String> featureValueOf(UploadedGoogleMediaItem actual) {
+            protected Optional<String> featureValueOf(RecordingGooglePhotosClient.MediaItem actual) {
                 return actual.getDescription();
             }
         };
     }
 
-    private static Matcher<CreatedGooglePhotosAlbum> albumWithId(String albumId) {
+    private static Matcher<Album> albumWithId(String albumId) {
         return albumWithId(equalTo(albumId));
     }
 
-    private static Matcher<CreatedGooglePhotosAlbum> albumWithId(Matcher<String> albumIdMatcher) {
+    private static Matcher<Album> albumWithId(Matcher<String> albumIdMatcher) {
         return new FeatureMatcher<>(albumIdMatcher, "album with name", "album with name") {
             @Override
-            protected String featureValueOf(CreatedGooglePhotosAlbum actual) {
+            protected String featureValueOf(Album actual) {
                 return actual.getId();
             }
         };
@@ -658,10 +688,10 @@ final class IntegrationTest {
         };
     }
 
-    private static Matcher<UploadedGoogleMediaItem> itemWithNoAlbum() {
+    private static Matcher<RecordingGooglePhotosClient.MediaItem> itemWithNoAlbum() {
         return new CustomTypeSafeMatcher<>("item with no album") {
             @Override
-            protected boolean matchesSafely(UploadedGoogleMediaItem item) {
+            protected boolean matchesSafely(RecordingGooglePhotosClient.MediaItem item) {
                 return item.getAlbumIds().isEmpty();
             }
         };
