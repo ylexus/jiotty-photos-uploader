@@ -14,7 +14,7 @@ import java.util.ResourceBundle;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javafx.scene.input.KeyCode.COMMA;
 import static javafx.scene.input.KeyCombination.META_DOWN;
-import static net.yudichev.googlephotosupload.core.AppName.APP_TITLE;
+import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 
 final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
     private final ResourceBundle resourceBundle;

@@ -15,10 +15,10 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.io.Resources.getResource;
-import static net.yudichev.googlephotosupload.core.AppName.APP_TITLE;
+import static net.yudichev.googlephotosupload.core.AppGlobals.APP_SETTINGS_DIR_NAME;
+import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 
 public final class DependenciesModule extends AbstractModule {
-    private static final String APPLICATION_NAME = "jiottyphotosuploader";
     private final Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser;
 
     private DependenciesModule(Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser) {
@@ -33,9 +33,9 @@ public final class DependenciesModule extends AbstractModule {
     protected void configure() {
         install(new TimeModule());
         install(new ExecutorModule());
-        install(new VarStoreModule(APPLICATION_NAME));
+        install(new VarStoreModule(APP_SETTINGS_DIR_NAME));
 
-        var authDataStoreRootDir = Paths.get(System.getProperty("user.home")).resolve("." + APPLICATION_NAME).resolve("auth");
+        var authDataStoreRootDir = Paths.get(System.getProperty("user.home")).resolve("." + APP_SETTINGS_DIR_NAME).resolve("auth");
         bind(Restarter.class).to(RestarterImpl.class);
         bind(Path.class).annotatedWith(RestarterImpl.GoogleAuthRootDir.class).toInstance(authDataStoreRootDir);
 

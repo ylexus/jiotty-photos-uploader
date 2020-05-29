@@ -2,6 +2,9 @@ package net.yudichev.googlephotosupload.ui;
 
 import javafx.application.Platform;
 import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
 import javafx.stage.Stage;
 import net.yudichev.googlephotosupload.core.DependenciesModule;
 import net.yudichev.googlephotosupload.core.ResourceBundleModule;
@@ -15,6 +18,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkState;
+import static javafx.scene.input.KeyCombination.*;
+import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 import static net.yudichev.googlephotosupload.core.BuildVersion.buildVersion;
 import static net.yudichev.jiotty.common.inject.BindingSpec.annotatedWith;
 
@@ -23,6 +28,9 @@ public final class UiMain extends javafx.application.Application {
     private static final AtomicReference<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler = new AtomicReference<>();
 
     public static void main(String[] args) {
+        if (SingleInstanceCheck.otherInstanceRunning()) {
+            return;
+        }
         logger.info("Version {}", buildVersion());
         Application.builder()
                 .addModule(() -> new UiModule(handler -> {
@@ -44,10 +52,20 @@ public final class UiMain extends javafx.application.Application {
     public void start(Stage primaryStage) {
         primaryStage.setMinWidth(500);
         primaryStage.setMinHeight(500);
-        primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("/Icon1024.png")));
+        primaryStage.getIcons().add(new Image(getClass().getResource("/Icon1024.png").toString()));
+        installThreadDumpHotkey(primaryStage);
         javafxApplicationResourcesHandler.get().accept(JavafxApplicationResources.builder()
                 .setHostServices(getHostServices())
                 .setPrimaryStage(primaryStage)
                 .build());
+    }
+
+    private static void installThreadDumpHotkey(Stage primaryStage) {
+        KeyCombination threadDumpCombination = new KeyCodeCombination(KeyCode.D, CONTROL_DOWN, ALT_DOWN, SHIFT_DOWN);
+        primaryStage.addEventHandler(KEY_RELEASED, event -> {
+            if (threadDumpCombination.match(event)) {
+                new ThreadDumps().writeSeveralThreadDumpsAsync();
+            }
+        });
     }
 }

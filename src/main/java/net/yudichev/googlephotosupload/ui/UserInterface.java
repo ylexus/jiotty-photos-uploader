@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
-import static net.yudichev.googlephotosupload.core.AppName.APP_TITLE;
+import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class UserInterface extends BaseLifecycleComponent implements Provider<JavafxApplicationResources> {

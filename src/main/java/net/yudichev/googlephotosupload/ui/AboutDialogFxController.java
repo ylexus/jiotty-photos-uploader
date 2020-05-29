@@ -9,7 +9,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.yudichev.googlephotosupload.core.AppName.APP_TITLE;
+import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 import static net.yudichev.googlephotosupload.core.BuildVersion.buildVersion;
 
 public final class AboutDialogFxController {
