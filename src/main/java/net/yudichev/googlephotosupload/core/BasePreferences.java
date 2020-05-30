@@ -28,7 +28,8 @@ abstract class BasePreferences {
                 ".*[Pp]icasa.[Ii][Nn][Ii]",
                 "DS_Store",
                 "Thumbs.db",
-                ".*\\.(txt|exe|htm)");
+                ".*\\.(txt|exe|htm)",
+                "desktop.ini");
     }
 
     public final boolean anyMatch(Path path) {
