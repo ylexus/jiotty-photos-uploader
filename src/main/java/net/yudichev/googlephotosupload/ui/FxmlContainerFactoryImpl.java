@@ -6,9 +6,8 @@ import javafx.fxml.FXMLLoader;
 import javax.inject.Inject;
 import java.util.ResourceBundle;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
+import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 
 final class FxmlContainerFactoryImpl implements FxmlContainerFactory {
     private final Injector injector;
@@ -20,26 +19,20 @@ final class FxmlContainerFactoryImpl implements FxmlContainerFactory {
 
     @Override
     public FxmlContainer create(String fxmlResourcePath) {
-        var fxmlLoader = new FXMLLoader();
+        var fxmlLoader = new FXMLLoader(ClassLoader.getSystemResource(fxmlResourcePath));
         fxmlLoader.setResources(injector.getInstance(ResourceBundle.class));
         fxmlLoader.setControllerFactory(injector::getInstance);
-        return getAsUnchecked(() -> {
-            try (var fxmlInputStream = ClassLoader.getSystemResourceAsStream(fxmlResourcePath)) {
-                checkArgument(fxmlInputStream != null, "Resource not found: %s", fxmlResourcePath);
-                fxmlLoader.load(fxmlInputStream);
-
-                return new FxmlContainer() {
-                    @Override
-                    public <T> T root() {
-                        return fxmlLoader.getRoot();
-                    }
-
-                    @Override
-                    public <T> T controller() {
-                        return fxmlLoader.getController();
-                    }
-                };
+        asUnchecked(fxmlLoader::load);
+        return new FxmlContainer() {
+            @Override
+            public <T> T root() {
+                return fxmlLoader.getRoot();
             }
-        });
+
+            @Override
+            public <T> T controller() {
+                return fxmlLoader.getController();
+            }
+        };
     }
 }
