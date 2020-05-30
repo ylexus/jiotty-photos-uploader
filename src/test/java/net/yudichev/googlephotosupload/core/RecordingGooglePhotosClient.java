@@ -17,6 +17,8 @@ import javax.annotation.Nonnull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
@@ -32,6 +34,9 @@ import static io.grpc.Status.INVALID_ARGUMENT;
 import static net.yudichev.googlephotosupload.core.TestTimeModule.getCurrentInstant;
 
 final class RecordingGooglePhotosClient implements GooglePhotosClient {
+    private static final DateTimeFormatter FILE_DATE_FORMAT = DateTimeFormatter
+            .ofPattern("yyyy_MM_dd_HH_mm_ss")
+            .withZone(ZoneOffset.UTC);
     private static final Logger logger = LoggerFactory.getLogger(RecordingGooglePhotosClient.class);
 
     private final Map<String, MediaBinary> binariesByUploadToken = new LinkedHashMap<>();
@@ -215,19 +220,11 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
     }
 
     @Nonnull
-    private InvalidArgumentException invalidArgumentException(String s) {
+    private static InvalidArgumentException invalidArgumentException(String s) {
         return new InvalidArgumentException(new StatusRuntimeException(
                 INVALID_ARGUMENT.withDescription(s)),
                 GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
                 false);
-    }
-
-    private Album lookupAlbumOrFail(String theAlbumId) {
-        var album = albumsById.get(theAlbumId);
-        if (album == null) {
-            throw invalidArgumentException("invalid album id: " + theAlbumId);
-        }
-        return album;
     }
 
     static final class MediaBinary {
@@ -285,8 +282,8 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         @Override
         public Instant getCreationTime() {
             var fileName = mediaBinary.getFile().getFileName().toString();
-            return fileName.startsWith("creation-time") ?
-                    Instant.parse(fileName.substring("creation-time".length(), fileName.lastIndexOf('.'))) :
+            return fileName.startsWith("creation-time-") ?
+                    Instant.from(FILE_DATE_FORMAT.parse(fileName.substring("creation-time-".length(), fileName.lastIndexOf('.')))) :
                     Instant.EPOCH;
         }
 
@@ -314,15 +311,23 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
             return this;
         }
 
+        private Album lookupAlbumOrFail(String theAlbumId) {
+            var album = albumsById.get(theAlbumId);
+            if (album == null) {
+                throw invalidArgumentException("invalid album id: " + theAlbumId);
+            }
+            return album;
+        }
+
         @Override
-        public boolean equals(Object o) {
-            if (this == o) {
+        public boolean equals(Object obj) {
+            if (this == obj) {
                 return true;
             }
-            if (o == null || getClass() != o.getClass()) {
+            if (obj == null || getClass() != obj.getClass()) {
                 return false;
             }
-            return id.equals(((MediaItem) o).id);
+            return id.equals(((MediaItem) obj).id);
         }
 
         @Override

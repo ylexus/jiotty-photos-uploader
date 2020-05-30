@@ -6,13 +6,18 @@ PROJECT_DIR="$PWD"
 BUILD_DIR="${PROJECT_DIR}/build"
 CODESIGN_IDENTITY="Developer ID Application: Alexey Yudichev (J4R72JZQ9P)"
 APP_NAME="${1}"
-VERSION="${2}"
 [[ -z "${APP_NAME}" ]] && {
   echo "app name missing"
   exit 1
 }
+VERSION="${2}"
 [[ -z "${VERSION}" ]] && {
   echo "version missing"
+  exit 1
+}
+JAVA_HOME="${3}"
+[[ -z "${JAVA_HOME}" ]] && {
+  echo "java home missing"
   exit 1
 }
 
@@ -79,6 +84,7 @@ sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app" "grpc-ne
 sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app" "javafx-graphics-*-mac.jar"
 sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app" "javafx-media-*-mac.jar"
 sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app" "javafx-web-*-mac.jar"
+sign_jar_internals "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/app" "conscrypt-openjdk-uber-*.jar"
 
 find "${BUILD_DIR}/jpackage/${APP_NAME}.app" -type f \
   -not -path "*/Contents/runtime/*" \
@@ -142,7 +148,7 @@ if [[ $? -ne 0 ]]; then
   exit $?
 fi
 
-/Library/Java/JavaVirtualMachines/jdk-14.jdk/Contents/Home/bin/jpackage \
+"$JAVA_HOME/bin/jpackage" \
   --type dmg \
   --dest "${BUILD_DIR}/jpackage" \
   --name "${APP_NAME}" \
@@ -159,9 +165,10 @@ notarize_output="$(xcrun altool \
   --notarize-app \
   --primary-bundle-id "net.yudichev.jiottyphotosupload.dmg" \
   --username "a@yudichev.net" --password "@keychain:Apple Notarization Tool App Password" \
-  --file "${BUILD_DIR}/jpackage/${APP_NAME}-${VERSION}.dmg")"
+  --file "${BUILD_DIR}/jpackage/${APP_NAME}-${VERSION}.dmg" 2>&1)"
 if [[ $? -ne 0 ]]; then
-  echo >&2 "failed to invoke notarization"
+  echo >&2 "failed to invoke notarization:"
+  echo >&2 "${notarize_output}"
   exit $?
 fi
 
@@ -179,7 +186,7 @@ echo "Waiting for a max of ${NOTARIZATION_TIMEOUT_SEC} seconds for the package t
 while [[ $notarization_waited_sec -lt $NOTARIZATION_TIMEOUT_SEC ]] && [[ "${notarization_status}" != "success" ]]; do
   sleep $NOTARIZATION_TIME_INCREMENT_SEC
   notarization_waited_sec=$((notarization_waited_sec + NOTARIZATION_TIME_INCREMENT_SEC))
-  notarization_status_str="$(xcrun altool --notarization-history 0 --username "a@yudichev.net" --password "@keychain:Apple Notarization Tool App Password")"
+  notarization_status_str="$(xcrun altool --notarization-history 0 --username "a@yudichev.net" --password "@keychain:Apple Notarization Tool App Password" 2>&1)"
   if [[ $? -ne 0 ]]; then
     echo >&2 "WARN: failed to check notarization history, output was: ${notarization_status_str}"
   else

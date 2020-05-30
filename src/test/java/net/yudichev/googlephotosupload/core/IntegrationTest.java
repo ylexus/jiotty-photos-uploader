@@ -479,18 +479,18 @@ final class IntegrationTest {
                 .collect(toImmutableList());
 
         doExecuteUpload();
+        getLastFailure().ifPresent(Assertions::fail);
 
         filesPaths.forEach(path -> assertThat(googlePhotosClient.getAllItems(), hasItem(itemForFile(path))));
-        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
     void addsItemsToAlbumInTheOrderOfTheirCreationTime() throws Exception {
         var albumWithSortedFilesPath = root.resolve("albumWithSortedFiles").toAbsolutePath();
         Files.createDirectory(albumWithSortedFilesPath);
-        var file3 = albumWithSortedFilesPath.resolve("creation-time-2020-01-03T00:00:00Z.jpg");
-        var file1 = albumWithSortedFilesPath.resolve("creation-time-2020-01-01T00:00:00Z.jpg");
-        var file2 = albumWithSortedFilesPath.resolve("creation-time-2020-01-02T00:00:00Z.jpg");
+        var file3 = albumWithSortedFilesPath.resolve("creation-time-2020_01_03_00_00_00.jpg");
+        var file1 = albumWithSortedFilesPath.resolve("creation-time-2020_01_01_00_00_00.jpg");
+        var file2 = albumWithSortedFilesPath.resolve("creation-time-2020_01_02_00_00_00.jpg");
 
         Files.write(file3, new byte[]{0});
         Files.write(file1, new byte[]{0});
@@ -498,6 +498,7 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
+        getLastFailure().ifPresent(Assertions::fail);
         var album = (Album) googlePhotosClient.getAllAlbums().stream()
                 .filter(createdGooglePhotosAlbum -> "albumWithSortedFiles".equals(createdGooglePhotosAlbum.getTitle()))
                 .findFirst()
