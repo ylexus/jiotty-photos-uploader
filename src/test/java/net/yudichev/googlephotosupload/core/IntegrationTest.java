@@ -26,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.SecureRandom;
@@ -65,7 +66,7 @@ final class IntegrationTest {
     private Path innerAlbumPhoto;
     private Path varStoreDir;
     private RecordingGooglePhotosClient googlePhotosClient;
-
+    private RecordingProgressStatusFactory progressStatusFactory;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -90,6 +91,7 @@ final class IntegrationTest {
         varStoreAppName = IntegrationTest.class.getSimpleName() + RANDOM.nextInt();
         varStoreDir = Paths.get(System.getProperty("user.home"), "." + varStoreAppName);
         googlePhotosClient = new RecordingGooglePhotosClient();
+        progressStatusFactory = new RecordingProgressStatusFactory();
 
         TestTimeModule.resetTime();
     }
@@ -123,6 +125,7 @@ final class IntegrationTest {
         doExecuteUpload();
 
         getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
         assertThat(googlePhotosClient.getAllItems(), not(hasItem(itemForFile(outerAlbumPhoto))));
     }
 
@@ -133,6 +136,7 @@ final class IntegrationTest {
         doUploadTest();
 
         getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
     }
 
     @Test
@@ -143,6 +147,7 @@ final class IntegrationTest {
         doUploadTest();
 
         getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
     }
 
     @Test
@@ -152,6 +157,11 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
+        getLastFailure().ifPresent(Assertions::fail);
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
+                equalTo("Uploading media files"),
+                contains(KeyedError.of(invalidMediaItemPath.toAbsolutePath(),
+                        "INVALID_ARGUMENT: createMediaItems"))));
         doVerifyGoogleClientState();
 
         var varStoreData = readVarStoreDirectly();
@@ -166,7 +176,6 @@ final class IntegrationTest {
                 uploadMediaItemStateHavingInstant(equalTo(EPOCH))))));
 
         doVerifyJpegFilesInVarStore(varStoreData);
-        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -176,6 +185,11 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
+        getLastFailure().ifPresent(Assertions::fail);
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
+                equalTo("Uploading media files"),
+                contains(KeyedError.of(invalidMediaItemPath.toAbsolutePath(),
+                        "INVALID_ARGUMENT: uploadMediaData"))));
         doVerifyGoogleClientState();
 
         var varStoreData = readVarStoreDirectly();
@@ -183,7 +197,6 @@ final class IntegrationTest {
         assertThat(uploadedMediaItemIdByAbsolutePath.values(), hasSize(3));
 
         doVerifyJpegFilesInVarStore(varStoreData);
-        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -191,8 +204,9 @@ final class IntegrationTest {
         googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
 
         doExecuteUpload();
-        doVerifyGoogleClientState();
         getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
+        doVerifyGoogleClientState();
     }
 
     @Test
@@ -202,13 +216,17 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
+        getLastFailure().ifPresent(Assertions::fail);
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
+                equalTo("Reconciling 2 album(s) with Google Photos"),
+                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                        "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
         doVerifyGoogleClientItemState();
         assertThat(googlePhotosClient.getAllAlbums(), containsInAnyOrder(
                 albumWithId("fail-on-me-pre-existing-album"),
                 albumWithId("outer-album"),
                 albumWithId("outer-album1"),
                 albumWithId("outer-album: inner-album")));
-        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -221,6 +239,18 @@ final class IntegrationTest {
         var preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "photo2.jpg");
 
         doExecuteUpload();
+
+        getLastFailure().ifPresent(Assertions::fail);
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
+                equalTo("Reconciling 2 album(s) with Google Photos"),
+                containsInAnyOrder(
+                        KeyedError.of(new URL("http://photos.com/outer-album1"),
+                                "Album 'outer-album' may now be empty and will require manual deletion " +
+                                        "(Google Photos API does not allow me to delete it for you)"),
+                        KeyedError.of(new URL("http://photos.com/outer-album2"),
+                                "Album 'outer-album' may now be empty and will require manual deletion " +
+                                        "(Google Photos API does not allow me to delete it for you)"))));
 
         assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
                 allOf(itemForFile(rootPhoto), itemWithNoAlbum()),
@@ -236,7 +266,6 @@ final class IntegrationTest {
                 albumWithId("outer-album: inner-album")));
         assertThat(preExistingAlbum2, is(emptyAlbum()));
         assertThat(preExistingAlbum3, is(emptyAlbum()));
-        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -250,10 +279,16 @@ final class IntegrationTest {
         Files.delete(outerAlbumPhoto);
 
         doExecuteUpload();
+        getLastFailure().ifPresent(Assertions::fail);
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
+                equalTo("Reconciling 2 album(s) with Google Photos"),
+                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                        "Album 'outer-album' may now be empty and will require manual deletion " +
+                                "(Google Photos API does not allow me to delete it for you)"))));
 
         assertThat(preExistingAlbum1, is(albumWithItems(contains(itemForFile(preExistingPhoto1)))));
         assertThat(preExistingAlbum2, is(emptyAlbum()));
-        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -268,13 +303,18 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
+        getLastFailure().ifPresent(Assertions::fail);
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
+                equalTo("Reconciling 2 album(s) with Google Photos"),
+                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                        "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
+
         var outerAlbumItems = preExistingAlbum1.getMediaItems().get(3, TimeUnit.SECONDS);
         assertThat(outerAlbumItems, hasSize(53));
         filePaths.forEach(path -> assertThat(outerAlbumItems, hasItem(itemForFile(path))));
         assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
 
         assertThat(preExistingAlbum2, is(emptyAlbum()));
-        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -289,13 +329,18 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
+        getLastFailure().ifPresent(Assertions::fail);
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
+                equalTo("Reconciling 2 album(s) with Google Photos"),
+                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                        "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
+
         var outerAlbumItems = preExistingAlbum1.getMediaItems().get(3, TimeUnit.SECONDS);
         assertThat(outerAlbumItems, hasSize(51));
         filePaths.forEach(path -> assertThat(outerAlbumItems, hasItem(itemForFile(path))));
         assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
 
         assertThat(preExistingAlbum2, is(emptyAlbum()));
-        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -306,6 +351,9 @@ final class IntegrationTest {
         var preExistingPhoto2 = uploadPhoto(preExistingAlbum2, "photo2.jpg");
 
         doExecuteUpload();
+
+        getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
 
         assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
                 allOf(itemForFile(rootPhoto), itemWithNoAlbum()),
@@ -318,7 +366,6 @@ final class IntegrationTest {
                         albumWithItems(containsInAnyOrder(itemForFile(outerAlbumPhoto), itemForFile(preExistingPhoto2)))),
                 allOf(albumWithId("outer-album"), emptyAlbum()),
                 allOf(albumWithId("outer-album: inner-album"), albumWithItems(contains(itemForFile(innerAlbumPhoto))))));
-        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -332,6 +379,11 @@ final class IntegrationTest {
         doExecuteUpload();
 
         getLastFailure().ifPresent(Assertions::fail);
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
+                equalTo("Reconciling 2 album(s) with Google Photos"),
+                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                        "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
         assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
                 allOf(itemForFile(rootPhoto), itemWithNoAlbum()),
                 allOf(itemForFile(outerAlbumPhoto), itemInAlbumWithId(equalTo("outer-album"))),
@@ -356,6 +408,7 @@ final class IntegrationTest {
         doExecuteUpload();
 
         assertThat(getLastFailure(), optionalWithValue());
+        assertNoRecordedProgressErrors();
     }
 
     @Test
@@ -367,6 +420,8 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
+        assertNoRecordedProgressErrors();
+
         assertThat(googlePhotosClient.getAllItems(), is(empty()));
         assertThat(googlePhotosClient.getAllItems(), is(empty()));
         assertThat(getLastFailure(), optionalWithValue());
@@ -375,10 +430,14 @@ final class IntegrationTest {
     @Test
     void noResumeReUploadsExistingFile() throws Exception {
         doUploadTest();
+        getLastFailure().ifPresent(Assertions::fail);
 
         doUploadTest("-no-resume");
-        googlePhotosClient.getAllItems().forEach(mediaItem -> assertThat(mediaItem.getUploadCount(), is(2)));
+
         getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
+
+        googlePhotosClient.getAllItems().forEach(mediaItem -> assertThat(mediaItem.getUploadCount(), is(2)));
     }
 
     @Test
@@ -388,9 +447,22 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
+        getLastFailure().ifPresent(Assertions::fail);
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
+                equalTo("Uploading media files"),
+                contains(KeyedError.of(invalidMediaItemPath.toAbsolutePath(),
+                        "INVALID_ARGUMENT: createMediaItems"))));
+
+        progressStatusFactory.reset();
         googlePhotosClient.disableFileNameBaseFailures();
 
         doExecuteUpload();
+
+        getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
+
+        googlePhotosClient.disableFileNameBaseFailures();
 
         assertThat(googlePhotosClient.getAllItems(), hasItem(allOf(itemForFile(invalidMediaItemPath), itemWithNoAlbum())));
 
@@ -400,7 +472,6 @@ final class IntegrationTest {
         var invalidItemPathString = invalidMediaItemPath.toAbsolutePath().toString();
         var invalidItemState = uploadedMediaItemIdByAbsolutePath.get(invalidItemPathString);
         assertThat(invalidItemState, itemStateHavingMediaId(optionalWithValue(equalTo(invalidItemPathString))));
-        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -410,6 +481,7 @@ final class IntegrationTest {
         doExecuteUpload();
 
         getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
     }
 
     @Test
@@ -419,10 +491,15 @@ final class IntegrationTest {
 
         doExecuteUpload();
 
+        getLastFailure().ifPresent(Assertions::fail);
+
         googlePhotosClient.disableFileNameBaseFailures();
         TestTimeModule.advanceTimeBy(Duration.ofDays(2));
 
         doExecuteUpload();
+
+        getLastFailure().ifPresent(Assertions::fail);
+
         var mediaItem = googlePhotosClient.getAllItems().stream()
                 .filter(item -> item.getBinary().getFile().equals(invalidMediaItemPath))
                 .findFirst()
@@ -433,7 +510,6 @@ final class IntegrationTest {
                 itemWithNoAlbum(),
                 itemWithDescription(optionalWithValue(equalTo(invalidMediaItemPath.getFileName().toString())))));
         googlePhotosClient.getAllItems().forEach(item -> assertThat(item.getUploadCount(), is(1)));
-        getLastFailure().ifPresent(Assertions::fail);
     }
 
     @Test
@@ -446,6 +522,12 @@ final class IntegrationTest {
         doExecuteUpload();
 
         getLastFailure().ifPresent(Assertions::fail);
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
+        assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
+                equalTo("Uploading media files"),
+                contains(KeyedError.of(photoInPreExistingAlbumPath.toAbsolutePath(),
+                        "INVALID_ARGUMENT: No permission to add media items to this album"))));
+
         assertThat(googlePhotosClient.getAllItems(), hasItem(
                 allOf(itemForFile(photoInPreExistingAlbumPath), itemWithNoAlbum())
         ));
@@ -463,6 +545,10 @@ final class IntegrationTest {
         Files.createDirectory(skippableSubDir2);
 
         doExecuteUpload();
+
+        getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
+
         assertThat(googlePhotosClient.getAllAlbums(), allOf(
                 not(hasItem(albumWithId("skippable-dir"))),
                 not(hasItem(albumWithId("skippable-sub-dir"))),
@@ -479,7 +565,9 @@ final class IntegrationTest {
                 .collect(toImmutableList());
 
         doExecuteUpload();
+
         getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
 
         filesPaths.forEach(path -> assertThat(googlePhotosClient.getAllItems(), hasItem(itemForFile(path))));
     }
@@ -499,6 +587,8 @@ final class IntegrationTest {
         doExecuteUpload();
 
         getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
+
         var album = (Album) googlePhotosClient.getAllAlbums().stream()
                 .filter(createdGooglePhotosAlbum -> "albumWithSortedFiles".equals(createdGooglePhotosAlbum.getTitle()))
                 .findFirst()
@@ -507,6 +597,10 @@ final class IntegrationTest {
                 itemForFile(file1),
                 itemForFile(file2),
                 itemForFile(file3)));
+    }
+
+    private void assertNoRecordedProgressErrors() {
+        progressStatusFactory.getRecordedErrorsByProgressName().values().forEach(keyedErrors -> assertThat(keyedErrors, is(empty())));
     }
 
     private VarStoreData readVarStoreDirectly() throws IOException {
@@ -592,7 +686,7 @@ final class IntegrationTest {
                     .addModule(() -> new MockGooglePhotosModule(googlePhotosClient))
                     .addModule(ResourceBundleModule::new)
                     .addModule(() -> new UploadPhotosModule(1))
-                    .addModule(() -> new IntegrationTestUploadStarterModule(commandLine))
+                    .addModule(() -> new IntegrationTestUploadStarterModule(commandLine, progressStatusFactory))
                     .build()
                     .run();
             applicationExitedLatch.countDown();

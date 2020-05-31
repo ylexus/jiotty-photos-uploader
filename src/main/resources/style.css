@@ -4,7 +4,7 @@
     -fx-base: #111;
     -fx-control-inner-background: derive(-fx-base,50%);
     -fx-control-inner-background-alt: derive(-fx-control-inner-background, 30%);
-    -fx-font-size: 14pt;
+    -fx-font-size: 13pt;
     -mdfx-font-color: white;
 }
 
@@ -39,10 +39,14 @@
 }
 
 .url-bar {
-    -fx-font-size: 12pt;
+    -fx-font-size: 0.8em;
 }
 
 .side-note {
+    -fx-font-size: 0.8em;
+}
+
+.error-log {
     -fx-font-size: 0.8em;
 }
 

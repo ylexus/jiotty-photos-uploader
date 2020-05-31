@@ -63,7 +63,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                         throw new RuntimeException("upload failed");
                     }
                     if (file.toString().endsWith("failOnMeWithInvalidArgumentDuringUploadIngMediaData.jpg")) {
-                        throw invalidArgumentException("Some invalid argument error");
+                        throw invalidArgumentException("uploadMediaData");
                     }
                 }
                 simulateResourceExhaustion(ImmutableSet.of("uploadMediaData", file));
@@ -101,6 +101,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                                 logger.warn("Media item upload error for binary {}", uploadedGoogleMediaBinary);
                                 return MediaItemOrError.error(com.google.rpc.Status.newBuilder()
                                         .setCode(Code.INVALID_ARGUMENT_VALUE)
+                                        .setMessage("createMediaItems")
                                         .build());
                             } else {
                                 var candidateNewItem = new MediaItem(uploadedGoogleMediaBinary, newMediaItem.description());

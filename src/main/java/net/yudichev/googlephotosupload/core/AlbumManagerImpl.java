@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -28,6 +29,7 @@ import static java.lang.Math.min;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfList;
+import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumManager {
     private static final Logger logger = LoggerFactory.getLogger(AlbumManagerImpl.class);
@@ -70,7 +72,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                 Optional.of(reconcilableAlbumCount));
         return albumDirectories.stream()
                 .map(albumDirectory -> albumDirectory.albumTitle()
-                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path(), progressStatus::onBackoffDelay)
+                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path(), progressStatus, progressStatus::onBackoffDelay)
                                 .whenComplete((album, e) -> progressStatus.incrementSuccess())))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
@@ -88,6 +90,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
 
     private CompletableFuture<GooglePhotosAlbum> mergeAlbums(GooglePhotosAlbum primaryAlbum,
                                                              List<GooglePhotosAlbum> albumsToBeMerged,
+                                                             ProgressStatus progressStatus,
                                                              LongConsumer backoffEventConsumer) {
         return getItemsInAlbum(primaryAlbum, backoffEventConsumer)
                 .thenCompose(itemsInPrimaryAlbum -> {
@@ -96,16 +99,17 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                     }
                     return albumsToBeMerged.stream()
                             .map(albumToBeMerged -> moveItems(albumToBeMerged, primaryAlbum, itemsInPrimaryAlbum, backoffEventConsumer)
-                                    .thenRun(() -> removeAlbum(albumToBeMerged)))
+                                    .thenRun(() -> removeAlbum(albumToBeMerged, progressStatus)))
                             .collect(toFutureOfList())
                             .thenApply(list -> primaryAlbum);
                 });
     }
 
-    private static void removeAlbum(GooglePhotosAlbum albumToBeMerged) {
+    private void removeAlbum(GooglePhotosAlbum albumToBeMerged, ProgressStatus progressStatus) {
         // remove this album - CAN'T DO THIS :-(, so flagging to user
-        logger.warn("Google Photos API deficiency: album '{}' with URL {} may now be empty and will require manual deletion",
-                albumToBeMerged.getTitle(), albumToBeMerged.getAlbumUrl());
+        progressStatus.addFailure(KeyedError.of(
+                getAsUnchecked(() -> new URL(albumToBeMerged.getAlbumUrl())),
+                String.format(resourceBundle.getString("albumManagerPleaseDeleteManually"), albumToBeMerged.getTitle())));
     }
 
     private CompletableFuture<Void> moveItems(GooglePhotosAlbum sourceAlbum,
@@ -163,6 +167,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     private CompletableFuture<GooglePhotosAlbum> reconcile(Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle,
                                                            String filesystemAlbumTitle,
                                                            Path path,
+                                                           ProgressStatus progressStatus,
                                                            LongConsumer backoffEventConsumer) {
         CompletableFuture<GooglePhotosAlbum> albumFuture;
         var cloudAlbumsForThisTitle = cloudAlbumsByTitle.get(filesystemAlbumTitle);
@@ -179,12 +184,16 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
             if (nonEmptyCloudAlbumsForThisTitle.isEmpty()) {
                 cloudAlbumsForThisTitle.stream()
                         .skip(1)
-                        .forEach(AlbumManagerImpl::removeAlbum);
+                        .forEach(albumToBeMerged -> removeAlbum(albumToBeMerged, progressStatus));
                 return completedFuture(cloudAlbumsForThisTitle.get(0));
             } else if (nonEmptyCloudAlbumsForThisTitle.size() > 1) {
                 var primaryAlbum = cloudAlbumsForThisTitle.get(0);
                 logger.info("Merging {} duplicate cloud album(s) for path [{}] into {}", cloudAlbumsForThisTitle.size(), path, primaryAlbum);
-                albumFuture = mergeAlbums(primaryAlbum, cloudAlbumsForThisTitle.subList(1, cloudAlbumsForThisTitle.size()), backoffEventConsumer);
+                albumFuture = mergeAlbums(
+                        primaryAlbum,
+                        cloudAlbumsForThisTitle.subList(1, cloudAlbumsForThisTitle.size()),
+                        progressStatus,
+                        backoffEventConsumer);
             } else {
                 albumFuture = completedFuture(nonEmptyCloudAlbumsForThisTitle.get(0));
             }

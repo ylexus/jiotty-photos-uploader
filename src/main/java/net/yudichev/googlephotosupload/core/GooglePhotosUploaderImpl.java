@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.common.collect.ImmutableList;
+import com.google.rpc.Code;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.common.lang.ResultOrFailure;
@@ -174,7 +175,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                         var pathState = pendingPathStates.get(i);
                         var mediaItemOrError = mediaItemOrErrors.get(i);
                         mediaItemOrError.errorStatus().ifPresent(status -> fileProgressStatus.addFailure(
-                                KeyedError.of(pathState.path(), status.getCode() + ": " + status.getMessage())));
+                                KeyedError.of(pathState.path(), Code.forNumber(status.getCode()) + ": " + status.getMessage())));
                         mediaItemOrError.item().ifPresent(item -> {
                             uploadedItemStateByPath.compute(pathState.path(),
                                     (path, itemStateFuture) -> checkNotNull(itemStateFuture).thenApply(itemState -> itemState.withMediaId(item.getId())));

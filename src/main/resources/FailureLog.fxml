@@ -25,10 +25,10 @@
             <Insets top="4.0"/>
         </VBox.margin>
     </HBox>
-    <TableView fx:id="tableView" HBox.hgrow="ALWAYS">
+    <TableView fx:id="tableView" styleClass="error-log" HBox.hgrow="ALWAYS">
         <columns>
-            <TableColumn prefWidth="500.0" text="%failuresDialogPathColumnTitle"/>
-            <TableColumn prefWidth="524.0" text="%failuresDialogFailureColumnTitle"/>
+            <TableColumn fx:id="keyColumn" prefWidth="500.0" text="%failuresDialogPathColumnTitle"/>
+            <TableColumn fx:id="valueColumn" prefWidth="524.0" text="%failuresDialogFailureColumnTitle"/>
         </columns>
     </TableView>
     <HBox prefHeight="100.0" prefWidth="200.0"/>
