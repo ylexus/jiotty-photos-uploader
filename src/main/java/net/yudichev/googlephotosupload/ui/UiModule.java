@@ -50,6 +50,7 @@ final class UiModule extends BaseLifecycleComponentModule {
                 .build(ProgressStatusFactory.class));
 
         boundLifecycleComponent(VersionCheck.class);
+        boundLifecycleComponent(Diagnostics.class);
 
         expose(ProgressStatusFactory.class);
         expose(FxmlContainerFactory.class);
