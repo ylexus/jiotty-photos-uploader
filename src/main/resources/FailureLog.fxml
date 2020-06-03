@@ -13,7 +13,7 @@
         <ImageView fitWidth="20" preserveRatio="true">
             <Image url="@info-icon.png"/>
         </ImageView>
-        <Label text="%failuresDialogTopHint" wrapText="true" VBox.vgrow="SOMETIMES">
+        <Label minHeight="-Infinity" text="%failuresDialogTopHint" wrapText="true" VBox.vgrow="SOMETIMES">
             <VBox.margin>
                 <Insets bottom="2.0" left="2.0" right="2.0" top="2.0"/>
             </VBox.margin>
@@ -25,13 +25,12 @@
             <Insets top="4.0"/>
         </VBox.margin>
     </HBox>
-    <TableView fx:id="tableView" styleClass="error-log" HBox.hgrow="ALWAYS">
+    <TableView fx:id="tableView" styleClass="error-log" HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS">
         <columns>
             <TableColumn fx:id="keyColumn" prefWidth="500.0" text="%failuresDialogPathColumnTitle"/>
             <TableColumn fx:id="valueColumn" prefWidth="524.0" text="%failuresDialogFailureColumnTitle"/>
         </columns>
     </TableView>
-    <HBox prefHeight="100.0" prefWidth="200.0"/>
     <opaqueInsets>
         <Insets/>
     </opaqueInsets>
