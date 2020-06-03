@@ -101,7 +101,6 @@ dependencies {
     testImplementation "net.yudichev.jiotty:jiotty-common"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$orgJunitJupiterVersion"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$orgJunitJupiterVersion"
-    testImplementation "org.mockito:mockito-core:$orgMockitoVersion"
     testImplementation "org.mockito:mockito-junit-jupiter:$orgMockitoVersion"
     testImplementation "org.hamcrest:hamcrest:2.1"
     testCompileOnly "org.immutables:value:$orgImmutablesVersion"
