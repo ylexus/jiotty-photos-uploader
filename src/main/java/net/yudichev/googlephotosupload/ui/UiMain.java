@@ -1,6 +1,8 @@
 package net.yudichev.googlephotosupload.ui;
 
 import javafx.application.Platform;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -18,10 +20,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkState;
+import static javafx.scene.control.Alert.AlertType.ERROR;
+import static javafx.scene.control.Alert.AlertType.INFORMATION;
 import static javafx.scene.input.KeyCombination.*;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
 import static net.yudichev.googlephotosupload.core.BuildVersion.buildVersion;
 import static net.yudichev.jiotty.common.inject.BindingSpec.annotatedWith;
+import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 
 public final class UiMain extends javafx.application.Application {
     private static final Logger logger = LoggerFactory.getLogger(UiMain.class);
@@ -53,18 +58,36 @@ public final class UiMain extends javafx.application.Application {
         primaryStage.setMinWidth(500);
         primaryStage.setMinHeight(500);
         primaryStage.getIcons().add(new Image(getClass().getResource("/Icon1024.png").toString()));
-        installThreadDumpHotkey(primaryStage);
+        installDiagnosticsHotkeys(primaryStage);
         javafxApplicationResourcesHandler.get().accept(JavafxApplicationResources.builder()
                 .setHostServices(getHostServices())
                 .setPrimaryStage(primaryStage)
                 .build());
     }
 
-    private static void installThreadDumpHotkey(Stage primaryStage) {
+    private static void installDiagnosticsHotkeys(Stage primaryStage) {
         KeyCombination threadDumpCombination = new KeyCodeCombination(KeyCode.D, CONTROL_DOWN, ALT_DOWN, SHIFT_DOWN);
         primaryStage.addEventHandler(KEY_RELEASED, event -> {
             if (threadDumpCombination.match(event)) {
-                new ThreadDumps().writeSeveralThreadDumpsAsync();
+                new Dumps().writeSeveralThreadDumpsAsync();
+            }
+        });
+        KeyCombination heapDumpCombination = new KeyCodeCombination(KeyCode.H, CONTROL_DOWN, ALT_DOWN, SHIFT_DOWN);
+        primaryStage.addEventHandler(KEY_RELEASED, event -> {
+            if (heapDumpCombination.match(event)) {
+                Dumps.writeHeapDump()
+                        .whenComplete((path, e) -> Platform.runLater(() -> {
+                            if (e != null) {
+                                logger.error("Failed to write heap dump", e);
+                                var alert = new Alert(ERROR, humanReadableMessage(e), ButtonType.OK);
+                                alert.setHeaderText("Failed to write heap dump");
+                                alert.showAndWait();
+                            } else {
+                                var alert = new Alert(INFORMATION, "Heap dump written to " + path.toAbsolutePath(), ButtonType.OK);
+                                alert.setHeaderText("Heap dump");
+                                alert.showAndWait();
+                            }
+                        }));
             }
         });
     }
