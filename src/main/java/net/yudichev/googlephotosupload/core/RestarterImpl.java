@@ -8,7 +8,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.ForkJoinPool;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.io.MoreFiles.deleteRecursively;
@@ -30,17 +29,15 @@ final class RestarterImpl implements Restarter {
 
     @Override
     public void initiateLogoutAndRestart() {
-        ForkJoinPool.commonPool().execute(() -> {
-            if (Files.exists(googleAuthRootDir)) {
-                asUnchecked(() -> deleteRecursively(googleAuthRootDir, ALLOW_INSECURE));
-            }
-            applicationLifecycleControl.initiateRestart();
-        });
+        if (Files.exists(googleAuthRootDir)) {
+            asUnchecked(() -> deleteRecursively(googleAuthRootDir, ALLOW_INSECURE));
+        }
+        applicationLifecycleControl.initiateRestart();
     }
 
     @Override
     public void initiateRestart() {
-        ForkJoinPool.commonPool().execute(applicationLifecycleControl::initiateRestart);
+        applicationLifecycleControl.initiateRestart();
     }
 
     @BindingAnnotation

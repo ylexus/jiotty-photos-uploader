@@ -4,16 +4,16 @@ import org.gradle.internal.jvm.Jvm
 plugins {
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.0.8'
-    id 'org.beryx.runtime' version '1.8.3'
+    id 'org.beryx.runtime' version '1.8.5'
     id "name.remal.check-updates" version "1.0.187"
 
     // TODO no good alternative to maven duplicate finder
     // id "net.idlestate.gradle-duplicate-classes-check" version "1.0.2"
 
-    id "ca.cutterslade.analyze" version "1.4.0"
+    id "ca.cutterslade.analyze" version "1.4.1"
 }
 
-version = readEnvOrDefault('VERSION', 'DEVELOPMENT')
+version = readEnvOrDefault('VERSION', '0.DEV')
 //noinspection GroovyUnusedAssignment
 sourceCompatibility = '14'
 ext.javafxVersion = '14.0.1'
@@ -153,7 +153,10 @@ runtime {
             // required by httpclient, missed by default when building and running on Windows
             'java.naming',
             // required to establish an SSL connection
-            'jdk.crypto.ec']
+            'jdk.crypto.ec',
+            // required for a heap dump via JMX
+            'jdk.management'
+    ]
     additive = true
 
     jpackage {
@@ -200,6 +203,10 @@ runtime {
     }
 }
 
+if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+    jpackage.dependsOn 'copyMacOsPackagingResources'
+}
+
 task copyMacOsPackagingResources(type: Copy) {
     from("$rootDir/src/main/packaging-resources/macOS/out") {
         exclude '**/*.plist'
@@ -212,15 +219,10 @@ task copyMacOsPackagingResources(type: Copy) {
 }
 
 task fullpackage {
-    dependsOn build
+    dependsOn check
     dependsOn jpackage
 
     tasks.findByName('jpackage').mustRunAfter 'test'
-
-    if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
-        dependsOn copyMacOsPackagingResources
-        tasks.findByName('jpackage').mustRunAfter 'copyMacOsPackagingResources'
-    }
 
     doFirst {
         if (!clientSecretPath) {

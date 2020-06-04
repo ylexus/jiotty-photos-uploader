@@ -5,7 +5,7 @@ import java.util.Optional;
 public final class BuildVersion {
     private static final String IMPLEMENTATION_VERSION = Optional
             .ofNullable(BuildVersion.class.getPackage().getImplementationVersion())
-            .orElse("DEVELOPMENT");
+            .orElse("0.DEV");
 
     BuildVersion() {
     }

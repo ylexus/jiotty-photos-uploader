@@ -47,7 +47,7 @@ final class VersionCheck extends BaseLifecycleComponent {
 
     @Override
     protected void doStart() {
-        if (!upgradeCheckDone) {
+        if (!buildVersion().contains("DEV") && !upgradeCheckDone) {
             upgradeCheckDone = true;
 
             preferences = varStore.readValue(VersionCheckPreferences.class, VAR_STORE_KEY)
