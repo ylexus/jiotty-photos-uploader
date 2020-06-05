@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkState;
 import static net.yudichev.googlephotosupload.core.BuildVersion.buildVersion;
+import static net.yudichev.googlephotosupload.ui.SingleInstanceCheck.otherInstanceRunning;
 import static net.yudichev.jiotty.common.inject.BindingSpec.annotatedWith;
 
 public final class UiMain extends javafx.application.Application {
@@ -23,10 +24,12 @@ public final class UiMain extends javafx.application.Application {
     private static final AtomicReference<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler = new AtomicReference<>();
 
     public static void main(String[] args) {
-        if (SingleInstanceCheck.otherInstanceRunning()) {
+        if (otherInstanceRunning()) {
             return;
         }
         logger.info("Version {}", buildVersion());
+        logger.info("System properties {}", System.getProperties());
+        logger.info("Environment {}", System.getenv());
         Application.builder()
                 .addModule(() -> new UiModule(handler -> {
                     checkState(javafxApplicationResourcesHandler.compareAndSet(null, handler), "can only launch once");
