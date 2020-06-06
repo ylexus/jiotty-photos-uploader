@@ -15,7 +15,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.System.lineSeparator;
 import static java.lang.management.ManagementFactory.*;
+import static java.time.ZoneOffset.UTC;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.joining;
 import static javafx.scene.control.Alert.AlertType.ERROR;
@@ -82,6 +83,10 @@ final class Diagnostics extends BaseLifecycleComponent {
         });
     }
 
+    private static String dumpTimestamp() {
+        return DUMP_FILE_NAME_DATE_FORMATTER.format(Instant.now().atZone(UTC));
+    }
+
     private static final class HeapDumps {
         public static CompletableFuture<Path> writeHeapDump() {
             logger.info("Requested heap dump");
@@ -91,7 +96,7 @@ final class Diagnostics extends BaseLifecycleComponent {
         private static Path doWriteHeapDump() {
             var baseDir = APP_SETTINGS_DIR.resolve("heapdumps");
             asUnchecked(() -> Files.createDirectories(baseDir));
-            var dumpFile = baseDir.resolve("heapdump-" + DUMP_FILE_NAME_DATE_FORMATTER.format(LocalDateTime.now()) + ".hprof");
+            var dumpFile = baseDir.resolve("heapdump-" + dumpTimestamp() + ".hprof");
 
             asUnchecked(() -> {
                 var clazz = Class.forName("com.sun.management.HotSpotDiagnosticMXBean");
@@ -99,11 +104,13 @@ final class Diagnostics extends BaseLifecycleComponent {
                 clazz.getMethod("dumpHeap", String.class, boolean.class).invoke(mxBean, dumpFile.toAbsolutePath().toString(), true);
             });
 
+            logger.info("Heap dump written to {}", dumpFile);
             return dumpFile;
         }
     }
 
     private static final class ThreadDumps {
+
         private int count = 5;
         private ScheduledExecutorService scheduledExecutor;
 
@@ -117,7 +124,7 @@ final class Diagnostics extends BaseLifecycleComponent {
             try {
                 var baseDir = APP_SETTINGS_DIR.resolve("threaddumps");
                 asUnchecked(() -> Files.createDirectories(baseDir));
-                var dumpFile = baseDir.resolve("threaddump-" + DUMP_FILE_NAME_DATE_FORMATTER.format(LocalDateTime.now()) + ".txt");
+                var dumpFile = baseDir.resolve("threaddump-" + dumpTimestamp() + ".txt");
                 var infos = getThreadMXBean().dumpAllThreads(true, true);
                 asUnchecked(() -> Files.writeString(dumpFile, Stream.of(infos).map(Object::toString).collect(joining(lineSeparator()))));
                 logger.info("Wrote thread dump to {}", dumpFile);
