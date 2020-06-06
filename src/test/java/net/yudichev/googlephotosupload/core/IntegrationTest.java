@@ -84,24 +84,6 @@ final class IntegrationTest {
         TestTimeModule.resetTime();
     }
 
-    private void createStandardTestFiles() throws IOException {
-        rootPhoto = root.resolve("root-photo.jpg");
-        writeMediaFile(rootPhoto);
-
-        var outerAlbumDir = root.resolve("outer-album");
-        Files.createDirectories(outerAlbumDir);
-        outerAlbumPhoto = outerAlbumDir.resolve("outer-album-photo.jpg");
-        writeMediaFile(outerAlbumPhoto);
-        writeMediaFile(outerAlbumDir.resolve("picasa.ini"));
-
-        Files.createDirectories(root.resolve("DS_Store"));
-
-        var innerAlbumDir = outerAlbumDir.resolve("inner-album");
-        Files.createDirectories(innerAlbumDir);
-        innerAlbumPhoto = innerAlbumDir.resolve("inner-album-photo.jpg");
-        writeMediaFile(innerAlbumPhoto);
-    }
-
     @AfterEach
     void tearDown() {
         removeDir(varStoreDir);
@@ -635,8 +617,6 @@ final class IntegrationTest {
                 itemForFile(file3)));
     }
 
-    // TODO test non-writable albums (should already be tested)
-
     @Test
     void twoFilesInSameDirectoryWithIdenticalContent() throws Exception {
         var albumPath = root.resolve("album");
@@ -684,6 +664,24 @@ final class IntegrationTest {
 
         var album = (Album) getOnlyElement(googlePhotosClient.getAllAlbums());
         assertThat(album.getItems(), contains(itemWithContents(mediaItemContents)));
+    }
+
+    private void createStandardTestFiles() throws IOException {
+        rootPhoto = root.resolve("root-photo.jpg");
+        writeMediaFile(rootPhoto);
+
+        var outerAlbumDir = root.resolve("outer-album");
+        Files.createDirectories(outerAlbumDir);
+        outerAlbumPhoto = outerAlbumDir.resolve("outer-album-photo.jpg");
+        writeMediaFile(outerAlbumPhoto);
+        writeMediaFile(outerAlbumDir.resolve("picasa.ini"));
+
+        Files.createDirectories(root.resolve("DS_Store"));
+
+        var innerAlbumDir = outerAlbumDir.resolve("inner-album");
+        Files.createDirectories(innerAlbumDir);
+        innerAlbumPhoto = innerAlbumDir.resolve("inner-album-photo.jpg");
+        writeMediaFile(innerAlbumPhoto);
     }
 
     private void assertNoRecordedProgressErrors() {
