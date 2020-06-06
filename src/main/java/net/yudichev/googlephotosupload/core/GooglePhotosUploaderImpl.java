@@ -262,6 +262,9 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                     var mediaItemsToAddToAlbum = pathMediaItemOrErrors.stream()
                             .map(PathMediaItemOrError::mediaItem)
                             .sorted(comparing(GoogleMediaItem::getCreationTime))
+                            // it's possible to have duplicates here, when a directory contains two copies of same media items under different file names
+                            // (see https://github.com/ylexus/jiotty-photos-uploader/issues/34#issuecomment-639876779)
+                            .distinct()
                             .collect(toImmutableList());
                     return cloudOperationHelper.withBackOffAndRetry("add items to album",
                             () -> partition(mediaItemsToAddToAlbum, GOOGLE_PHOTOS_API_BATCH_SIZE).stream()
