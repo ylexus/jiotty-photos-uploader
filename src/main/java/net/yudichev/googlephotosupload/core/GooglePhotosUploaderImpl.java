@@ -47,7 +47,7 @@ import static net.yudichev.jiotty.common.lang.ResultOrFailure.failure;
 import static net.yudichev.jiotty.common.lang.ResultOrFailure.success;
 
 final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements GooglePhotosUploader {
-    private static final int GOOGLE_PHOTOS_API_BATCH_SIZE = 50;
+    public static final int GOOGLE_PHOTOS_API_BATCH_SIZE = 50;
 
     private static final Logger logger = LoggerFactory.getLogger(GooglePhotosUploaderImpl.class);
 

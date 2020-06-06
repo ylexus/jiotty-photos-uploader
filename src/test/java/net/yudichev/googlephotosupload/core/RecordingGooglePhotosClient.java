@@ -9,11 +9,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.rpc.Code;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.connector.google.photos.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -26,36 +28,33 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntConsumer;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.*;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static io.grpc.Status.INVALID_ARGUMENT;
+import static net.yudichev.googlephotosupload.core.GooglePhotosUploaderImpl.GOOGLE_PHOTOS_API_BATCH_SIZE;
 import static net.yudichev.googlephotosupload.core.TestTimeModule.getCurrentInstant;
+import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
+@SuppressWarnings("ClassWithTooManyFields")
 final class RecordingGooglePhotosClient implements GooglePhotosClient {
     private static final DateTimeFormatter FILE_DATE_FORMAT = DateTimeFormatter
             .ofPattern("yyyy_MM_dd_HH_mm_ss")
             .withZone(ZoneOffset.UTC);
     private static final Logger logger = LoggerFactory.getLogger(RecordingGooglePhotosClient.class);
-
     private final Map<String, MediaBinary> binariesByUploadToken = new LinkedHashMap<>();
+    private final Map<MediaItemContents, MediaItem> itemsByContents = new LinkedHashMap<>();
     private final Map<String, MediaItem> itemsById = new LinkedHashMap<>();
     private final Map<String, Album> albumsById = new LinkedHashMap<>();
     private final Map<String, Integer> albumIdSuffixByName = new LinkedHashMap<>();
     private final Map<Object, Integer> resourceExhaustionCountByKey = new LinkedHashMap<>();
     private final Object lock = new Object();
-
-    private boolean resourceExhaustedExceptions;
     @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized") // analysis failure
     private boolean fileNameBasedFailuresEnabled = true;
-
-    RecordingGooglePhotosClient() {
-        createAlbum("fail-on-me-pre-existing-album", directExecutor());
-    }
+    private boolean resourceExhaustedExceptions;
 
     @Override
     public CompletableFuture<String> uploadMediaData(Path file, Executor executor) {
+        logger.info("uploadMediaData {}", file);
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
                 if (fileNameBasedFailuresEnabled) {
@@ -79,46 +78,50 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         return CompletableFuture.supplyAsync(() -> {
             synchronized (lock) {
                 checkArgument(!newMediaItems.isEmpty(), "the list of media items is empty");
-                if (newMediaItems.size() > 50) {
+                if (newMediaItems.size() > GOOGLE_PHOTOS_API_BATCH_SIZE) {
                     throw invalidArgumentException("Request must have less than 50 items");
                 }
                 simulateResourceExhaustion(ImmutableSet.of("createMediaItems", albumId, newMediaItems));
 
-                albumId
-                        .filter(s -> fileNameBasedFailuresEnabled)
-                        .filter(theAlbumId -> theAlbumId.contains("fail-on-me-pre-existing-album"))
-                        .ifPresent(theAlbumId -> {
-                            throw invalidArgumentException("No permission to add media items to this album");
-                        });
                 expireTokens();
 
+                Set<String> mediaItemIdsInThisRequest = new HashSet<>();
                 List<MediaItemOrError> result = newMediaItems.stream()
                         .map(newMediaItem -> {
                             var uploadedGoogleMediaBinary = checkNotNull(binariesByUploadToken.get(newMediaItem.uploadToken()),
                                     "Unknown upload token: %s", newMediaItem.uploadToken());
                             if (fileNameBasedFailuresEnabled &&
-                                    uploadedGoogleMediaBinary.getFile().toString().endsWith("failOnMeWithInvalidArgumentDuringCreationOfMediaItem.jpg")) {
+                                    uploadedGoogleMediaBinary.getUploadToken().contains("failOnMeWithInvalidArgumentDuringCreationOfMediaItem")) {
                                 logger.warn("Media item upload error for binary {}", uploadedGoogleMediaBinary);
                                 return MediaItemOrError.error(com.google.rpc.Status.newBuilder()
                                         .setCode(Code.INVALID_ARGUMENT_VALUE)
                                         .setMessage("createMediaItems")
                                         .build());
                             } else {
-                                var candidateNewItem = new MediaItem(uploadedGoogleMediaBinary, newMediaItem.description());
-                                var createdMediaItem = itemsById.compute(candidateNewItem.getId(), (mediaId, existingItem) -> {
-                                    if (existingItem == null) {
-                                        existingItem = candidateNewItem;
-                                    } else {
-                                        existingItem = existingItem.withUploadCountIncremented();
-                                    }
-                                    return existingItem;
-                                });
-                                albumId.ifPresent(createdMediaItem::addToAlbum);
-                                return MediaItemOrError.item(createdMediaItem);
+                                var newItemCandidate = new MediaItem(uploadedGoogleMediaBinary, newMediaItem.description());
+
+                                // This is an extremely strange observed behaviour of Google Photos: within same request,
+                                // duplicate binaries are not allowed, but across two requests it's OK
+                                if (!mediaItemIdsInThisRequest.add(newItemCandidate.getId())) {
+                                    return MediaItemOrError.error(com.google.rpc.Status.newBuilder()
+                                            .setCode(Code.ALREADY_EXISTS_VALUE)
+                                            .setMessage("Failed: There was an error while trying to create this media item.")
+                                            .build());
+                                }
+
+                                var newItem = itemsByContents.merge(uploadedGoogleMediaBinary.getContents(), newItemCandidate,
+                                        (existingItem, theNewItem) -> existingItem.withUploadCountIncremented());
+
+                                var previousItemById = itemsById.put(newItem.getId(), newItem);
+                                checkState(previousItemById == null || previousItemById == newItem);
+
+                                albumId.ifPresent(newItem::addToAlbum);
+
+                                return MediaItemOrError.item(newItem);
                             }
                         })
                         .collect(toImmutableList());
-                logger.debug("createMediaItems albumId={}, newMediaItems={} result: {}", albumId, newMediaItems, result);
+                logger.info("createMediaItems albumId={}, newMediaItems={} result: {}", albumId, newMediaItems, result);
                 return result;
             }
         }, executor);
@@ -136,11 +139,19 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                     throw new RuntimeException("album creation failed");
                 }
                 simulateResourceExhaustion(ImmutableSet.of("createAlbum", name));
-                var album = new Album(name, generateAlbumId(name));
+                var album = new Album(name, generateAlbumId(name), true);
                 albumsById.put(album.getId(), album);
                 return album;
             }
         }, executor);
+    }
+
+    public GooglePhotosAlbum createNonWritableAlbum(String name) {
+        synchronized (lock) {
+            var album = new Album(name, generateAlbumId(name), false);
+            albumsById.put(album.getId(), album);
+            return album;
+        }
     }
 
     @Override
@@ -231,11 +242,11 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
     static final class MediaBinary {
         private static final AtomicLong counter = new AtomicLong();
         private final String uploadToken;
-        private final Path file;
         private final Instant uploadTime;
+        private final MediaItemContents contents;
 
         MediaBinary(Path file) {
-            this.file = checkNotNull(file);
+            contents = getAsUnchecked(() -> Json.parse(Files.readString(file), MediaItemContents.class));
             uploadToken = file.toAbsolutePath().toString() + '_' + counter.incrementAndGet();
             uploadTime = getCurrentInstant();
         }
@@ -244,8 +255,8 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
             return uploadToken;
         }
 
-        public Path getFile() {
-            return file;
+        public MediaItemContents getContents() {
+            return contents;
         }
 
         public Instant getUploadTime() {
@@ -256,7 +267,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         public String toString() {
             return MoreObjects.toStringHelper(this)
                     .add("uploadToken", uploadToken)
-                    .add("file", file)
+                    .add("contents", contents)
                     .toString();
         }
     }
@@ -271,7 +282,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
 
         MediaItem(MediaBinary mediaBinary, Optional<String> description) {
             this.mediaBinary = checkNotNull(mediaBinary);
-            id = mediaBinary.getFile().toAbsolutePath().toString();
+            id = mediaBinary.getContents().toMediaItemId();
             this.description = checkNotNull(description);
         }
 
@@ -282,10 +293,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
 
         @Override
         public Instant getCreationTime() {
-            var fileName = mediaBinary.getFile().getFileName().toString();
-            return fileName.startsWith("creation-time-") ?
-                    Instant.from(FILE_DATE_FORMAT.parse(fileName.substring("creation-time-".length(), fileName.lastIndexOf('.')))) :
-                    Instant.EPOCH;
+            return mediaBinary.getContents().creationTime();
         }
 
         public int getUploadCount() {
@@ -301,6 +309,12 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         }
 
         void addToAlbum(String albumId) {
+            if (fileNameBasedFailuresEnabled && albumId.contains("fail-on-me-pre-existing-album")) {
+                throw new InvalidArgumentException(new StatusRuntimeException(
+                        INVALID_ARGUMENT.withDescription("No permission to add media items to this album")),
+                        GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
+                        false);
+            }
             synchronized (stateLock) {
                 logger.debug("Add item {} to album {}", this, albumId);
                 lookupAlbumOrFail(albumId).internalAddMediaItemsById(ImmutableList.of(id));
@@ -342,6 +356,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
                 return MoreObjects.toStringHelper(this)
                         .add("id", id)
                         .add("uploadCount", uploadCount)
+                        .add("mediaBinary", mediaBinary)
                         .toString();
             }
         }
@@ -357,11 +372,13 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
     public class Album implements GooglePhotosAlbum {
         private final String name;
         private final String id;
+        private final boolean writable;
         private final Set<MediaItem> items = new LinkedHashSet<>();
 
-        Album(String name, String id) {
+        Album(String name, String id, boolean writable) {
             this.name = checkNotNull(name);
             this.id = checkNotNull(id);
+            this.writable = writable;
         }
 
         @Override
@@ -393,13 +410,25 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         }
 
         @Override
+        public boolean isWriteable() {
+            return writable;
+        }
+
+        @Override
         public CompletableFuture<Void> addMediaItemsByIds(List<String> mediaItemsIds, Executor executor) {
             logger.info("addMediaItemsByIds to album {}: {}", id, mediaItemsIds);
             return CompletableFuture.runAsync(
                     () -> {
                         checkArgument(!mediaItemsIds.isEmpty(), "list must contain at least one media item");
-                        if (mediaItemsIds.size() > 50) {
+                        if (mediaItemsIds.size() > GOOGLE_PHOTOS_API_BATCH_SIZE) {
                             throw invalidArgumentException("Request must have less than 50 items");
+
+                        }
+                        if (mediaItemsIds.stream().distinct().count() < mediaItemsIds.size()) {
+                            throw new InvalidArgumentException(new StatusRuntimeException(
+                                    INVALID_ARGUMENT.withDescription("Request must not contain duplicated ids")),
+                                    GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
+                                    false);
 
                         }
                         internalAddMediaItemsById(mediaItemsIds);
@@ -408,7 +437,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
         }
 
         private void internalAddMediaItemsById(List<String> mediaItemsIds) {
-            if (fileNameBasedFailuresEnabled && id.contains("fail-on-me-pre-existing-album")) {
+            if (fileNameBasedFailuresEnabled && id.contains("pre-existing-not-writable-album")) {
                 throw invalidArgumentException("No permission to add media items to this album");
             }
             synchronized (lock) {

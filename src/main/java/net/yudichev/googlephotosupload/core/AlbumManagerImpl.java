@@ -169,38 +169,51 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                                                            Path path,
                                                            ProgressStatus progressStatus,
                                                            LongConsumer backoffEventConsumer) {
-        CompletableFuture<GooglePhotosAlbum> albumFuture;
-        var cloudAlbumsForThisTitle = cloudAlbumsByTitle.get(filesystemAlbumTitle);
-        if (cloudAlbumsForThisTitle == null) {
-            logger.info("Creating album [{}] for path [{}]", filesystemAlbumTitle, path);
-            albumFuture = cloudOperationHelper.withBackOffAndRetry(
-                    "create album " + filesystemAlbumTitle,
-                    () -> googlePhotosClient.createAlbum(filesystemAlbumTitle, executorService),
-                    backoffEventConsumer);
-        } else if (cloudAlbumsForThisTitle.size() > 1) {
-            List<GooglePhotosAlbum> nonEmptyCloudAlbumsForThisTitle = cloudAlbumsForThisTitle.stream()
-                    .filter(googlePhotosAlbum -> googlePhotosAlbum.getMediaItemCount() > 0)
-                    .collect(toImmutableList());
-            if (nonEmptyCloudAlbumsForThisTitle.isEmpty()) {
-                cloudAlbumsForThisTitle.stream()
-                        .skip(1)
-                        .forEach(albumToBeMerged -> removeAlbum(albumToBeMerged, progressStatus));
-                return completedFuture(cloudAlbumsForThisTitle.get(0));
-            } else if (nonEmptyCloudAlbumsForThisTitle.size() > 1) {
-                var primaryAlbum = cloudAlbumsForThisTitle.get(0);
-                logger.info("Merging {} duplicate cloud album(s) for path [{}] into {}", cloudAlbumsForThisTitle.size(), path, primaryAlbum);
-                albumFuture = mergeAlbums(
-                        primaryAlbum,
-                        cloudAlbumsForThisTitle.subList(1, cloudAlbumsForThisTitle.size()),
-                        progressStatus,
-                        backoffEventConsumer);
-            } else {
-                albumFuture = completedFuture(nonEmptyCloudAlbumsForThisTitle.get(0));
-            }
-        } else {
-            albumFuture = completedFuture(cloudAlbumsForThisTitle.get(0));
-        }
-        return albumFuture;
+        return Optional.ofNullable(cloudAlbumsByTitle.get(filesystemAlbumTitle))
+                .flatMap(albums -> {
+                    var writableAlbums = albums.stream()
+                            .filter(googlePhotosAlbum -> {
+                                var writeable = googlePhotosAlbum.isWriteable();
+                                if (!writeable) {
+                                    logger.debug("Ignoring non-writable album {}", googlePhotosAlbum);
+                                }
+                                return writeable;
+                            }) // ignore albums we can't touch anyway
+                            .collect(toImmutableList());
+                    return writableAlbums.isEmpty() ? Optional.empty() : Optional.of(writableAlbums);
+                })
+                .map(cloudAlbumsForThisTitle -> {
+                    if (cloudAlbumsForThisTitle.size() > 1) {
+                        List<GooglePhotosAlbum> nonEmptyCloudAlbumsForThisTitle = cloudAlbumsForThisTitle.stream()
+                                .filter(googlePhotosAlbum -> googlePhotosAlbum.getMediaItemCount() > 0)
+                                .collect(toImmutableList());
+                        if (nonEmptyCloudAlbumsForThisTitle.isEmpty()) {
+                            cloudAlbumsForThisTitle.stream()
+                                    .skip(1)
+                                    .forEach(albumToBeMerged -> removeAlbum(albumToBeMerged, progressStatus));
+                            return completedFuture(cloudAlbumsForThisTitle.get(0));
+                        } else if (nonEmptyCloudAlbumsForThisTitle.size() > 1) {
+                            var primaryAlbum = cloudAlbumsForThisTitle.get(0);
+                            logger.info("Merging {} duplicate cloud album(s) for path [{}] into {}", cloudAlbumsForThisTitle.size(), path, primaryAlbum);
+                            return mergeAlbums(
+                                    primaryAlbum,
+                                    cloudAlbumsForThisTitle.subList(1, cloudAlbumsForThisTitle.size()),
+                                    progressStatus,
+                                    backoffEventConsumer);
+                        } else {
+                            return completedFuture(nonEmptyCloudAlbumsForThisTitle.get(0));
+                        }
+                    } else {
+                        return completedFuture(cloudAlbumsForThisTitle.get(0));
+                    }
+                })
+                .orElseGet(() -> {
+                    logger.info("Creating album [{}] for path [{}]", filesystemAlbumTitle, path);
+                    return cloudOperationHelper.withBackOffAndRetry(
+                            "create album " + filesystemAlbumTitle,
+                            () -> googlePhotosClient.createAlbum(filesystemAlbumTitle, executorService),
+                            backoffEventConsumer);
+                });
     }
 
     private static CompletableFuture<Void> withInvalidMediaItemErrorIgnored(String operationName, CompletableFuture<Void> action) {
