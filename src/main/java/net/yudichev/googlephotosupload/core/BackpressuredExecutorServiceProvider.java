@@ -9,14 +9,14 @@ import javax.inject.Provider;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.util.concurrent.MoreExecutors.shutdownAndAwaitTermination;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 final class BackpressuredExecutorServiceProvider extends BaseLifecycleComponent implements Provider<ExecutorService> {
     private static final Logger logger = LoggerFactory.getLogger(BackpressuredExecutorServiceProvider.class);
-    private final int threadCount = Runtime.getRuntime().availableProcessors() * 2;
     private ThreadPoolExecutor executor;
 
     @Override
@@ -31,19 +31,20 @@ final class BackpressuredExecutorServiceProvider extends BaseLifecycleComponent 
 
     @Override
     protected void doStop() {
-        if (!shutdownAndAwaitTermination(executor, 3, TimeUnit.SECONDS)) {
-            logger.warn("Failed to shutdown upload thread pool in 3 seconds");
+        if (!shutdownAndAwaitTermination(executor, 30, SECONDS)) {
+            logger.warn("Failed to shutdown upload thread pool in 3 seconds!");
         }
+        //noinspection AssignmentToNull
         executor = null;
     }
 
     @Override
     protected void doStart() {
         executor = new ThreadPoolExecutor(
-                threadCount,
-                threadCount,
-                0L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<>(threadCount * 2),
+                1,
+                1,
+                0L, MILLISECONDS,
+                new LinkedBlockingQueue<>(2),
                 new ThreadFactoryBuilder()
                         .setNameFormat("upload-pool-%s")
                         .setDaemon(true)

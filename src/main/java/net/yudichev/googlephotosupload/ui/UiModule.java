@@ -68,8 +68,7 @@ final class UiModule extends BaseLifecycleComponentModule {
         bind(LoginDialogControllerImpl.class).in(Singleton.class);
         bind(LoginDialogFxController.class).to(LoginDialogControllerImpl.class);
 
-        bind(FolderSelectorControllerImpl.class).in(Singleton.class);
-        bind(FolderSelectorController.class).to(FolderSelectorControllerImpl.class);
+        bind(FolderSelectorController.class).to(boundLifecycleComponent(FolderSelectorControllerImpl.class));
 
         bind(PreferencesDialogController.class).in(Singleton.class);
         bind(PreferencesSupplier.class).to(PreferencesDialogController.class);

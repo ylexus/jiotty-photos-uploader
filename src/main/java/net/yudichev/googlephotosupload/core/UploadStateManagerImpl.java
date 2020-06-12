@@ -1,19 +1,24 @@
 package net.yudichev.googlephotosupload.core;
 
 import net.yudichev.jiotty.common.varstore.VarStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.System.identityHashCode;
 import static net.yudichev.jiotty.common.lang.Locks.inLock;
 
 final class UploadStateManagerImpl implements UploadStateManager {
+    private static final Logger logger = LoggerFactory.getLogger(UploadStateManagerImpl.class);
+
     private static final String VAR_STORE_KEY = "photosUploader";
     private final VarStore varStore;
     private final Lock lock = new ReentrantLock();
-    private volatile UploadState uploadState;
+    private UploadState uploadState;
 
     @Inject
     UploadStateManagerImpl(VarStore varStore) {
@@ -23,7 +28,7 @@ final class UploadStateManagerImpl implements UploadStateManager {
 
     @Override
     public UploadState get() {
-        return uploadState;
+        return inLock(lock, () -> uploadState);
     }
 
     @Override
@@ -31,6 +36,7 @@ final class UploadStateManagerImpl implements UploadStateManager {
         inLock(lock, () -> {
             this.uploadState = uploadState;
             varStore.saveValue(VAR_STORE_KEY, uploadState);
+            logger.debug("Saved state {} with {} item(s)", identityHashCode(uploadState), uploadState.uploadedMediaItemIdByAbsolutePath().size());
         });
     }
 }

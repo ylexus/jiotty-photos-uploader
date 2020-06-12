@@ -24,8 +24,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -42,7 +40,6 @@ import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfList;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfListChaining;
 import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
-import static net.yudichev.jiotty.common.lang.Locks.inLock;
 import static net.yudichev.jiotty.common.lang.ResultOrFailure.failure;
 import static net.yudichev.jiotty.common.lang.ResultOrFailure.success;
 
@@ -61,7 +58,9 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     private final Provider<ExecutorService> executorServiceProvider;
     private final BackingOffRemoteApiExceptionHandler backOffHandler;
     private final FatalUserCorrectableRemoteApiExceptionHandler fatalUserCorrectableHandler;
-    private final Lock stateLock = new ReentrantLock();
+
+    // memory barrier for access to non-finals (as we must survive a restart), but should NOT be used to guard internal state of any other objects
+    private volatile boolean memoryBarrier = true;
 
     private StateSaver stateSaver;
     private ExecutorService executorService;
@@ -93,7 +92,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     public CompletableFuture<Void> uploadDirectory(Path albumDirectoryPath, Optional<GooglePhotosAlbum> googlePhotosAlbum, ProgressStatus fileProgressStatus) {
         checkStarted();
 
-        return supplyAsync(() -> filesystemManager.listFiles(albumDirectoryPath))
+        return supplyAsync(() -> filesystemManager.listFiles(albumDirectoryPath), executorService)
                 .thenCompose(paths -> paths.stream()
                         .map(path -> createMediaData(path)
                                 .thenApply(itemState -> {
@@ -111,37 +110,36 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     @Override
     public void doNotResume() {
-        inLock(stateLock, () -> {
-            logger.info("Requested not to resume, forgetting {} previously uploaded item(s)", uploadedItemStateByPath.size());
-            uploadState = UploadState.builder().build();
-            uploadStateManager.save(uploadState);
-            uploadedItemStateByPath.clear();
-        });
+        checkStarted();
+        checkState(memoryBarrier);
+        logger.info("Requested not to resume, forgetting {} previously uploaded item(s)", uploadedItemStateByPath.size());
+        uploadState = UploadState.builder().build();
+        uploadStateManager.save(uploadState);
+        uploadedItemStateByPath.clear();
+        memoryBarrier = true;
     }
 
     @Override
     public int canResume() {
-        return (int) uploadStateManager.get().uploadedMediaItemIdByAbsolutePath().values().stream()
-                .filter(itemState -> itemState.mediaId().isPresent())
-                .count();
+        return (int) uploadStateManager.get().uploadedMediaItemIdByAbsolutePath().size();
     }
 
     @Override
     protected void doStart() {
-        inLock(stateLock, () -> {
-            executorService = executorServiceProvider.get();
-            stateSaver = stateSaverFactory.create("uploaded-items", this::saveState);
-            uploadState = uploadStateManager.get();
-            uploadedItemStateByPath = uploadState.uploadedMediaItemIdByAbsolutePath().entrySet().stream()
-                    .collect(toConcurrentMap(
-                            entry -> Paths.get(entry.getKey()),
-                            entry -> completedFuture(entry.getValue())));
-        });
+        executorService = executorServiceProvider.get();
+        stateSaver = stateSaverFactory.create("uploaded-items", this::saveState);
+        uploadState = uploadStateManager.get();
+        uploadedItemStateByPath = uploadState.uploadedMediaItemIdByAbsolutePath().entrySet().stream()
+                .collect(toConcurrentMap(
+                        entry -> Paths.get(entry.getKey()),
+                        entry -> completedFuture(entry.getValue())));
+        memoryBarrier = true;
     }
 
     @Override
     protected void doStop() {
-        inLock(stateLock, () -> stateSaver.close());
+        checkState(memoryBarrier);
+        stateSaver.close();
     }
 
     /**
@@ -150,6 +148,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
      */
     private CompletableFuture<List<PathMediaItemOrError>> createMediaItems(ProgressStatus fileProgressStatus,
                                                                            List<PathState> createMediaDataResults) {
+        checkState(memoryBarrier);
         List<PathState> pendingPathStates = createMediaDataResults.stream()
                 .filter(pathState -> {
                     var itemStateOptional = pathState.state().toSuccess();
@@ -200,7 +199,8 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     private CompletableFuture<ResultOrFailure<ItemState>> createMediaData(Path file) {
         checkStarted();
-        return inLock(stateLock, () -> uploadedItemStateByPath.compute(file,
+        checkState(memoryBarrier);
+        return uploadedItemStateByPath.compute(file,
                 (theFile, currentFuture) -> {
                     if (currentFuture == null || currentFuture.isCompletedExceptionally()) {
                         logger.info("Scheduling upload of {}", file);
@@ -230,6 +230,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                     return currentFuture;
                 })
                 .thenApply(itemState -> {
+                    checkState(memoryBarrier);
                     stateSaver.save();
                     backOffHandler.reset();
                     return success(itemState);
@@ -244,7 +245,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                     } else {
                         throw new RuntimeException(exception);
                     }
-                }));
+                });
     }
 
     private CompletionStage<Void> addToAlbum(Optional<GooglePhotosAlbum> googlePhotosAlbum,
@@ -267,9 +268,12 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                             .distinct()
                             .collect(toImmutableList());
                     return cloudOperationHelper.withBackOffAndRetry("add items to album",
-                            () -> partition(mediaItemsToAddToAlbum, GOOGLE_PHOTOS_API_BATCH_SIZE).stream()
-                                    .collect(toFutureOfListChaining(mediaItems -> album.addMediaItems(mediaItems, executorService)))
-                                    .<Void>thenApply(ignored -> null),
+                            () -> {
+                                checkState(memoryBarrier);
+                                return partition(mediaItemsToAddToAlbum, GOOGLE_PHOTOS_API_BATCH_SIZE).stream()
+                                        .collect(toFutureOfListChaining(mediaItems -> album.addMediaItems(mediaItems, executorService)))
+                                        .<Void>thenApply(ignored -> null);
+                            },
                             fileProgressStatus::onBackoffDelay)
                             .exceptionallyCompose(exception -> {
                                 var operationName = "adding items to album " + album.getTitle();
@@ -306,6 +310,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     }
 
     private void saveState() {
+        checkState(memoryBarrier);
         var newUploadState = UploadState.of(
                 uploadedItemStateByPath.entrySet().stream()
                         .filter(entry -> entry.getValue().isDone() && !entry.getValue().isCompletedExceptionally())
@@ -316,5 +321,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
             uploadState = newUploadState;
             uploadStateManager.save(uploadState);
         }
+        memoryBarrier = true;
     }
 }

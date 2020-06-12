@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.ui;
 
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
@@ -11,6 +12,7 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import net.yudichev.googlephotosupload.core.Uploader;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -21,7 +23,7 @@ import java.util.function.BiConsumer;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-public final class FolderSelectorControllerImpl implements FolderSelectorController {
+public final class FolderSelectorControllerImpl extends BaseLifecycleComponent implements FolderSelectorController {
     private final Uploader uploader;
     private final ResourceBundle resourceBundle;
     public VBox folderSelector;
@@ -29,12 +31,32 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
     public FlowPane resumePane;
     public Label alreadyUploadedLabel;
     private BiConsumer<Path, Boolean> folderSelectionListener;
+    private volatile boolean everInitialised;
 
     @Inject
     FolderSelectorControllerImpl(Uploader uploader,
                                  ResourceBundle resourceBundle) {
         this.uploader = checkNotNull(uploader);
         this.resourceBundle = checkNotNull(resourceBundle);
+    }
+
+    public void initialize() {
+        var numberOfUploadedItems = uploader.numberOfUploadedItems();
+        if (numberOfUploadedItems > 0) {
+            alreadyUploadedLabel.setText(String.format("(%s %s)", resourceBundle.getString("folderSelectorAlreadyUploadedLabelPrefix"), numberOfUploadedItems));
+            resumePane.setVisible(true);
+        } else {
+            resumePane.setVisible(false);
+        }
+        everInitialised = true;
+    }
+
+    @Override
+    protected void doStart() {
+        // re-initialise on restart
+        if (everInitialised) {
+            Platform.runLater(this::initialize);
+        }
     }
 
     @SuppressWarnings("MethodMayBeStatic")
@@ -79,16 +101,6 @@ public final class FolderSelectorControllerImpl implements FolderSelectorControl
             event.setDropCompleted(false);
         }
         event.consume();
-    }
-
-    public void initialize() {
-        var numberOfUploadedItems = uploader.numberOfUploadedItems();
-        if (numberOfUploadedItems > 0) {
-            alreadyUploadedLabel.setText(String.format("(%s %s)", resourceBundle.getString("folderSelectorAlreadyUploadedLabelPrefix"), numberOfUploadedItems));
-            resumePane.setVisible(true);
-        } else {
-            resumePane.setVisible(false);
-        }
     }
 
     private void notifyListener(File file) {
