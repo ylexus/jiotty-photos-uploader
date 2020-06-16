@@ -42,7 +42,7 @@ public final class DependenciesModule extends AbstractModule {
         var googleApiSettingsBuilder = GoogleApiAuthSettings.builder()
                 .setAuthDataStoreRootDir(authDataStoreRootDir)
                 .setApplicationName(APP_TITLE)
-                .setCredentialsUrl(getResource("client_secret_641898159424-0tmk9ngs1aog13ef0v4bg1njtnndj1c3.apps.googleusercontent.com.json"));
+                .setCredentialsUrl(getResource("client_secret.json"));
         googleApiSettingsCustomiser.accept(googleApiSettingsBuilder);
         install(GooglePhotosModule.builder()
                 .setSettings(googleApiSettingsBuilder.build())
