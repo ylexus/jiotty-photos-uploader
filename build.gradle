@@ -18,36 +18,24 @@ version = readEnvOrDefault('VERSION', '0.DEV')
 sourceCompatibility = '14'
 ext.javafxVersion = '14.0.1'
 
-application {
-    mainClassName = 'net.yudichev.googlephotosupload.ui.Launcher'
-    applicationName = 'Jiotty Photos Uploader'
-    applicationDefaultJvmArgs = ['--add-exports', 'javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED',
-                                 '--add-opens', 'javafx.graphics/com.sun.javafx.tk.quantum=ALL-UNNAMED',
-                                 '--add-exports', 'javafx.graphics/com.sun.glass.ui=ALL-UNNAMED',
-                                 '--add-exports', 'javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED',
-                                 '--add-exports', 'javafx.graphics/com.sun.javafx.menu=ALL-UNNAMED']
-}
-
-String clientSecretPath = readEnvOrNull('CLIENT_SECRET_PATH')
-if (clientSecretPath) {
-    if (!file(clientSecretPath).exists()) {
-        throw new StopExecutionException("Client secret file not found: " + clientSecretPath)
+repositories {
+    mavenLocal() {
+        content {
+            includeGroup "net.yudichev.jiotty"
+        }
     }
-    processResources {
-        from file(clientSecretPath)
-        rename(clientSecretPath, 'client_secret_641898159424-0tmk9ngs1aog13ef0v4bg1njtnndj1c3.apps.googleusercontent.com.json')
+    mavenCentral()
+    maven {
+        url "https://maven.google.com"
     }
-}
-
-javafx {
-    version = "$javafxVersion"
-    modules = ['javafx.controls', 'javafx.fxml', 'javafx.web']
-}
-
-jar {
-    manifest {
-        attributes 'Implementation-Title': project.name,
-                'Implementation-Version': archiveVersion
+    maven {
+        url "https://oss.sonatype.org/content/repositories/snapshots"
+        mavenContent {
+            snapshotsOnly()
+        }
+    }
+    maven {
+        url "http://sandec.bintray.com/repo"
     }
 }
 
@@ -115,29 +103,48 @@ dependencies {
     permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:win"
 }
 
-repositories {
-    mavenLocal() {
-        content {
-            includeGroup "net.yudichev.jiotty"
+task copyClientSecret {
+    doLast {
+        String clientSecretPath = readEnvOrNull('CLIENT_SECRET_PATH')
+        if (!clientSecretPath) {
+            throw new InvalidUserDataException("CLIENT_SECRET_PATH system property or environment variable missing - " +
+                    "should exist and contain a path to Google OAuth client secret file")
         }
-    }
-    mavenCentral()
-    maven {
-        url "https://maven.google.com"
-    }
-    maven {
-        url "https://oss.sonatype.org/content/repositories/snapshots"
-        mavenContent {
-            snapshotsOnly()
+        if (!file(clientSecretPath).exists()) {
+            throw new InvalidUserDataException("Client secret file not found: " + clientSecretPath)
         }
-    }
-    maven {
-        url "http://sandec.bintray.com/repo"
+        processResources {
+            from file(clientSecretPath)
+            rename(clientSecretPath, 'client_secret_641898159424-0tmk9ngs1aog13ef0v4bg1njtnndj1c3.apps.googleusercontent.com.json')
+        }
     }
 }
+processResources.dependsOn 'copyClientSecret'
 
 test {
     useJUnitPlatform()
+}
+
+jar {
+    manifest {
+        attributes 'Implementation-Title': project.name,
+                'Implementation-Version': archiveVersion
+    }
+}
+
+application {
+    mainClassName = 'net.yudichev.googlephotosupload.ui.Launcher'
+    applicationName = 'Jiotty Photos Uploader'
+    applicationDefaultJvmArgs = ['--add-exports', 'javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED',
+                                 '--add-opens', 'javafx.graphics/com.sun.javafx.tk.quantum=ALL-UNNAMED',
+                                 '--add-exports', 'javafx.graphics/com.sun.glass.ui=ALL-UNNAMED',
+                                 '--add-exports', 'javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED',
+                                 '--add-exports', 'javafx.graphics/com.sun.javafx.menu=ALL-UNNAMED']
+}
+
+javafx {
+    version = "$javafxVersion"
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.web']
 }
 
 runtime {
@@ -178,57 +185,40 @@ runtime {
             installerName = 'JiottyPhotosUploader' // cannot have spaces in Debian resource names
             imageOptions = ['--verbose']
             resourceDir = file("$rootDir/src/main/packaging-resources/linux")
-            /*
-  --linux-package-name <package name>
-          Name for Linux package, defaults to the application name
-  --linux-deb-maintainer <email address>
-          Maintainer for .deb package
-  --linux-menu-group <menu-group-name>
-          Menu group this application is placed in
-  --linux-package-deps
-          Required packages or capabilities for the application
-  --linux-rpm-license-type <type string>
-          Type of the license ("License: <value>" of the RPM .spec)
-  --linux-app-release <release value>
-          Release value of the RPM <name>.spec file or
-          Debian revision value of the DEB control file.
-  --linux-app-category <category value>
-          Group value of the RPM <name>.spec file or
-          Section value of DEB control file.
-  --linux-shortcut
-          Creates a shortcut for the application
-            */
             installerOptions = ['--verbose', '--linux-shortcut', '--linux-package-name', 'jiotty-photos-uploader']
         }
     }
 }
+jpackage.dependsOn 'check'
 
 if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+    task copyMacOsPackagingResources(type: Copy) {
+        from("$rootDir/src/main/packaging-resources/macOS/out") {
+            exclude '**/*.plist'
+        }
+        from("$rootDir/src/main/packaging-resources/macOS/out") {
+            include '**/*.plist'
+            filter(ReplaceTokens, tokens: [version: version])
+        }
+        into "$buildDir/packaging-resources/macOS/out"
+    }
     jpackage.dependsOn 'copyMacOsPackagingResources'
 }
 
-task copyMacOsPackagingResources(type: Copy) {
-    from("$rootDir/src/main/packaging-resources/macOS/out") {
-        exclude '**/*.plist'
+task ensureVersionReleaseReady {
+    doLast {
+        if (!(version ==~ /\d+\.\d+\.\d+/)) {
+            throw new InvalidUserDataException("version must be set to X.Y.Z format but was: ${version}; add -DVERSION=X.Y.Z to the command line and try again")
+        }
     }
-    from("$rootDir/src/main/packaging-resources/macOS/out") {
-        include '**/*.plist'
-        filter(ReplaceTokens, tokens: [version: version])
-    }
-    into "$buildDir/packaging-resources/macOS/out"
 }
 
 task fullpackage {
-    dependsOn check
+    dependsOn ensureVersionReleaseReady
     dependsOn jpackage
 
-    tasks.findByName('jpackage').mustRunAfter 'test'
+    jpackage.mustRunAfter 'ensureVersionReleaseReady'
 
-    doFirst {
-        if (!clientSecretPath) {
-            throw new StopExecutionException("Client secret path environment variable missing")
-        }
-    }
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             exec {
