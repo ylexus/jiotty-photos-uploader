@@ -7,4 +7,6 @@ public interface Uploader {
     CompletableFuture<Void> upload(Path rootDir, boolean resume);
 
     int numberOfUploadedItems();
+
+    void forgetUploadState();
 }

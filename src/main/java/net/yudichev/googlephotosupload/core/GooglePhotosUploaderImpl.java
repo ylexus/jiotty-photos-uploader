@@ -66,6 +66,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     private ExecutorService executorService;
     private Map<Path, CompletableFuture<ItemState>> uploadedItemStateByPath;
     private UploadState uploadState;
+    private boolean requestedToForgetUploadStateOnShutdown;
 
     @Inject
     GooglePhotosUploaderImpl(GooglePhotosClient googlePhotosClient,
@@ -109,19 +110,20 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     }
 
     @Override
-    public void doNotResume() {
-        checkStarted();
-        checkState(memoryBarrier);
-        logger.info("Requested not to resume, forgetting {} previously uploaded item(s)", uploadedItemStateByPath.size());
-        uploadState = UploadState.builder().build();
-        uploadStateManager.save(uploadState);
-        uploadedItemStateByPath.clear();
-        memoryBarrier = true;
+    public int canResume() {
+        return (int) uploadStateManager.get().uploadedMediaItemIdByAbsolutePath().size();
     }
 
     @Override
-    public int canResume() {
-        return (int) uploadStateManager.get().uploadedMediaItemIdByAbsolutePath().size();
+    public void doNotResume() {
+        checkStarted();
+        forgetUploadState();
+    }
+
+    @Override
+    public void forgetUploadStateOnShutdown() {
+        requestedToForgetUploadStateOnShutdown = true;
+        memoryBarrier = true;
     }
 
     @Override
@@ -140,6 +142,20 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     protected void doStop() {
         checkState(memoryBarrier);
         stateSaver.close();
+        if (requestedToForgetUploadStateOnShutdown) {
+            forgetUploadState();
+            requestedToForgetUploadStateOnShutdown = false;
+        }
+        memoryBarrier = true;
+    }
+
+    private void forgetUploadState() {
+        checkState(memoryBarrier);
+        logger.info("Forgetting {} previously uploaded item(s)", uploadedItemStateByPath.size());
+        uploadState = UploadState.builder().build();
+        uploadStateManager.save(uploadState);
+        uploadedItemStateByPath.clear();
+        memoryBarrier = true;
     }
 
     /**

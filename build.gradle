@@ -111,8 +111,8 @@ task copyClientSecretIfDefined {
                 throw new InvalidUserDataException("Client secret file not found: " + clientSecretPath)
             }
             processResources {
-                from file(clientSecretPath)
-                rename(clientSecretPath, 'client_secret.json')
+                from clientSecretPath
+                rename(file(clientSecretPath).name, 'client_secret.json')
             }
         }
     }

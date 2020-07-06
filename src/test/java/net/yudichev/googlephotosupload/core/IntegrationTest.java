@@ -458,6 +458,21 @@ final class IntegrationTest {
     }
 
     @Test
+    void forgettingUploadStateReUploadsExistingFile() throws Exception {
+        IntegrationTestUploadStarter.forgetUploadStateOnShutdown();
+        createStandardTestFiles();
+        doExecuteUpload();
+        getLastFailure().ifPresent(Assertions::fail);
+
+        doUploadTest();
+
+        getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
+
+        googlePhotosClient.getAllItems().forEach(mediaItem -> assertThat(mediaItem.getUploadCount(), is(2)));
+    }
+
+    @Test
     void doesNotReUploadDataIfPreviouslyUploadedButMediaCreationFailed() throws Exception {
         var invalidMediaItemPath = root.resolve("failOnMeWithInvalidArgumentDuringCreationOfMediaItem.jpg").toAbsolutePath();
         var invalidMediaItemContents = writeMediaFile(invalidMediaItemPath);

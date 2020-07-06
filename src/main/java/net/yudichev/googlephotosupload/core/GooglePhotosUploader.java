@@ -7,9 +7,13 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 interface GooglePhotosUploader {
-    CompletableFuture<Void> uploadDirectory(Path albumDirectoryPath, Optional<GooglePhotosAlbum> googlePhotosAlbum, ProgressStatus fileProgressStatus);
+    CompletableFuture<Void> uploadDirectory(Path albumDirectoryPath,
+                                            Optional<GooglePhotosAlbum> googlePhotosAlbum,
+                                            ProgressStatus fileProgressStatus);
+
+    int canResume();
 
     void doNotResume();
 
-    int canResume();
+    void forgetUploadStateOnShutdown();
 }

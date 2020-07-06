@@ -58,7 +58,9 @@ final class UploaderImpl implements Uploader {
                                         return albumDirectories.stream()
                                                 .map(albumDirectory -> googlePhotosUploader.uploadDirectory(
                                                         albumDirectory.path(),
-                                                        albumDirectory.albumTitle().map(albumsByTitle::get), fileProgressStatus)
+                                                        albumDirectory.albumTitle().map(albumsByTitle::get),
+                                                        fileProgressStatus
+                                                )
                                                         .thenRun(directoryProgressStatus::incrementSuccess))
                                                 .collect(toFutureOfList())
                                                 .whenComplete((ignored, e) -> {
@@ -77,5 +79,10 @@ final class UploaderImpl implements Uploader {
     @Override
     public int numberOfUploadedItems() {
         return googlePhotosUploader.canResume();
+    }
+
+    @Override
+    public void forgetUploadState() {
+        googlePhotosUploader.forgetUploadStateOnShutdown();
     }
 }
