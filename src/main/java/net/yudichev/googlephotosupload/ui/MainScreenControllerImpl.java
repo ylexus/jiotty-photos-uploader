@@ -26,11 +26,11 @@ public final class MainScreenControllerImpl implements MainScreenController {
     private final Node folderSelectionPane;
     private final UploadPaneController uploadPaneController;
     private final Node uploadPane;
-
     public MenuBar menuBar;
     public MenuItem menuItemLogout;
     public MenuItem menuItemStopUpload;
     public VBox root;
+    private final FolderSelectorController folderSelectorController;
     private Dialog preferencesDialog;
     private Dialog aboutDialog;
 
@@ -48,7 +48,7 @@ public final class MainScreenControllerImpl implements MainScreenController {
         this.resourceBundle = checkNotNull(resourceBundle);
 
         var folderSelectorFxmlContainer = fxmlContainerFactory.create("FolderSelector.fxml");
-        FolderSelectorController folderSelectorController = folderSelectorFxmlContainer.controller();
+        folderSelectorController = folderSelectorFxmlContainer.controller();
         folderSelectorController.setFolderSelectedAction(this::onFolderSelected);
         folderSelectionPane = folderSelectorFxmlContainer.root();
 
@@ -78,6 +78,7 @@ public final class MainScreenControllerImpl implements MainScreenController {
             if (!children.contains(folderSelectionPane)) {
                 children.add(folderSelectionPane);
             }
+            folderSelectorController.refresh();
             uploadPaneController.reset();
 
             menuItemLogout.setDisable(false);

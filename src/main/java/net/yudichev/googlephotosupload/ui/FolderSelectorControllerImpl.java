@@ -68,6 +68,11 @@ public final class FolderSelectorControllerImpl extends BaseLifecycleComponent i
     }
 
     @Override
+    public void refresh() {
+        initialize();
+    }
+
+    @Override
     public void setFolderSelectedAction(BiConsumer<Path, Boolean> folderSelectionListener) {
         checkState(this.folderSelectionListener == null);
         this.folderSelectionListener = checkNotNull(folderSelectionListener);

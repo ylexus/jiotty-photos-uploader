@@ -35,7 +35,7 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     private final FxmlContainerFactory fxmlContainerFactory;
     private final Provider<MainScreenController> mainScreenControllerProvider;
     private final ResourceBundle resourceBundle;
-    private final Collection<Closeable> progressBoxes = new ArrayList<>();
+    private final Collection<ProgressBox> progressBoxes = new ArrayList<>();
     public VBox progressBoxContainer;
     public TextFlow logArea;
     public Button stopButton;
@@ -73,6 +73,7 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
         runLater(() -> {
             logArea.getStyleClass().remove("success-background");
             logArea.getStyleClass().remove("failed-background");
+            logArea.getStyleClass().remove("partial-success-background");
             logArea.getChildren().clear();
             logArea.setVisible(false);
 
@@ -106,8 +107,15 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
                 logArea.setVisible(true);
                 var logAreaChildren = logArea.getChildren();
                 if (exception == null) {
-                    logArea.getStyleClass().add("success-background");
-                    logAreaChildren.add(new Text(resourceBundle.getString("uploadPaneLogAreaSuccessLabel")));
+                    if (progressBoxes.stream().anyMatch(ProgressBox::hasFailures)) {
+                        logArea.getStyleClass().add("partial-success-background");
+                        logAreaChildren.add(new Text(String.format(
+                                resourceBundle.getString("uploadPaneLogAreaPartialSuccessLabel"),
+                                resourceBundle.getString("progressBoxFailuresHyperlinkText"))));
+                    } else {
+                        logArea.getStyleClass().add("success-background");
+                        logAreaChildren.add(new Text(resourceBundle.getString("uploadPaneLogAreaSuccessLabel")));
+                    }
                 } else {
                     logger.error("Upload failed", exception);
                     logArea.getStyleClass().add("failed-background");

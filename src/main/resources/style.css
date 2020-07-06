@@ -29,6 +29,10 @@
     -fx-background-color: #144220;
 }
 
+.partial-success-background {
+    -fx-background-color: #4a4018;
+}
+
 .failed-text {
     -fx-fill: red;
     -fx-text-fill: -fx-fill;
@@ -58,6 +62,7 @@
 
 .hyperlink {
     -fx-padding: 0;
+    -fx-underline: true;
 }
 
 .release-notes {
