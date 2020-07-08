@@ -2,7 +2,7 @@ package net.yudichev.googlephotosupload.ui;
 
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
-import net.yudichev.googlephotosupload.core.PreferencesSupplier;
+import net.yudichev.googlephotosupload.core.PreferencesManager;
 import net.yudichev.googlephotosupload.core.ProgressStatus;
 import net.yudichev.googlephotosupload.core.ProgressStatusFactory;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
@@ -55,7 +55,7 @@ final class UiModule extends BaseLifecycleComponentModule {
         expose(FxmlContainerFactory.class);
         expose(MainScreenController.class);
 
-        expose(PreferencesSupplier.class);
+        expose(PreferencesManager.class);
         expose(DialogFactory.class);
     }
 
@@ -70,10 +70,13 @@ final class UiModule extends BaseLifecycleComponentModule {
         bind(FolderSelectorController.class).to(boundLifecycleComponent(FolderSelectorControllerImpl.class));
 
         bind(PreferencesDialogController.class).in(Singleton.class);
-        bind(PreferencesSupplier.class).to(PreferencesDialogController.class);
+        bind(PreferencesManager.class).to(PreferencesDialogController.class);
 
         var uploadPaneControllerKey = boundLifecycleComponent(UploadPaneControllerImpl.class);
         bind(UploadPaneController.class).to(uploadPaneControllerKey);
+
+        bind(UploaderStrategyChoicePanelControllerImpl.class).in(Singleton.class);
+        bind(UploaderStrategyChoicePanelController.class).toProvider(UploaderStrategyChoicePanelControllerProvider.class).in(Singleton.class);
 
         // needed for FxmlLoader to find them
         expose(MainScreenControllerImpl.class);
@@ -81,6 +84,8 @@ final class UiModule extends BaseLifecycleComponentModule {
         expose(FolderSelectorControllerImpl.class);
         expose(PreferencesDialogController.class);
         expose(SupportPaneController.class);
+        expose(UploaderStrategyChoicePanelController.class);
+        expose(UploaderStrategyChoicePanelControllerImpl.class);
         expose(uploadPaneControllerKey);
     }
 }

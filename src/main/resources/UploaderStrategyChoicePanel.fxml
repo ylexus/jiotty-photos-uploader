@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.VBox?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="root" alignment="CENTER" prefWidth="600" spacing="4.0" stylesheets="@style.css"
+      xmlns="http://javafx.com/javafx/11.0.1" fx:controller="net.yudichev.googlephotosupload.ui.UploaderStrategyChoicePanelControllerImpl">
+    <Label minHeight="-Infinity" text="%preferencesUploaderStrategyLabel" textAlignment="CENTER" wrapText="true"/>
+    <Separator/>
+    <VBox spacing="8.0">
+        <VBox>
+            <RadioButton fx:id="addToAlbumWhileCreatingRadioButton" minHeight="-Infinity" onAction="#onRadioButtonSelectionChange"
+                         text="%preferencesUploaderStrategyPreferDuplicateSupportLabel" wrapText="true">
+                <toggleGroup>
+                    <!--suppress JavaFxUnresolvedFxIdReference -->
+                    <ToggleGroup fx:id="group"/>
+                </toggleGroup>
+            </RadioButton>
+            <Label styleClass="side-note" minHeight="-Infinity" text="%preferencesUploaderStrategyPreferDuplicateSupportDescription" wrapText="true">
+                <padding>
+                    <Insets left="30.0"/>
+                </padding>
+            </Label>
+        </VBox>
+        <VBox>
+            <RadioButton fx:id="addAfterCreatingItemsRadioButton" minHeight="-Infinity" onAction="#onRadioButtonSelectionChange"
+                         text="%preferencesUploaderStrategyPreferOrderLabel" toggleGroup="$group" wrapText="true"/>
+            <Label minHeight="-Infinity" styleClass="side-note" text="%preferencesUploaderStrategyPreferOrderDescription" wrapText="true">
+                <padding>
+                    <Insets left="30.0"/>
+                </padding>
+            </Label>
+        </VBox>
+    </VBox>
+    <padding>
+        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+    </padding>
+</VBox>

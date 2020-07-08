@@ -1,24 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ListView?>
-<?import javafx.scene.layout.FlowPane?>
-<?import javafx.scene.layout.VBox?>
-<VBox xmlns:fx="http://javafx.com/fxml/1" stylesheets="@style.css" xmlns="http://javafx.com/javafx/10.0.2-internal"
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" stylesheets="@style.css" xmlns="http://javafx.com/javafx/11.0.1"
       fx:controller="net.yudichev.googlephotosupload.ui.PreferencesDialogController">
     <padding>
         <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
     </padding>
-    <Label text="%mainScreenPreferencesDialogIgnoreSectionLabel"/>
-    <ListView fx:id="listView" editable="true" onKeyReleased="#onKeyReleased" prefHeight="600.0" prefWidth="400.0">
-        <padding>
-            <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
-        </padding>
-    </ListView>
-    <FlowPane>
-        <Button fx:id="plusButton" mnemonicParsing="false" onAction="#onPlusButtonAction" text="+"/>
-        <Button fx:id="minusButton" disable="true" mnemonicParsing="false" onAction="#onMinusButtonAction" text="-"/>
-    </FlowPane>
+    <TitledPane animated="false" collapsible="false" text="%preferencesDialogIgnoreSectionTitle" VBox.vgrow="ALWAYS">
+        <VBox>
+            <ListView fx:id="listView" editable="true" onKeyReleased="#onKeyReleased" VBox.vgrow="ALWAYS">
+                <padding>
+                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                </padding>
+            </ListView>
+            <FlowPane>
+                <Button fx:id="plusButton" mnemonicParsing="false" onAction="#onPlusButtonAction" text="+"/>
+                <Button fx:id="minusButton" disable="true" mnemonicParsing="false" onAction="#onMinusButtonAction" text="-"/>
+            </FlowPane>
+        </VBox>
+    </TitledPane>
+    <TitledPane fx:id="uploaderStrategyChoiceContainer" animated="false" collapsible="false" text="%preferencesDialogUploaderStrategySectionTitle"/>
 </VBox>

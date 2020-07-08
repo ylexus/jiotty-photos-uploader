@@ -47,6 +47,7 @@ import static java.time.Instant.EPOCH;
 import static java.time.Instant.now;
 import static java.util.stream.Collectors.toList;
 import static net.yudichev.googlephotosupload.cli.CliOptions.OPTIONS;
+import static net.yudichev.googlephotosupload.core.AddToAlbumMethod.AFTER_CREATING_ITEMS_SORTED;
 import static net.yudichev.googlephotosupload.core.GooglePhotosUploaderImpl.GOOGLE_PHOTOS_API_BATCH_SIZE;
 import static net.yudichev.googlephotosupload.core.IntegrationTestUploadStarter.getLastFailure;
 import static net.yudichev.googlephotosupload.core.OptionalMatchers.emptyOptional;
@@ -103,9 +104,8 @@ final class IntegrationTest {
     void skipsUploadIfSavedStateShowsAlreadyUploaded() throws Exception {
         createStandardTestFiles();
         var varStore = Guice.createInjector(new VarStoreModule(varStoreAppName)).getInstance(VarStore.class);
-        var photosUploaderKey = "photosUploader";
         var outerAlbumPhotoAbsolutePath = outerAlbumPhoto.toAbsolutePath().toString();
-        varStore.saveValue(photosUploaderKey, UploadState.builder()
+        varStore.saveValue("photosUploader", UploadState.builder()
                 .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath,
                         ItemState.builder()
                                 .setMediaId(outerAlbumPhotoAbsolutePath)
@@ -606,7 +606,9 @@ final class IntegrationTest {
     }
 
     @Test
-    void addsItemsToAlbumInTheOrderOfTheirCreationTime() throws Exception {
+    void inSortedModeAddsItemsToAlbumInTheOrderOfTheirCreationTime() throws Exception {
+        IntegrationTestUploadStarterModule.setPreferences(Preferences.builder().setAddToAlbumStrategy(AFTER_CREATING_ITEMS_SORTED).build());
+
         var albumWithSortedFilesPath = root.resolve("albumWithSortedFiles").toAbsolutePath();
         Files.createDirectory(albumWithSortedFilesPath);
         var file3 = albumWithSortedFilesPath.resolve("file3.jpg");
@@ -626,6 +628,30 @@ final class IntegrationTest {
                 .filter(createdGooglePhotosAlbum -> "albumWithSortedFiles".equals(createdGooglePhotosAlbum.getTitle()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Could not find album 'albumWithSortedFiles'"));
+        assertThat(album.getItems(), contains(
+                itemForFile(file1),
+                itemForFile(file2),
+                itemForFile(file3)));
+    }
+
+    @Test
+    void inRegularModeSortsByFilename() throws Exception {
+        var albumWithSortedFilesPath = root.resolve("albumWithSortedFiles").toAbsolutePath();
+        Files.createDirectory(albumWithSortedFilesPath);
+        var file3 = albumWithSortedFilesPath.resolve("file3.jpg");
+        var file1 = albumWithSortedFilesPath.resolve("file1.jpg");
+        var file2 = albumWithSortedFilesPath.resolve("file2.jpg");
+
+        writeMediaFile(file3);
+        writeMediaFile(file2);
+        writeMediaFile(file1);
+
+        doExecuteUpload();
+
+        getLastFailure().ifPresent(Assertions::fail);
+        assertNoRecordedProgressErrors();
+
+        var album = getOnlyElement(googlePhotosClient.getAllAlbums());
         assertThat(album.getItems(), contains(
                 itemForFile(file1),
                 itemForFile(file2),

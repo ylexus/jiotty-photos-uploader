@@ -14,14 +14,14 @@ final class DialogImpl implements Dialog {
     private final Stage dialog;
 
     @Inject
-    DialogImpl(Provider<JavafxApplicationResources> primaryStageProvider,
+    DialogImpl(Provider<JavafxApplicationResources> javafxApplicationResourcesProvider,
                FxmlContainerFactory fxmlContainerFactory,
                @Assisted("title") String title,
                @Assisted("fxmlPath") String fxmlPath,
                @Assisted Consumer<Stage> customizer) {
         var preferencesDialogFxContainer = fxmlContainerFactory.create(fxmlPath);
         fxController = preferencesDialogFxContainer.controller();
-        var primaryStage = primaryStageProvider.get().primaryStage();
+        var primaryStage = javafxApplicationResourcesProvider.get().primaryStage();
         dialog = new Stage();
         dialog.getIcons().add(new Image(getClass().getResourceAsStream("/Icon1024.png")));
         dialog.setTitle(title);

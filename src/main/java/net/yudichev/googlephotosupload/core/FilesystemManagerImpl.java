@@ -25,16 +25,16 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 final class FilesystemManagerImpl implements FilesystemManager {
     private static final Logger logger = LoggerFactory.getLogger(FilesystemManagerImpl.class);
 
-    private final PreferencesSupplier preferencesSupplier;
+    private final PreferencesManager preferencesManager;
 
     @Inject
-    FilesystemManagerImpl(PreferencesSupplier preferencesSupplier) {
-        this.preferencesSupplier = checkNotNull(preferencesSupplier);
+    FilesystemManagerImpl(PreferencesManager preferencesManager) {
+        this.preferencesManager = checkNotNull(preferencesManager);
     }
 
     @Override
     public void walkDirectories(Path rootDir, Consumer<Path> directoryHandler) {
-        var preferences = preferencesSupplier.get();
+        var preferences = preferencesManager.get();
         asUnchecked(() -> Files.walkFileTree(rootDir, new SimpleFileVisitor<>() {
             private final Deque<Integer> relevantItemCountStack = new ArrayDeque<>();
 
@@ -80,7 +80,7 @@ final class FilesystemManagerImpl implements FilesystemManager {
 
     @Override
     public List<Path> listFiles(Path directory) {
-        var preferences = preferencesSupplier.get();
+        var preferences = preferencesManager.get();
         return getAsUnchecked(() -> {
             try (var pathStream = Files.list(directory)) {
                 return pathStream

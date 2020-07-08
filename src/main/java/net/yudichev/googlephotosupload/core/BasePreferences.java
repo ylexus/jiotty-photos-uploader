@@ -9,6 +9,7 @@ import org.immutables.value.Value;
 import org.immutables.value.Value.Immutable;
 
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -31,6 +32,9 @@ abstract class BasePreferences {
                 ".*\\.(txt|exe|htm)",
                 "desktop.ini");
     }
+
+    @Value.Parameter
+    public abstract Optional<AddToAlbumMethod> addToAlbumStrategy();
 
     public final boolean anyMatch(Path path) {
         return patterns().stream().anyMatch(pattern -> pattern.matcher(path.getFileName().toString()).matches());

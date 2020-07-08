@@ -19,6 +19,7 @@ final class UploaderImpl implements Uploader {
     private final AlbumManager albumManager;
     private final CloudAlbumsProvider cloudAlbumsProvider;
     private final ProgressStatusFactory progressStatusFactory;
+    private final UploadStateManager uploadStateManager;
     private final ResourceBundle resourceBundle;
 
     @Inject
@@ -27,12 +28,14 @@ final class UploaderImpl implements Uploader {
                  AlbumManager albumManager,
                  CloudAlbumsProvider cloudAlbumsProvider,
                  ProgressStatusFactory progressStatusFactory,
+                 UploadStateManager uploadStateManager,
                  ResourceBundle resourceBundle) {
         this.googlePhotosUploader = checkNotNull(googlePhotosUploader);
         this.directoryStructureSupplier = checkNotNull(directoryStructureSupplier);
         this.albumManager = checkNotNull(albumManager);
         this.cloudAlbumsProvider = checkNotNull(cloudAlbumsProvider);
         this.progressStatusFactory = checkNotNull(progressStatusFactory);
+        this.uploadStateManager = checkNotNull(uploadStateManager);
         this.resourceBundle = checkNotNull(resourceBundle);
     }
 
@@ -78,7 +81,7 @@ final class UploaderImpl implements Uploader {
 
     @Override
     public int numberOfUploadedItems() {
-        return googlePhotosUploader.canResume();
+        return uploadStateManager.get().uploadedMediaItemIdByAbsolutePath().size();
     }
 
     @Override

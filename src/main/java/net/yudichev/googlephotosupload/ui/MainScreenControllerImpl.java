@@ -2,19 +2,25 @@ package net.yudichev.googlephotosupload.ui;
 
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.VBox;
+import net.yudichev.googlephotosupload.core.AddToAlbumMethod;
+import net.yudichev.googlephotosupload.core.PreferencesManager;
 import net.yudichev.googlephotosupload.core.Restarter;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.nio.file.Path;
 import java.util.ResourceBundle;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static javafx.application.Platform.runLater;
 import static javafx.stage.Modality.APPLICATION_MODAL;
+import static javafx.stage.StageStyle.UTILITY;
+import static net.yudichev.googlephotosupload.core.AddToAlbumMethod.WHILE_CREATING_ITEMS;
 
 @SuppressWarnings("ClassWithTooManyFields") // OK for a FX controller
 public final class MainScreenControllerImpl implements MainScreenController {
@@ -23,14 +29,17 @@ public final class MainScreenControllerImpl implements MainScreenController {
     private final DialogFactory dialogFactory;
     private final PlatformSpecificMenu platformSpecificMenu;
     private final ResourceBundle resourceBundle;
+    private final PreferencesManager preferencesManager;
+    private final UploaderStrategyChoicePanelController uploaderStrategyChoicePanelController;
+    private final Provider<JavafxApplicationResources> javafxApplicationResourcesProvider;
     private final Node folderSelectionPane;
     private final UploadPaneController uploadPaneController;
     private final Node uploadPane;
+    private final FolderSelectorController folderSelectorController;
     public MenuBar menuBar;
     public MenuItem menuItemLogout;
     public MenuItem menuItemStopUpload;
     public VBox root;
-    private final FolderSelectorController folderSelectorController;
     private Dialog preferencesDialog;
     private Dialog aboutDialog;
 
@@ -40,12 +49,18 @@ public final class MainScreenControllerImpl implements MainScreenController {
                                     Restarter restarter,
                                     DialogFactory dialogFactory,
                                     PlatformSpecificMenu platformSpecificMenu,
-                                    ResourceBundle resourceBundle) {
+                                    ResourceBundle resourceBundle,
+                                    PreferencesManager preferencesManager,
+                                    UploaderStrategyChoicePanelController uploaderStrategyChoicePanelController,
+                                    Provider<JavafxApplicationResources> javafxApplicationResourcesProvider) {
         this.applicationLifecycleControl = checkNotNull(applicationLifecycleControl);
         this.restarter = checkNotNull(restarter);
         this.dialogFactory = checkNotNull(dialogFactory);
         this.platformSpecificMenu = checkNotNull(platformSpecificMenu);
         this.resourceBundle = checkNotNull(resourceBundle);
+        this.preferencesManager = checkNotNull(preferencesManager);
+        this.uploaderStrategyChoicePanelController = checkNotNull(uploaderStrategyChoicePanelController);
+        this.javafxApplicationResourcesProvider = checkNotNull(javafxApplicationResourcesProvider);
 
         var folderSelectorFxmlContainer = fxmlContainerFactory.create("FolderSelector.fxml");
         folderSelectorController = folderSelectorFxmlContainer.controller();
@@ -62,6 +77,28 @@ public final class MainScreenControllerImpl implements MainScreenController {
         platformSpecificMenu.setOnExitAction(this::onMenuExit);
         platformSpecificMenu.setOnPreferencesAction(this::onPreferences);
         platformSpecificMenu.setOnAboutAction(this::onAbout);
+
+        if (preferencesManager.get().addToAlbumStrategy().isEmpty()) {
+            runLater(() -> {
+                var dialog = new javafx.scene.control.Dialog<AddToAlbumMethod>();
+                dialog.setTitle(resourceBundle.getString("mainScreenInitialUploadMethodDialogTitle"));
+                dialog.initStyle(UTILITY);
+                dialog.initModality(APPLICATION_MODAL);
+                dialog.initOwner(javafxApplicationResourcesProvider.get().primaryStage());
+                dialog.getDialogPane().setContent(uploaderStrategyChoicePanelController.getRoot());
+                dialog.getDialogPane().getButtonTypes().add(ButtonType.OK);
+                dialog.getDialogPane().getStylesheets().add("style.css");
+                dialog.getDialogPane().setPrefWidth(700);
+
+                uploaderStrategyChoicePanelController.setSelection(WHILE_CREATING_ITEMS);
+                preferencesManager.update(preferences -> preferences.withAddToAlbumStrategy(WHILE_CREATING_ITEMS));
+                var subscription = uploaderStrategyChoicePanelController.addSelectionChangeListener(method ->
+                        preferencesManager.update(preferences -> preferences.withAddToAlbumStrategy(method)));
+
+                dialog.showAndWait();
+                subscription.close();
+            });
+        }
     }
 
     public void onMenuActionLogout(ActionEvent actionEvent) {
@@ -114,12 +151,13 @@ public final class MainScreenControllerImpl implements MainScreenController {
     private void onPreferences(ActionEvent actionEvent) {
         if (preferencesDialog == null) {
             preferencesDialog = dialogFactory.create(
-                    resourceBundle.getString("mainScreenPreferencesDialogTitle"),
+                    resourceBundle.getString("preferencesDialogTitle"),
                     "PreferencesDialog.fxml",
                     dialog -> {
                         dialog.initModality(APPLICATION_MODAL);
                         dialog.setMinHeight(500);
                         dialog.setMinWidth(500);
+                        dialog.setResizable(false);
                     });
         }
         preferencesDialog.show();
