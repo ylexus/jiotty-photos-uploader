@@ -33,19 +33,19 @@ function sign_jar_internals() {
   rm -rf "${tmp_unpacked_path}"
   if [[ $? -ne 0 ]]; then
     echo >&2 "Failed to delete ${tmp_unpacked_path}"
-    exit $?
+    exit 1
   fi
 
   mkdir -p "${tmp_unpacked_path}"
   if [[ $? -ne 0 ]]; then
     echo >&2 "Failed to create ${tmp_unpacked_path}"
-    exit $?
+    exit 1
   fi
 
   unzip -q "${jar_path}" -d "${tmp_unpacked_path}"
   if [[ $? -ne 0 ]]; then
     echo >&2 "Failed to unzip"
-    exit $?
+    exit 1
   fi
 
   find "${tmp_unpacked_path}" \
@@ -62,19 +62,19 @@ function sign_jar_internals() {
     {} \;
   if [[ $? -ne 0 ]]; then
     echo >&2 "Failed to sign"
-    exit $?
+    exit 1
   fi
 
   rm -f "${jar_path}"
   if [[ $? -ne 0 ]]; then
     echo >&2 "Failed to delete ${jar_path}"
-    exit $?
+    exit 1
   fi
 
   (cd "${tmp_unpacked_path}" && zip -q -r "${jar_path}" ./*)
   if [[ $? -ne 0 ]]; then
     echo >&2 "Failed to zip"
-    exit $?
+    exit 1
   fi
 
   echo "signed ${jar_path}"
@@ -100,7 +100,7 @@ find "${BUILD_DIR}/jpackage/${APP_NAME}.app" -type f \
   {} \;
 if [[ $? -ne 0 ]]; then
   echo >&2 "Failed to sign"
-  exit $?
+  exit 1
 fi
 
 find "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/runtime" -type f \
@@ -117,7 +117,7 @@ find "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/runtime" -type f \
   {} \;
 if [[ $? -ne 0 ]]; then
   echo >&2 "Failed to sign"
-  exit $?
+  exit 1
 fi
 
 codesign \
@@ -131,7 +131,7 @@ codesign \
   "${BUILD_DIR}/jpackage/${APP_NAME}.app/Contents/runtime"
 if [[ $? -ne 0 ]]; then
   echo >&2 "Failed to sign"
-  exit $?
+  exit 1
 fi
 
 codesign \
@@ -145,7 +145,7 @@ codesign \
   "${BUILD_DIR}/jpackage/${APP_NAME}.app"
 if [[ $? -ne 0 ]]; then
   echo >&2 "Failed to sign"
-  exit $?
+  exit 1
 fi
 
 "$JAVA_HOME/bin/jpackage" \
@@ -157,7 +157,7 @@ fi
   --resource-dir "${PROJECT_DIR}/src/main/packaging-resources/macOS/out"
 if [[ $? -ne 0 ]]; then
   echo >&2 "jpackage failed"
-  exit $?
+  exit 1
 fi
 
 echo "Uploading package for notarization..."
@@ -169,7 +169,7 @@ notarize_output="$(xcrun altool \
 if [[ $? -ne 0 ]]; then
   echo >&2 "failed to invoke notarization:"
   echo >&2 "${notarize_output}"
-  exit $?
+  exit 1
 fi
 
 request_uuid="$(echo "${notarize_output}" | grep "RequestUUID = " | awk '{print $3}')"
@@ -204,7 +204,7 @@ echo "Notarized, stapling..."
 xcrun stapler staple "${BUILD_DIR}/jpackage/${APP_NAME}-${VERSION}.dmg"
 if [[ $? -ne 0 ]]; then
   echo >&2 "Failed to staple"
-  exit $?
+  exit 1
 fi
 
 echo "All done"

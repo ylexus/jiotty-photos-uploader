@@ -221,19 +221,19 @@ task ensureVersionReleaseReady {
     }
 }
 
+task macOsNotarize(type: Exec) {
+    commandLine "$projectDir/macos_notarize_dmg.sh", "$project.name", "$version", Jvm.current().getJavaHome()
+}
+
 task fullpackage {
     dependsOn ensureVersionReleaseReady
     dependsOn jpackage
+    if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+        dependsOn macOsNotarize
+        macOsNotarize.mustRunAfter 'jpackage'
+    }
 
     jpackage.mustRunAfter 'ensureVersionReleaseReady'
-
-    doLast {
-        if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
-            exec {
-                commandLine "$projectDir/macos_notarize_dmg.sh", "$project.name", "$version", Jvm.current().getJavaHome()
-            }
-        }
-    }
 }
 
 private static readEnvOrNull(String variableName) {
