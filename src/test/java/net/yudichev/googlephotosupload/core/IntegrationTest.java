@@ -50,6 +50,8 @@ import static net.yudichev.googlephotosupload.cli.CliOptions.OPTIONS;
 import static net.yudichev.googlephotosupload.core.AddToAlbumMethod.AFTER_CREATING_ITEMS_SORTED;
 import static net.yudichev.googlephotosupload.core.GooglePhotosUploaderImpl.GOOGLE_PHOTOS_API_BATCH_SIZE;
 import static net.yudichev.googlephotosupload.core.IntegrationTestUploadStarter.getLastFailure;
+import static net.yudichev.googlephotosupload.core.IntegrationTestUploadStarterModule.modifyPreferences;
+import static net.yudichev.googlephotosupload.core.IntegrationTestUploadStarterModule.setDefaultPreferences;
 import static net.yudichev.googlephotosupload.core.OptionalMatchers.emptyOptional;
 import static net.yudichev.googlephotosupload.core.OptionalMatchers.optionalWithValue;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
@@ -83,6 +85,8 @@ final class IntegrationTest {
         progressStatusFactory = new RecordingProgressStatusFactory();
 
         TestTimeModule.resetTime();
+
+        setDefaultPreferences();
     }
 
     @AfterEach
@@ -287,10 +291,8 @@ final class IntegrationTest {
         var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(3, TimeUnit.SECONDS);
         var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(3, TimeUnit.SECONDS);
 
-        var preExistingPhoto1ItemItem = uploadPhoto(preExistingAlbum1, "photo1.jpg");
-        preExistingAlbum2.addMediaItemsByIds(ImmutableList.of(preExistingPhoto1ItemItem.getId())).get(3, TimeUnit.SECONDS);
-
-        Files.delete(outerAlbumPhoto);
+        var preExistingPhotoItem = uploadPhoto(preExistingAlbum1, "photo1.jpg");
+        preExistingAlbum2.addMediaItemsByIds(ImmutableList.of(preExistingPhotoItem.getId())).get(3, TimeUnit.SECONDS);
 
         doExecuteUpload();
         getLastFailure().ifPresent(Assertions::fail);
@@ -301,7 +303,7 @@ final class IntegrationTest {
                         "Album 'outer-album' may now be empty and will require manual deletion " +
                                 "(Google Photos API does not allow me to delete it for you)"))));
 
-        assertThat(preExistingAlbum1, is(albumWithItems(contains(preExistingPhoto1ItemItem))));
+        assertThat(preExistingAlbum1, is(albumWithItems(contains(is(preExistingPhotoItem), itemForFile(outerAlbumPhoto)))));
         assertThat(preExistingAlbum2, is(emptyAlbum()));
     }
 
@@ -607,7 +609,7 @@ final class IntegrationTest {
 
     @Test
     void inSortedModeAddsItemsToAlbumInTheOrderOfTheirCreationTime() throws Exception {
-        IntegrationTestUploadStarterModule.setPreferences(Preferences.builder().setAddToAlbumStrategy(AFTER_CREATING_ITEMS_SORTED).build());
+        modifyPreferences(preferences -> preferences.withAddToAlbumStrategy(AFTER_CREATING_ITEMS_SORTED));
 
         var albumWithSortedFilesPath = root.resolve("albumWithSortedFiles").toAbsolutePath();
         Files.createDirectory(albumWithSortedFilesPath);
@@ -705,6 +707,25 @@ final class IntegrationTest {
 
         var album = (Album) getOnlyElement(googlePhotosClient.getAllAlbums());
         assertThat(album.getItems(), contains(itemWithContents(mediaItemContents)));
+    }
+
+
+    @Test
+    void onlyUploadsWhiteListedDirExcepBlackListFiles() throws Exception {
+        modifyPreferences(preferences -> preferences.withScanInclusionGlobs("glob:**/whitelisted-dir/**"));
+        var whitelistedDir = root.resolve("whitelisted-dir");
+        Files.createDirectories(whitelistedDir);
+        var otherDir = root.resolve("some-other-dir");
+        Files.createDirectories(otherDir);
+        var fileInWhiteListedDir = whitelistedDir.resolve("fileInWhiteListedDir.jpg");
+        writeMediaFile(fileInWhiteListedDir);
+        writeMediaFile(whitelistedDir.resolve("picasa.ini"));
+        writeMediaFile(otherDir.resolve("fileInOtherDir.jpg"));
+
+        doExecuteUpload();
+
+        getLastFailure().ifPresent(Assertions::fail);
+        assertThat(googlePhotosClient.getAllItems(), contains(itemForFile(fileInWhiteListedDir)));
     }
 
     private void createStandardTestFiles() throws IOException {

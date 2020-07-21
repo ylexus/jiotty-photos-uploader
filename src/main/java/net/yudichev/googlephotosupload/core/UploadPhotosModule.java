@@ -36,8 +36,6 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
         bind(BackingOffRemoteApiExceptionHandler.class).to(BackingOffRemoteApiExceptionHandlerImpl.class);
         bind(FatalUserCorrectableRemoteApiExceptionHandler.class).to(FatalUserCorrectableRemoteApiExceptionHandlerImpl.class);
 
-        bind(FilesystemManager.class).to(FilesystemManagerImpl.class);
-
         bind(CloudOperationHelper.class).to(CloudOperationHelperImpl.class);
         bind(CloudAlbumsProvider.class).to(boundLifecycleComponent(CloudAlbumsProviderImpl.class));
 

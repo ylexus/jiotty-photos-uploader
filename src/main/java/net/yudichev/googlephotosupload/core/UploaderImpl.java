@@ -59,11 +59,11 @@ final class UploaderImpl implements Uploader {
                                             Optional.empty());
                                     try {
                                         return albumDirectories.stream()
-                                                .map(albumDirectory -> googlePhotosUploader.uploadDirectory(
-                                                        albumDirectory.path(),
-                                                        albumDirectory.albumTitle().map(albumsByTitle::get),
-                                                        fileProgressStatus
-                                                )
+                                                .map(albumDirectory -> googlePhotosUploader
+                                                        .uploadDirectory(
+                                                                albumDirectory.albumTitle().map(albumsByTitle::get),
+                                                                albumDirectory.files(),
+                                                                fileProgressStatus)
                                                         .thenRun(directoryProgressStatus::incrementSuccess))
                                                 .collect(toFutureOfList())
                                                 .whenComplete((ignored, e) -> {

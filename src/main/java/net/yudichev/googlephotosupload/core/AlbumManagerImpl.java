@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.api.gax.rpc.InvalidArgumentException;
+import com.google.common.collect.ImmutableMap;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
@@ -65,6 +66,9 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                                                                                Map<String, List<GooglePhotosAlbum>> cloudAlbumsByTitle) {
         checkStarted();
         // root directory is excluded from progress as it does not need to be reconciled
+        if (albumDirectories.isEmpty()) {
+            return completedFuture(ImmutableMap.of());
+        }
         var reconcilableAlbumCount = albumDirectories.size() - 1;
         logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", reconcilableAlbumCount);
         var progressStatus = progressStatusFactory.create(

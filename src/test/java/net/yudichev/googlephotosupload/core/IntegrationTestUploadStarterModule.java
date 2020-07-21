@@ -6,9 +6,15 @@ import org.apache.commons.cli.CommandLine;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.googlephotosupload.core.AddToAlbumMethod.AFTER_CREATING_ITEMS_SORTED;
 
 public final class IntegrationTestUploadStarterModule extends BaseLifecycleComponentModule {
-    private static Preferences preferences = Preferences.builder().setAddToAlbumStrategy(AddToAlbumMethod.WHILE_CREATING_ITEMS).build();
+    private static Preferences preferences;
+
+    static {
+        setDefaultPreferences();
+    }
+
     private final CommandLine commandLine;
     private final ProgressStatusFactory progressStatusFactory;
 
@@ -17,8 +23,12 @@ public final class IntegrationTestUploadStarterModule extends BaseLifecycleCompo
         this.progressStatusFactory = checkNotNull(progressStatusFactory);
     }
 
-    public static void setPreferences(Preferences preferences) {
-        IntegrationTestUploadStarterModule.preferences = checkNotNull(preferences);
+    public static void setDefaultPreferences() {
+        preferences = Preferences.builder().setAddToAlbumStrategy(AFTER_CREATING_ITEMS_SORTED).build();
+    }
+
+    public static void modifyPreferences(Function<Preferences, Preferences> modifier) {
+        preferences = modifier.apply(preferences);
     }
 
     @Override

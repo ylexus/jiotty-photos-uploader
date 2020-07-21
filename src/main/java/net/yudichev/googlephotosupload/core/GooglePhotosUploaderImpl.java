@@ -48,7 +48,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     private final StateSaverFactory stateSaverFactory;
     private final UploadStateManager uploadStateManager;
     private final CurrentDateTimeProvider currentDateTimeProvider;
-    private final FilesystemManager filesystemManager;
     private final Provider<ExecutorService> executorServiceProvider;
     private final BackingOffRemoteApiExceptionHandler backOffHandler;
 
@@ -63,7 +62,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     @Inject
     GooglePhotosUploaderImpl(GooglePhotosClient googlePhotosClient,
-                             FilesystemManager filesystemManager,
                              @Backpressured Provider<ExecutorService> executorServiceProvider,
                              BackingOffRemoteApiExceptionHandler backOffHandler,
                              FatalUserCorrectableRemoteApiExceptionHandler fatalUserCorrectableHandler,
@@ -72,7 +70,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                              CurrentDateTimeProvider currentDateTimeProvider,
                              CloudOperationHelper cloudOperationHelper,
                              AddToAlbumStrategy addToAlbumStrategy) {
-        this.filesystemManager = checkNotNull(filesystemManager);
         this.executorServiceProvider = checkNotNull(executorServiceProvider);
         this.backOffHandler = checkNotNull(backOffHandler);
         this.fatalUserCorrectableHandler = checkNotNull(fatalUserCorrectableHandler);
@@ -85,10 +82,12 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     }
 
     @Override
-    public CompletableFuture<Void> uploadDirectory(Path albumDirectoryPath, Optional<GooglePhotosAlbum> googlePhotosAlbum, ProgressStatus fileProgressStatus) {
+    public CompletableFuture<Void> uploadDirectory(Optional<GooglePhotosAlbum> googlePhotosAlbum,
+                                                   List<Path> files,
+                                                   ProgressStatus fileProgressStatus) {
         checkStarted();
 
-        return supplyAsync(() -> filesystemManager.listFiles(albumDirectoryPath), executorService)
+        return supplyAsync(() -> files, executorService)
                 .thenCompose(paths -> {
                     var createMediaDataResultsFuture = paths.stream()
                             .sorted(comparing(path -> path.getFileName().toString()))

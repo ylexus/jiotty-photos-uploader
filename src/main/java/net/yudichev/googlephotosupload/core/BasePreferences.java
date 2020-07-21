@@ -4,16 +4,21 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import net.yudichev.jiotty.common.lang.PublicImmutablesStyle;
 import org.immutables.value.Value;
 import org.immutables.value.Value.Immutable;
 
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 @Immutable
@@ -22,35 +27,107 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 @JsonSerialize
 @JsonIgnoreProperties(ignoreUnknown = true)
 abstract class BasePreferences {
+    private static final String P_DOT_FILES = "glob:**/.*";
+    private static final String P_DOT_DIRS = "glob:**/.*/**";
+    private static final String P_DS_STORE = "glob:**/DS_Store";
+    private static final String P_THUMBS_DB = "glob:**/Thumbs.db";
+    private static final String P_DESKTOP_INI = "glob:**/desktop.ini";
+    private static final String P_PICASAORIGINALS = "glob:**/*picasaoriginals";
+    private static final String P_PICASA_INI = "glob:**/*[Pp]icasa.[Ii][Nn][Ii]";
+    private static final String P_TXT_EXE_HTML = "glob:**/*.{txt,TXT,exe,EXE,htm,HTM,html,HTML}";
+    static final Set<String> DEFAULT_SCAN_EXCLUSION_GLOBS = ImmutableSet.of(
+            P_DOT_FILES,
+            P_DOT_DIRS,
+            P_DS_STORE,
+            P_THUMBS_DB,
+            P_DESKTOP_INI,
+            P_PICASAORIGINALS,
+            P_PICASA_INI,
+            P_TXT_EXE_HTML);
+
+    private static final Map<String, Set<String>> KNOWN_PATTERNS_MIGRATION_MAP = ImmutableMap.<String, Set<String>>builder()
+            .put("\\..*", ImmutableSet.of(P_DOT_FILES, P_DOT_DIRS))
+            .put(".*picasaoriginals", ImmutableSet.of(P_PICASAORIGINALS))
+            .put(".*[Pp]icasa.[Ii][Nn][Ii]", ImmutableSet.of(P_PICASA_INI))
+            .put("DS_Store", ImmutableSet.of(P_DS_STORE))
+            .put("Thumbs.db", ImmutableSet.of(P_THUMBS_DB))
+            .put(".*\\.(txt|exe|htm)", ImmutableSet.of(P_TXT_EXE_HTML))
+            .put("desktop.ini", ImmutableSet.of(P_DESKTOP_INI))
+            .build();
+
+    /**
+     * @deprecated {@link #scanExclusionGlobs()} is the newer alternative
+     */
+    @Deprecated
+    public abstract Optional<Set<String>> scanExclusionPatterns();
+
     @Value.Default
-    @Value.Parameter
-    public Set<String> scanExclusionPatterns() {
-        return ImmutableSet.of(
-                "\\..*",
-                ".*picasaoriginals",
-                ".*[Pp]icasa.[Ii][Nn][Ii]",
-                "DS_Store",
-                "Thumbs.db",
-                ".*\\.(txt|exe|htm)",
-                "desktop.ini");
+    public Set<String> scanExclusionGlobs() {
+        return DEFAULT_SCAN_EXCLUSION_GLOBS;
     }
 
-    @Value.Parameter
+    @Value.Default
+    public Set<String> scanInclusionGlobs() {
+        return ImmutableSet.of();
+    }
+
     public abstract Optional<AddToAlbumMethod> addToAlbumStrategy();
 
-    public final boolean anyMatch(Path path) {
-        return patterns().stream().anyMatch(pattern -> pattern.matcher(path.getFileName().toString()).matches());
+    public static boolean validatePathPattern(String pattern) {
+        var fileSystem = FileSystems.getDefault();
+        try {
+            fileSystem.getPathMatcher(pattern);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
-    public final boolean noneMatch(Path path) {
-        return patterns().stream().noneMatch(pattern -> pattern.matcher(path.getFileName().toString()).matches());
+    public final boolean shouldIncludePath(Path path) {
+        return matchesInclusionPatternIfAny(path) && compiledScanExclusionMatchers().stream().noneMatch(matcher -> matcher.matches(path));
+    }
+
+    private boolean matchesInclusionPatternIfAny(Path path) {
+        var matchers = compiledScanInclusionMatchers();
+        return matchers.isEmpty() || matchers.stream().anyMatch(matcher -> matcher.matches(path));
+    }
+
+    @SuppressWarnings("ClassReferencesSubclass")
+    @Value.Check
+    BasePreferences migrateIfNeeded() {
+        var preferences = (Preferences) this;
+        return scanExclusionPatterns()
+                .map(legacyPatterns -> {
+                    checkArgument(scanExclusionGlobs().equals(DEFAULT_SCAN_EXCLUSION_GLOBS));
+                    return preferences
+                            .withScanExclusionPatterns(Optional.empty())
+                            .withScanExclusionGlobs(legacyPatterns.stream()
+                                    .map(legacyRegexp -> KNOWN_PATTERNS_MIGRATION_MAP.getOrDefault(legacyRegexp,
+                                            ImmutableSet.of(
+                                                    "regex:.*/" + legacyRegexp + "/.*",
+                                                    "regex:.*/" + legacyRegexp)))
+                                    .flatMap(Collection::stream)
+                                    .collect(toImmutableSet()));
+                })
+                .orElse(preferences);
     }
 
     @Value.Derived
     @JsonIgnore
-    protected Set<Pattern> patterns() {
-        return scanExclusionPatterns().stream()
-                .map(Pattern::compile)
+    protected Set<PathMatcher> compiledScanExclusionMatchers() {
+        return compile(scanExclusionGlobs());
+    }
+
+    @Value.Derived
+    @JsonIgnore
+    protected Set<PathMatcher> compiledScanInclusionMatchers() {
+        return compile(scanInclusionGlobs());
+    }
+
+    private static Set<PathMatcher> compile(Set<String> strings) {
+        var fileSystem = FileSystems.getDefault();
+        return strings.stream()
+                .map(fileSystem::getPathMatcher)
                 .collect(toImmutableSet());
     }
 }

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.VBox?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/11.0.1"
+      fx:controller="net.yudichev.googlephotosupload.ui.PreferencePatternEditorController">
+    <ListView fx:id="listView" editable="true" onKeyReleased="#onKeyReleased" VBox.vgrow="ALWAYS">
+        <padding>
+            <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+        </padding>
+    </ListView>
+    <FlowPane>
+        <Button fx:id="plusButton" mnemonicParsing="false" onAction="#onPlusButtonAction" text="+"/>
+        <Button fx:id="minusButton" disable="true" mnemonicParsing="false" onAction="#onMinusButtonAction" text="-"/>
+    </FlowPane>
+</VBox>
