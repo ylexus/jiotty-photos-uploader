@@ -218,7 +218,7 @@ final class IntegrationTest {
 
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
-                equalTo("Reconciling 2 album(s) with Google Photos"),
+                containsString("Reconciling"),
                 contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
         doVerifyGoogleClientItemState();
@@ -261,7 +261,7 @@ final class IntegrationTest {
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
-                equalTo("Reconciling 2 album(s) with Google Photos"),
+                containsString("Reconciling"),
                 containsInAnyOrder(
                         KeyedError.of(new URL("http://photos.com/outer-album1"),
                                 "Album 'outer-album' may now be empty and will require manual deletion " +
@@ -298,7 +298,7 @@ final class IntegrationTest {
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
-                equalTo("Reconciling 2 album(s) with Google Photos"),
+                containsString("Reconciling"),
                 contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
                         "Album 'outer-album' may now be empty and will require manual deletion " +
                                 "(Google Photos API does not allow me to delete it for you)"))));
@@ -322,7 +322,7 @@ final class IntegrationTest {
 
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
-                equalTo("Reconciling 2 album(s) with Google Photos"),
+                containsString("Reconciling"),
                 contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
 
@@ -349,7 +349,7 @@ final class IntegrationTest {
 
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
-                equalTo("Reconciling 2 album(s) with Google Photos"),
+                containsString("Reconciling"),
                 contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
 
@@ -400,7 +400,7 @@ final class IntegrationTest {
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
-                equalTo("Reconciling 2 album(s) with Google Photos"),
+                containsString("Reconciling"),
                 contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
         assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
