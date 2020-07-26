@@ -72,7 +72,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
         var reconcilableAlbumCount = albumDirectories.size() - 1;
         logger.info("Reconciling {} albums(s) with Google Photos, may take a bit of time...", reconcilableAlbumCount);
         var progressStatus = progressStatusFactory.create(
-                String.format(resourceBundle.getString("albumManagerProgressStatusTitlePattern"), reconcilableAlbumCount),
+                resourceBundle.getString("albumManagerProgressStatusTitle"),
                 Optional.of(reconcilableAlbumCount));
         return albumDirectories.stream()
                 .map(albumDirectory -> albumDirectory.albumTitle()

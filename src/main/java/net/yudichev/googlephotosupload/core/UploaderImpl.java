@@ -50,13 +50,13 @@ final class UploaderImpl implements Uploader {
                 .thenCompose(albumDirectories -> cloudAlbumsByTitleFuture
                         .thenCompose(cloudAlbumsByTitle -> albumManager.listAlbumsByTitle(albumDirectories, cloudAlbumsByTitle)
                                 .thenCompose(albumsByTitle -> {
-                                    var directoryProgressStatus =
-                                            progressStatusFactory.create(
-                                                    resourceBundle.getString("uploaderDirectoryProgressTitle"),
-                                                    Optional.of(albumDirectories.size()));
                                     var fileProgressStatus = progressStatusFactory.create(
                                             resourceBundle.getString("uploaderFileProgressTitle"),
-                                            Optional.empty());
+                                            Optional.of(albumDirectories.stream().mapToInt(albumDirectory -> albumDirectory.files().size()).sum()));
+                                    var directoryProgressStatus =
+                                            progressStatusFactory.create(
+                                                    resourceBundle.getString("uploaderAlbumProgressTitle"),
+                                                    Optional.of(albumDirectories.size()));
                                     try {
                                         return albumDirectories.stream()
                                                 .map(albumDirectory -> googlePhotosUploader
