@@ -3,19 +3,15 @@ package net.yudichev.googlephotosupload.ui;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.*;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 
-import static java.awt.Image.SCALE_SMOOTH;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
-import static javax.swing.JOptionPane.ERROR_MESSAGE;
-import static javax.swing.JOptionPane.showMessageDialog;
 import static net.yudichev.googlephotosupload.core.AppGlobals.APP_SETTINGS_DIR;
-import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 import static net.yudichev.googlephotosupload.core.ResourceBundleModule.RESOURCE_BUNDLE;
+import static net.yudichev.googlephotosupload.ui.FatalStartupError.showFatalStartupError;
 
 final class SingleInstanceCheck {
     private static final Logger logger = LoggerFactory.getLogger(SingleInstanceCheck.class);
@@ -33,13 +29,7 @@ final class SingleInstanceCheck {
             return false;
         }
         if (LOCK == null) {
-            var image = new ImageIcon(SingleInstanceCheck.class.getResource("/Icon1024.png")).getImage();
-            var icon = new ImageIcon(image.getScaledInstance(40, 40, SCALE_SMOOTH));
-            showMessageDialog(null,
-                    RESOURCE_BUNDLE.getString("singleInstanceCheckDialogMessage"),
-                    APP_TITLE,
-                    ERROR_MESSAGE,
-                    icon);
+            showFatalStartupError(RESOURCE_BUNDLE.getString("singleInstanceCheckDialogMessage"));
             return true;
         }
         //noinspection StaticVariableUsedBeforeInitialization it's not

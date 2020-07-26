@@ -15,6 +15,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.googlephotosupload.core.ResourceBundleModule.RESOURCE_BUNDLE;
+import static net.yudichev.googlephotosupload.ui.FatalStartupError.showFatalStartupError;
 import static net.yudichev.jiotty.common.lang.Locks.inLock;
 
 public final class PreferencesDialogController implements PreferencesManager {
@@ -34,7 +36,12 @@ public final class PreferencesDialogController implements PreferencesManager {
                                 Provider<JavafxApplicationResources> javafxApplicationResourcesProvider) {
         this.varStore = checkNotNull(varStore);
         this.uploaderStrategyChoicePanelControllerProvider = checkNotNull(uploaderStrategyChoicePanelControllerProvider);
-        preferences = varStore.readValue(Preferences.class, VAR_STORE_KEY).orElseGet(() -> Preferences.builder().build());
+        try {
+            preferences = varStore.readValue(Preferences.class, VAR_STORE_KEY).orElseGet(() -> Preferences.builder().build());
+        } catch (RuntimeException e) {
+            showFatalStartupError(RESOURCE_BUNDLE.getString("preferencesLoadingFatalError"));
+            throw e;
+        }
         this.javafxApplicationResourcesProvider = checkNotNull(javafxApplicationResourcesProvider);
     }
 
