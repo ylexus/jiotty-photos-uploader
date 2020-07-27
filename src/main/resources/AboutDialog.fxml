@@ -12,7 +12,7 @@
     <ImageView fitWidth="100.0" preserveRatio="true" GridPane.rowSpan="4" GridPane.valignment="TOP">
         <Image url="@Icon1024.png"/>
     </ImageView>
-    <Hyperlink onAction="#onTitleHyperlinkLinkAction" styleClass="hyperlink" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+    <Hyperlink fx:id="titleHyperlink" onAction="#onTitleHyperlinkLinkAction" styleClass="hyperlink" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
     <HBox spacing="4.0" GridPane.columnIndex="1" GridPane.rowIndex="1">
         <Label text="%aboutDialogVersionLabel"/>
         <TextField fx:id="versionLabel" editable="false" focusTraversable="false" styleClass="copyable-label" text="1.0.1"/>
