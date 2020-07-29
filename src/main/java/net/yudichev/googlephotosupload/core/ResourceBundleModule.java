@@ -5,6 +5,7 @@ import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.ResourceBundle;
@@ -20,6 +21,14 @@ public final class ResourceBundleModule extends BaseLifecycleComponentModule imp
             var candidateLocales = super.getCandidateLocales(baseName, locale);
             logger.info("Candidate locales: {}", candidateLocales);
             return candidateLocales;
+        }
+
+        @Override
+        public ResourceBundle newBundle(String baseName, Locale locale, String format, ClassLoader loader, boolean reload)
+                throws IllegalAccessException, InstantiationException, IOException {
+            var resourceBundle = super.newBundle(baseName, locale, format, loader, reload);
+            logger.debug("newBundle {}, {} = {}", locale, format, resourceBundle.getLocale());
+            return resourceBundle;
         }
 
         @Override
