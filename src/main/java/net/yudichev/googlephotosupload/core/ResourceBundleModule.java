@@ -37,10 +37,10 @@ public final class ResourceBundleModule extends BaseLifecycleComponentModule imp
             checkNotNull(baseName);
             if ("zh".equals(locale.getLanguage())) {
                 if ("CHS".equals(locale.getVariant().toUpperCase()) || "CHS".equals(locale.getCountry().toUpperCase())) {
-                    return new Locale("zh", "HANS");
+                    return new Locale("zh", "Hans");
                 }
                 if ("CHT".equals(locale.getVariant().toUpperCase()) || "CHT".equals(locale.getCountry().toUpperCase())) {
-                    return new Locale("zh", "HANT");
+                    return new Locale("zh", "Hant");
                 }
             }
             return super.getFallbackLocale(baseName, locale);
