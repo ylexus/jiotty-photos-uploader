@@ -104,6 +104,10 @@ dependencies {
     permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:win"
 }
 
+test {
+    systemProperty "user.language", "en"
+}
+
 String clientSecretPath = readEnvOrNull('CLIENT_SECRET_PATH')
 task copyClientSecretIfDefined {
     doLast {
