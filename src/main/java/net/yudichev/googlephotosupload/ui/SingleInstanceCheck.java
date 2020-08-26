@@ -24,11 +24,12 @@ final class SingleInstanceCheck {
         try {
             LOCK = FileChannel.open(lockFile, CREATE, WRITE).tryLock();
         } catch (IOException | RuntimeException e) {
-            logger.error("Exception trying to lock the instance file", e);
+            logger.error("Exception trying to lock the instance file {}", lockFile, e);
             // should be pretty rare; best we can do is assume the instance is not running
             return false;
         }
         if (LOCK == null) {
+            logger.error("Lock could not be acquired on {}, another instance must be running", lockFile);
             showFatalStartupError(RESOURCE_BUNDLE.getString("singleInstanceCheckDialogMessage"));
             return true;
         }
