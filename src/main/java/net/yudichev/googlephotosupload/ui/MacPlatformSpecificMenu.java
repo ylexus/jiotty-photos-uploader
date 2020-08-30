@@ -28,7 +28,7 @@ final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
 
     @Override
     public void initialize(MenuBar menuBar) {
-        var tk = MenuToolkit.toolkit();
+        var tk = MenuToolkit.toolkit(resourceBundle.getLocale());
         var defaultApplicationMenu = tk.createDefaultApplicationMenu(APP_TITLE);
 
         aboutMenuItem = tk.createAboutMenuItem(APP_TITLE);
