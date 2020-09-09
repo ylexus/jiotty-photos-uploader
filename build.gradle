@@ -3,14 +3,14 @@ import org.gradle.internal.jvm.Jvm
 
 plugins {
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.8'
+    id 'org.openjfx.javafxplugin' version '0.0.9'
     id 'org.beryx.runtime' version '1.8.5'
-    id "name.remal.check-updates" version "1.0.187"
+    id "name.remal.check-updates" version "1.0.211"
 
     // TODO no good alternative to maven duplicate finder
     // id "net.idlestate.gradle-duplicate-classes-check" version "1.0.2"
 
-    id "ca.cutterslade.analyze" version "1.4.1"
+    id "ca.cutterslade.analyze" version "1.4.2"
 }
 
 version = readEnvOrDefault('VERSION', '0.DEV')

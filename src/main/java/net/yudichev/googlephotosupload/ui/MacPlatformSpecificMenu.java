@@ -3,6 +3,7 @@ package net.yudichev.googlephotosupload.ui;
 import de.codecentric.centerdevice.MenuToolkit;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
@@ -28,20 +29,22 @@ final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
 
     @Override
     public void initialize(MenuBar menuBar) {
-        var tk = MenuToolkit.toolkit(resourceBundle.getLocale());
-        var defaultApplicationMenu = tk.createDefaultApplicationMenu(APP_TITLE);
-
-        aboutMenuItem = tk.createAboutMenuItem(APP_TITLE);
-        defaultApplicationMenu.getItems().set(0, aboutMenuItem);
-
+        aboutMenuItem = new MenuItem(String.format(resourceBundle.getString("menuItemMacAbout"), APP_TITLE));
         preferencesMenuItem = new MenuItem(resourceBundle.getString("menuItemMacPreferences"));
         preferencesMenuItem.setAccelerator(new KeyCodeCombination(COMMA, META_DOWN));
-        defaultApplicationMenu.getItems().add(2, new SeparatorMenuItem());
-        defaultApplicationMenu.getItems().add(2, preferencesMenuItem);
 
-        defaultApplicationMenu.getItems().add(4, tk.createCloseWindowMenuItem());
-
-        tk.setApplicationMenu(defaultApplicationMenu);
+        var tk = MenuToolkit.toolkit(resourceBundle.getLocale());
+        tk.setApplicationMenu(new Menu("Apple",
+                null,
+                aboutMenuItem,
+                new SeparatorMenuItem(),
+                preferencesMenuItem,
+                new SeparatorMenuItem(),
+                tk.createHideMenuItem(APP_TITLE),
+                tk.createHideOthersMenuItem(),
+                tk.createUnhideAllMenuItem(),
+                new SeparatorMenuItem(),
+                tk.createQuitMenuItem(APP_TITLE)));
     }
 
     @Override
