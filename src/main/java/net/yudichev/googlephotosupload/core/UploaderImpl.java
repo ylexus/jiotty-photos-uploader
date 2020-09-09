@@ -70,7 +70,7 @@ final class UploaderImpl implements Uploader {
                                                     directoryProgressStatus.close(e == null);
                                                     fileProgressStatus.close(e == null);
                                                 })
-                                                .thenAccept(list -> logger.info("All done without errors, files uploaded: {}", list.size()));
+                                                .thenRun(() -> logger.info("All done without fatal errors"));
                                     } catch (RuntimeException e) {
                                         directoryProgressStatus.closeUnsuccessfully();
                                         fileProgressStatus.closeUnsuccessfully();

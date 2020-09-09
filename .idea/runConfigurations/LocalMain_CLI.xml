@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="LocalMain CLI" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="net.yudichev.googlephotosupload.Main" />
+    <module name="Jiotty_Photos_Uploader.test" />
+    <option name="PROGRAM_PARAMETERS" value="-r &quot;$USER_HOME$/Library/Mobile Documents/com~apple~CloudDocs/Temp/jiotty-test-roots/one-photo&quot; -n" />
+    <option name="VM_PARAMETERS" value="-Duser.language=ru -Duser.country=RU" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="net.yudichev.jiotty.common.lang.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

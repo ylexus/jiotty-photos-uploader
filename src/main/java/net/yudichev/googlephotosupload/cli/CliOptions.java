@@ -10,11 +10,18 @@ public final class CliOptions {
                     .hasArg()
                     .argName("PATH")
                     .desc("Path to root directory to scan")
-                    .required()
                     .build())
             .addOption(Option.builder("n")
                     .longOpt("no-resume")
                     .desc("Forget previous state and force re-uploading all files")
+                    .build())
+            .addOption(Option.builder("v")
+                    .longOpt("version")
+                    .desc("Print app version")
+                    .build())
+            .addOption(Option.builder("h")
+                    .longOpt("help")
+                    .desc("Print help and exit")
                     .build());
 
     private CliOptions() {

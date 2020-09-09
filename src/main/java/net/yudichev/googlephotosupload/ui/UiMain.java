@@ -16,7 +16,9 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkState;
 import static net.yudichev.googlephotosupload.core.BuildVersion.buildVersion;
-import static net.yudichev.googlephotosupload.ui.SingleInstanceCheck.otherInstanceRunning;
+import static net.yudichev.googlephotosupload.core.ResourceBundleModule.RESOURCE_BUNDLE;
+import static net.yudichev.googlephotosupload.core.SingleInstanceCheck.otherInstanceRunning;
+import static net.yudichev.googlephotosupload.ui.FatalStartupError.showFatalStartupError;
 import static net.yudichev.jiotty.common.inject.BindingSpec.annotatedWith;
 
 public final class UiMain extends javafx.application.Application {
@@ -25,6 +27,7 @@ public final class UiMain extends javafx.application.Application {
 
     public static void main(String[] args) {
         if (otherInstanceRunning()) {
+            showFatalStartupError(RESOURCE_BUNDLE.getString("singleInstanceCheckDialogMessage"));
             return;
         }
         logger.info("Version {}", buildVersion());

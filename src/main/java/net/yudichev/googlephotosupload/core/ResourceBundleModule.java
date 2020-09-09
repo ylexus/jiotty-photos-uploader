@@ -19,7 +19,7 @@ public final class ResourceBundleModule extends BaseLifecycleComponentModule imp
         @Override
         public List<Locale> getCandidateLocales(String baseName, Locale locale) {
             var candidateLocales = super.getCandidateLocales(baseName, locale);
-            logger.info("Candidate locales: {}", candidateLocales);
+            logger.debug("Candidate locales: {}", candidateLocales);
             return candidateLocales;
         }
 
@@ -48,7 +48,7 @@ public final class ResourceBundleModule extends BaseLifecycleComponentModule imp
     });
 
     static {
-        logger.info("Using resource bundle locale {}", RESOURCE_BUNDLE.getLocale());
+        logger.debug("Using resource bundle locale {}", RESOURCE_BUNDLE.getLocale());
     }
 
     @Override

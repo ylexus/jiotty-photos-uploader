@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="LocalUiLauncher zh_HANS" type="Application" factoryName="Application">
-    <option name="MAIN_CLASS_NAME" value="net.yudichev.googlephotosupload.core.LocalUiLauncher" />
+  <configuration default="false" name="LocalMain zh_HANS" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="net.yudichev.googlephotosupload.LocalMain" />
     <module name="Jiotty_Photos_Uploader.test" />
     <option name="VM_PARAMETERS" value="-Duser.language=zh -Duser.country=HANS" />
     <method v="2">

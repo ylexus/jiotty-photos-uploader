@@ -1,5 +1,5 @@
 Configuration:
-  name: Automator
+  name: Jiotty Photos Uploader
   shutdownHook: disable
   properties:
     property:
@@ -15,7 +15,7 @@ Configuration:
       Policies:
         SizeBasedTriggeringPolicy:
           size: 10 MB
-        OnStartupTriggeringPolicy: {}
+        OnStartupTriggeringPolicy: { }
       DefaultRollOverStrategy:
         max: 10
 

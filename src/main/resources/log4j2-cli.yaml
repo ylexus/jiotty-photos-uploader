@@ -1,0 +1,35 @@
+Configuration:
+  name: Jiotty Photos Uploader
+  shutdownHook: disable
+  appenders:
+    Console:
+      - name: STDOUT
+        PatternLayout:
+          Pattern: "%m%throwable{1}%n"
+        ThresholdFilter:
+          level: "ERROR"
+          onMatch: "DENY"
+          onMismatch: "ACCEPT"
+      - name: STDERR
+        target: "SYSTEM_ERR"
+        ThresholdFilter:
+          level: "ERROR"
+          onMatch: "ACCEPT"
+          onMismatch: "DENY"
+        PatternLayout:
+          Pattern: "%p: %m%throwable{1}%n"
+  Loggers:
+    logger:
+      - name: net.yudichev.googlephotosupload
+        level: info
+        includeLocation: true
+        # this one is spitting an irrelevant WARN on initialisation
+      - name: uk.org.lidalia.sysoutslf4j.context.SysOutOverSLF4JInitialiser
+        level: error
+        includeLocation: true
+    Root:
+      level: warn
+      includeLocation: true
+      AppenderRef:
+        - ref: STDOUT
+        - ref: STDERR

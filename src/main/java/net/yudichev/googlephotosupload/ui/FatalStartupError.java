@@ -14,7 +14,7 @@ final class FatalStartupError {
     }
 
     static void showFatalStartupError(String text) {
-        var image = new ImageIcon(SingleInstanceCheck.class.getResource("/Icon1024.png")).getImage();
+        var image = new ImageIcon(FatalStartupError.class.getResource("/Icon1024.png")).getImage();
         var icon = new ImageIcon(image.getScaledInstance(40, 40, SCALE_SMOOTH));
         asUnchecked(() -> setLookAndFeel(UIManager.getSystemLookAndFeelClassName()));
         showMessageDialog(null,

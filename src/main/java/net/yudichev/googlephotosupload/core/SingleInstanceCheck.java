@@ -1,4 +1,4 @@
-package net.yudichev.googlephotosupload.ui;
+package net.yudichev.googlephotosupload.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,10 +10,8 @@ import java.nio.channels.FileLock;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static net.yudichev.googlephotosupload.core.AppGlobals.APP_SETTINGS_DIR;
-import static net.yudichev.googlephotosupload.core.ResourceBundleModule.RESOURCE_BUNDLE;
-import static net.yudichev.googlephotosupload.ui.FatalStartupError.showFatalStartupError;
 
-final class SingleInstanceCheck {
+public final class SingleInstanceCheck {
     private static final Logger logger = LoggerFactory.getLogger(SingleInstanceCheck.class);
     // keeps the reference to the lock so that it's not garbage collected
     @SuppressWarnings({"FieldCanBeLocal", "StaticVariableMayNotBeInitialized"})
@@ -30,7 +28,6 @@ final class SingleInstanceCheck {
         }
         if (LOCK == null) {
             logger.error("Lock could not be acquired on {}, another instance must be running", lockFile);
-            showFatalStartupError(RESOURCE_BUNDLE.getString("singleInstanceCheckDialogMessage"));
             return true;
         }
         //noinspection StaticVariableUsedBeforeInitialization it's not

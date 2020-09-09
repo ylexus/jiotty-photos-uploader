@@ -207,7 +207,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     private void forgetUploadState() {
         checkState(memoryBarrier);
-        logger.info("Forgetting {} previously uploaded item(s)", uploadedItemStateByPath.size());
+        logger.info("Was asked not to resume - forgetting {} previously uploaded item(s)", uploadedItemStateByPath.size());
         uploadState = UploadState.builder().build();
         uploadStateManager.save(uploadState);
         uploadedItemStateByPath.clear();
@@ -277,7 +277,8 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     private CompletableFuture<ItemState> doCreateMediaData(Path file) {
         return googlePhotosClient.uploadMediaData(file, executorService)
                 .thenApply(uploadToken -> {
-                    logger.info("Uploaded file {}, upload token {}", file, uploadToken);
+                    logger.info("Uploaded file {}", file);
+                    logger.debug("Upload token {}", uploadToken);
                     return ItemState.builder()
                             .setUploadState(UploadMediaItemState.of(uploadToken, currentDateTimeProvider.currentInstant()))
                             .build();

@@ -43,8 +43,9 @@ final class SelectingAddToAlbumStrategy implements AddToAlbumStrategy {
     }
 
     private AddToAlbumStrategy selectDelegate() {
-        return preferencesManager.get().addToAlbumStrategy().orElseThrow(IllegalStateException::new) == WHILE_CREATING_ITEMS ?
-                whileCreatingItemsStrategyProvider.get() : afterCreatingItemsStrategyProvider.get();
+        var addToAlbumMethod = preferencesManager.get().addToAlbumStrategy().orElseThrow(() -> new IllegalStateException(
+                "Unable to determine album upload strategy - run UI version at least once and select the strategy in settings"));
+        return addToAlbumMethod == WHILE_CREATING_ITEMS ? whileCreatingItemsStrategyProvider.get() : afterCreatingItemsStrategyProvider.get();
     }
 
     @BindingAnnotation
