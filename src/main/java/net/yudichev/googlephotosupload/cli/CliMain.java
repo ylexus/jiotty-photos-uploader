@@ -36,6 +36,7 @@ public final class CliMain {
                     }
                 } else {
                     logger.error("Missing option -r");
+                    printHelp();
                 }
             }
         } catch (ParseException e) {
