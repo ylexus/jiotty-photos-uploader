@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -31,6 +32,7 @@ import static net.yudichev.jiotty.common.rest.RestClients.newClient;
 final class VersionCheck extends BaseLifecycleComponent {
     private static final Logger logger = LoggerFactory.getLogger(VersionCheck.class);
     private static final String VAR_STORE_KEY = "versionCheck";
+    private static final Pattern RELEASE_VERSION_PATTERN = Pattern.compile("\\d+\\.\\d+\\.\\d+");
     private final DialogFactory dialogFactory;
     private final VarStore varStore;
     private final ResourceBundle resourceBundle;
@@ -68,6 +70,7 @@ final class VersionCheck extends BaseLifecycleComponent {
     private void processReleases(List<GithubRevision> githubRevisions) {
         showUpgradeDialog(githubRevisions.stream()
                 .filter(revision -> revision.tag_name() != null)
+                .filter(revision -> RELEASE_VERSION_PATTERN.matcher(revision.tag_name()).matches())
                 .filter(revision -> revision.tag_name().compareTo(buildVersion()) > 0)
                 .filter(revision -> {
                     var ignoredByUser = preferences.ignoredVersions().contains(revision.tag_name());
@@ -85,7 +88,8 @@ final class VersionCheck extends BaseLifecycleComponent {
             runLater(() -> {
                 var dialog = dialogFactory.create(resourceBundle.getString("upgradeDialogTitle"), "upgradeNotificationDialog.fxml", stage -> {});
                 UpgradeNotificationDialogController controller = dialog.controller();
-                controller.initialise(newerRevisions,
+                controller.initialise(
+                        newerRevisions,
                         dialog::close,
                         () -> {
                             dialog.close();
