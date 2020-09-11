@@ -48,6 +48,7 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
         var rootNameCount = rootDir.getNameCount();
         return CompletableFuture.supplyAsync(() -> {
             logger.info("Scanning file system starting at {}...", rootDir);
+            preferences.relevantDirDepthLimit().ifPresent(limit -> logger.info("Only using directories up to depth level {} as albums", limit));
             var relevantDepthLimit = preferences.relevantDirDepthLimit().orElse(Integer.MAX_VALUE);
             Map<Path, ImmutableList.Builder<Path>> fileListBuilderByParentDir = new HashMap<>();
             asUnchecked(() -> Files.walkFileTree(rootDir, new SimpleFileVisitor<>() {
