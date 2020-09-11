@@ -44,15 +44,30 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
     public CompletableFuture<List<AlbumDirectory>> listAlbumDirectories(Path rootDir) {
         checkArgument(Files.isDirectory(rootDir), "Path is not a directory: %s", rootDir);
         var preferences = preferencesManager.get();
-        // TODO rename progress title
         var progressStatus = progressStatusFactory.create(resourceBundle.getString("directoryStructureSupplierProgressTitle"), Optional.empty());
         var rootNameCount = rootDir.getNameCount();
         return CompletableFuture.supplyAsync(() -> {
             logger.info("Scanning file system starting at {}...", rootDir);
+            var relevantDepthLimit = preferences.relevantDirDepthLimit().orElse(Integer.MAX_VALUE);
             Map<Path, ImmutableList.Builder<Path>> fileListBuilderByParentDir = new HashMap<>();
             asUnchecked(() -> Files.walkFileTree(rootDir, new SimpleFileVisitor<>() {
+                private int currentDepth;
+                private Path currentRelevantDir;
+
+                @Override
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                    if (++currentDepth <= relevantDepthLimit) {
+                        setRelevantDir(dir);
+                    }
+                    return CONTINUE;
+                }
+
                 @Override
                 public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+                    if (--currentDepth <= relevantDepthLimit) {
+                        setRelevantDir(dir.getParent());
+                    }
+
                     if (exc != null) {
                         progressStatus.addFailure(KeyedError.of(dir, humanReadableMessage(exc)));
                     }
@@ -62,12 +77,8 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                     if (preferences.shouldIncludePath(file)) {
-                        var dir = file.getParent();
                         fileListBuilderByParentDir
-                                .computeIfAbsent(dir, ignored -> {
-                                    logger.debug("Including directory: {}", dir);
-                                    return ImmutableList.builder();
-                                })
+                                .computeIfAbsent(currentRelevantDir, ignored -> ImmutableList.builder())
                                 .add(file);
                         logger.debug("Including file: {}", file);
                         progressStatus.incrementSuccess();
@@ -75,6 +86,11 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
                         logger.debug("Skipping file as it does not pass include/exclude pattern test: {}", file);
                     }
                     return CONTINUE;
+                }
+
+                private void setRelevantDir(Path dir) {
+                    currentRelevantDir = dir;
+                    logger.debug("Current relevant dir {}", currentRelevantDir);
                 }
             }));
 

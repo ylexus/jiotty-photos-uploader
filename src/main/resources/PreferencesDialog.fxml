@@ -2,15 +2,48 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.Cursor?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 <TabPane xmlns:fx="http://javafx.com/fxml/1" stylesheets="@style.css" xmlns="http://javafx.com/javafx/11.0.1"
          fx:controller="net.yudichev.googlephotosupload.ui.PreferencesDialogController">
     <Tab closable="false" text="%preferencesDialogTabMain">
-        <TitledPane fx:id="uploaderStrategyChoiceContainer" animated="false" collapsible="false" text="%preferencesDialogUploaderStrategySectionTitle">
-            <padding>
-                <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
-            </padding>
-        </TitledPane>
+        <VBox alignment="TOP_CENTER" spacing="4.0">
+            <TitledPane fx:id="uploaderStrategyChoiceContainer" animated="false" collapsible="false" text="%preferencesDialogUploaderStrategySectionTitle">
+                <padding>
+                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                </padding>
+            </TitledPane>
+            <TitledPane animated="false" collapsible="false" contentDisplay="RIGHT" graphicTextGap="10.0" text="%preferencesDialogRelevantDirDepthTitle">
+                <padding>
+                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                </padding>
+                <VBox spacing="4.0">
+                    <RadioButton fx:id="relevantDirDepthTitleFullRadioButton" minHeight="-Infinity" onAction="#onRelevantDirDepthTypeSelectionChange"
+                                 text="%preferencesRelevantDirDepthTitleFullLabel" wrapText="true">
+                        <toggleGroup>
+                            <!--suppress JavaFxUnresolvedFxIdReference -->
+                            <ToggleGroup fx:id="relevantDirDepthGroup"/>
+                        </toggleGroup>
+                    </RadioButton>
+                    <HBox alignment="CENTER_LEFT" spacing="4.0">
+                        <RadioButton fx:id="relevantDirDepthTitleLimitedRadioButton" minHeight="-Infinity" onAction="#onRelevantDirDepthTypeSelectionChange"
+                                     text="%preferencesRelevantDirDepthTitleLimitedLabel" toggleGroup="$relevantDirDepthGroup" wrapText="true"/>
+                        <TextField fx:id="relevantDirDepthTitleLimitTextField" disable="${relevantDirDepthTitleFullRadioButton.selected}" prefWidth="80.0"
+                                   HBox.hgrow="NEVER"/>
+                    </HBox>
+                </VBox>
+                <graphic>
+                    <ImageView fitHeight="20.0" onMouseClicked="#onRelevantDirDepthHelp" pickOnBounds="true" preserveRatio="true">
+                        <Image url="@help-icon.png"/>
+                        <cursor>
+                            <Cursor fx:constant="HAND"/>
+                        </cursor>
+                    </ImageView>
+                </graphic>
+            </TitledPane>
+        </VBox>
     </Tab>
     <Tab closable="false" text="%preferencesDialogTabPatterns">
         <VBox alignment="CENTER" spacing="4.0">
@@ -20,6 +53,7 @@
                     <VBox spacing="4.0">
                         <Label maxWidth="-Infinity" minHeight="-Infinity" styleClass="side-note" text="%preferencesDialogTabPatternsIgnoreDescription"
                                wrapText="true"/>
+                        <!--suppress JavaFxUnresolvedFxIdReference used: mapped to controller -->
                         <fx:include fx:id="excludePanel" source="PreferencePatternEditor.fxml" VBox.vgrow="ALWAYS"/>
                     </VBox>
                 </TitledPane>
@@ -28,6 +62,7 @@
                     <VBox spacing="4.0">
                         <Label maxWidth="-Infinity" minHeight="-Infinity" styleClass="side-note" text="%preferencesDialogTabIncludeDescription"
                                wrapText="true"/>
+                        <!--suppress JavaFxUnresolvedFxIdReference used: mapped to controller -->
                         <fx:include fx:id="includePanel" source="PreferencePatternEditor.fxml" VBox.vgrow="ALWAYS"/>
                     </VBox>
                 </TitledPane>

@@ -156,7 +156,7 @@ public final class MainScreenControllerImpl implements MainScreenController {
                     dialog -> {
                         dialog.initModality(APPLICATION_MODAL);
                         dialog.setMinHeight(600);
-                        dialog.setMinWidth(600);
+                        dialog.setMinWidth(700);
                     });
         }
         preferencesDialog.show();

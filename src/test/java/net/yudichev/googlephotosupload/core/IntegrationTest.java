@@ -709,7 +709,6 @@ final class IntegrationTest {
         assertThat(album.getItems(), contains(itemWithContents(mediaItemContents)));
     }
 
-
     @Test
     void onlyUploadsWhiteListedDirExcepBlackListFiles() throws Exception {
         modifyPreferences(preferences -> preferences.withScanInclusionGlobs("glob:**/whitelisted-dir/**"));
@@ -728,21 +727,74 @@ final class IntegrationTest {
         assertThat(googlePhotosClient.getAllItems(), contains(itemForFile(fileInWhiteListedDir)));
     }
 
+    @Test
+    void customisedRelevantFolderDepth2() throws Exception {
+        modifyPreferences(preferences -> preferences.withRelevantDirDepthLimit(2));
+        createStandardTestFiles();
+
+        doExecuteUpload();
+
+        getLastFailure().ifPresent(Assertions::fail);
+
+        assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
+                allOf(
+                        itemForFile(rootPhoto),
+                        itemWithNoAlbum()),
+                allOf(
+                        itemForFile(outerAlbumPhoto),
+                        itemInAlbumWithId(equalTo("outer-album"))),
+                allOf(
+                        itemForFile(innerAlbumPhoto),
+                        itemInAlbumWithId(equalTo("outer-album")))
+        ));
+    }
+
+    @Test
+    void customisedRelevantFolderDepth1() throws Exception {
+        modifyPreferences(preferences -> preferences.withRelevantDirDepthLimit(1));
+        createStandardTestFiles();
+
+        doExecuteUpload();
+
+        getLastFailure().ifPresent(Assertions::fail);
+
+        assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
+                allOf(
+                        itemForFile(rootPhoto),
+                        itemWithNoAlbum()),
+                allOf(
+                        itemForFile(outerAlbumPhoto),
+                        itemWithNoAlbum()),
+                allOf(
+                        itemForFile(innerAlbumPhoto),
+                        itemWithNoAlbum())
+        ));
+    }
+
     private void createStandardTestFiles() throws IOException {
+        /*
+        outerAlbum
+            innerAlbum
+                innerAlbumPhoto
+            outerAlbumPhoto
+            picasa.ini
+        DS_Store
+        rootPhoto
+         */
         rootPhoto = root.resolve("root-photo.jpg");
         writeMediaFile(rootPhoto);
 
-        var outerAlbumDir = root.resolve("outer-album");
-        Files.createDirectories(outerAlbumDir);
-        outerAlbumPhoto = outerAlbumDir.resolve("outer-album-photo.jpg");
+        var outerAlbum = root.resolve("outer-album");
+        Files.createDirectories(outerAlbum);
+        outerAlbumPhoto = outerAlbum.resolve("outer-album-photo.jpg");
         writeMediaFile(outerAlbumPhoto);
-        writeMediaFile(outerAlbumDir.resolve("picasa.ini"));
+        writeMediaFile(outerAlbum.resolve("picasa.ini"));
 
         Files.createDirectories(root.resolve("DS_Store"));
 
-        var innerAlbumDir = outerAlbumDir.resolve("inner-album");
-        Files.createDirectories(innerAlbumDir);
-        innerAlbumPhoto = innerAlbumDir.resolve("inner-album-photo.jpg");
+        var innerAlbum = outerAlbum.resolve("inner-album");
+        Files.createDirectories(innerAlbum);
+        innerAlbumPhoto = innerAlbum.resolve("inner-album-photo.jpg");
         writeMediaFile(innerAlbumPhoto);
     }
 

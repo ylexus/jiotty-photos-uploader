@@ -73,6 +73,13 @@ abstract class BasePreferences {
 
     public abstract Optional<AddToAlbumMethod> addToAlbumStrategy();
 
+    public abstract Optional<Integer> relevantDirDepthLimit();
+
+    @Value.Check
+    void validateRelevantDirDepthLimit() {
+        relevantDirDepthLimit().ifPresent(value -> checkArgument(value > 0, "validateRelevantDirDepthLimit cannot be <=0: %s", value));
+    }
+
     public static boolean validatePathPattern(String pattern) {
         var fileSystem = FileSystems.getDefault();
         try {
@@ -92,7 +99,7 @@ abstract class BasePreferences {
         return matchers.isEmpty() || matchers.stream().anyMatch(matcher -> matcher.matches(path));
     }
 
-    @SuppressWarnings("ClassReferencesSubclass")
+    @SuppressWarnings({"ClassReferencesSubclass", "deprecation"})
     @Value.Check
     BasePreferences migrateIfNeeded() {
         var preferences = (Preferences) this;
