@@ -16,7 +16,7 @@ plugins {
 version = readEnvOrDefault('VERSION', '0.DEV')
 //noinspection GroovyUnusedAssignment
 sourceCompatibility = '14'
-ext.javafxVersion = '14.0.1'
+ext.javafxVersion = '14.0.2'
 
 repositories {
     mavenLocal() {

@@ -22,22 +22,23 @@ public final class CliMain {
         CommandLineParser parser = new DefaultParser();
         try {
             var commandLine = parser.parse(CliOptions.OPTIONS, args);
-            if (commandLine.hasOption('v')) {
+            var helpRequested = commandLine.hasOption('h');
+            if (helpRequested) {
+                printHelp();
+            }
+            var versionRequested = commandLine.hasOption('v');
+            if (versionRequested) {
                 logger.info("Version {}", buildVersion());
             }
-            if (commandLine.hasOption('h')) {
-                printHelp();
-            } else {
-                if (commandLine.hasOption('r')) {
-                    if (otherInstanceRunning()) {
-                        logger.error("Another copy of the app is already running");
-                    } else {
-                        startApp(commandLine);
-                    }
+            if (commandLine.hasOption('r')) {
+                if (otherInstanceRunning()) {
+                    logger.error("Another copy of the app is already running");
                 } else {
-                    logger.error("Missing option -r");
-                    printHelp();
+                    startApp(commandLine);
                 }
+            } else if (!helpRequested && !versionRequested) {
+                logger.error("Missing option -r");
+                printHelp();
             }
         } catch (ParseException e) {
             logger.error(e.getMessage());
