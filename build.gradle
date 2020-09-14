@@ -230,15 +230,38 @@ task macOsNotarize(type: Exec) {
     commandLine "$projectDir/macos_notarize_dmg.sh", "$project.name", "$version", Jvm.current().getJavaHome()
 }
 
+task renameDistribution() {
+    doLast {
+        if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+            ant.move file: "${buildDir}/jpackage/${applicationName}-${version}.dmg",
+                    tofile: "${buildDir}/jpackage/macOS-jiotty-photos-uploader-${version}.dmg"
+        }
+        if (org.gradle.internal.os.OperatingSystem.current().windows) {
+            ant.move file: "${buildDir}/jpackage/${applicationName}-${version}.msi",
+                    tofile: "${buildDir}/jpackage/Windows7-jiotty-photos-uploader-${version}.msi"
+        }
+        if (org.gradle.internal.os.OperatingSystem.current().linux) {
+            ant.move file: "${buildDir}/jpackage/jiotty-photos-uploader_${version}-1_amd64.deb",
+                    tofile: "${buildDir}/jpackage/Linux-jiotty-photos-uploader_${version}-1_amd64.deb"
+            ant.move file: "${buildDir}/jpackage/jiotty-photos-uploader-${version}-1.x86_64.rpm",
+                    tofile: "${buildDir}/jpackage/Linux-jiotty-photos-uploader-${version}-1.x86_64.rpm"
+        }
+    }
+}
 task fullpackage {
     dependsOn ensureVersionReleaseReady
+
     dependsOn jpackage
+    jpackage.mustRunAfter 'ensureVersionReleaseReady'
+
     if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
         dependsOn macOsNotarize
         macOsNotarize.mustRunAfter 'jpackage'
     }
 
-    jpackage.mustRunAfter 'ensureVersionReleaseReady'
+    dependsOn renameDistribution
+    renameDistribution.mustRunAfter 'jpackage'
+    renameDistribution.mustRunAfter 'macOsNotarize'
 }
 
 private static readEnvOrNull(String variableName) {
