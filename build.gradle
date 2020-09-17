@@ -204,8 +204,8 @@ runtime {
 jpackage.dependsOn 'check'
 jpackage.dependsOn 'requireClientSecret'
 
-if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
-    task copyMacOsPackagingResources(type: Copy) {
+task copyPackagingResources(type: Copy) {
+    if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
         from("$rootDir/src/main/packaging-resources/macOS/out") {
             exclude '**/*.plist'
         }
@@ -215,8 +215,15 @@ if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
         }
         into "$buildDir/packaging-resources/macOS/out"
     }
-    jpackage.dependsOn 'copyMacOsPackagingResources'
+    if (org.gradle.internal.os.OperatingSystem.current().windows) {
+        from("$rootDir/src/main/packaging-resources/windows/out") {
+            include '**/*.xml'
+            filter(ReplaceTokens, tokens: [version: version, appName: project.name])
+        }
+        into "$buildDir/packaging-resources/windows/out"
+    }
 }
+jpackage.dependsOn 'copyPackagingResources'
 
 task ensureVersionReleaseReady {
     doLast {
@@ -226,8 +233,13 @@ task ensureVersionReleaseReady {
     }
 }
 
-task macOsNotarize(type: Exec) {
-    commandLine "$projectDir/macos_notarize_dmg.sh", "$project.name", "$version", Jvm.current().getJavaHome()
+task runOsSpecificPackaging(type: Exec) {
+    if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+        commandLine "$projectDir/macos_notarize_dmg.sh", "$project.name", "$version", Jvm.current().getJavaHome()
+    }
+    if (org.gradle.internal.os.OperatingSystem.current().windows) {
+        commandLine "$projectDir/windows-create-appx.bat", "$version"
+    }
 }
 
 task renameDistribution() {
@@ -254,14 +266,12 @@ task fullpackage {
     dependsOn jpackage
     jpackage.mustRunAfter 'ensureVersionReleaseReady'
 
-    if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
-        dependsOn macOsNotarize
-        macOsNotarize.mustRunAfter 'jpackage'
-    }
+    dependsOn runOsSpecificPackaging
+    runOsSpecificPackaging.mustRunAfter 'jpackage'
 
     dependsOn renameDistribution
     renameDistribution.mustRunAfter 'jpackage'
-    renameDistribution.mustRunAfter 'macOsNotarize'
+    renameDistribution.mustRunAfter 'runOsSpecificPackaging'
 }
 
 private static readEnvOrNull(String variableName) {
