@@ -1,6 +1,9 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.internal.jvm.Jvm
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 plugins {
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.0.9'
@@ -233,11 +236,15 @@ task ensureVersionReleaseReady {
     }
 }
 
+def finalFileNameWindowsMsi = "Windows7-jiotty-photos-uploader-${version}.msi"
+// TODO this file name is duplicated
+def finalFileNameWindowsMsix = "Windows10-jiotty-photos-uploader-${version}.msix"
+
 task prepareOsSpecificPackaging {
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().windows) {
-            ant.move file: "${buildDir}/jpackage/${applicationName}-${version}.msi",
-                    tofile: "${buildDir}/jpackage/Windows7-jiotty-photos-uploader-${version}.msi"
+            ant.move file: "$buildDir/jpackage/$applicationName-${version}.msi",
+                    tofile: "$buildDir/jpackage/$finalFileNameWindowsMsi"
         }
     }
 }
@@ -254,17 +261,21 @@ task runOsSpecificPackaging(type: Exec) {
 task renameDistribution() {
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
-            ant.move file: "${buildDir}/jpackage/${applicationName}-${version}.dmg",
+            ant.move file: "$buildDir/jpackage/$applicationName-${version}.dmg",
                     tofile: "${buildDir}/jpackage/macOS-jiotty-photos-uploader-${version}.dmg"
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
-            ant.move file: "${buildDir}/jpackage/jiotty-photos-uploader_${version}-1_amd64.deb",
-                    tofile: "${buildDir}/jpackage/Linux-jiotty-photos-uploader_${version}-1_amd64.deb"
-            ant.move file: "${buildDir}/jpackage/jiotty-photos-uploader-${version}-1.x86_64.rpm",
-                    tofile: "${buildDir}/jpackage/Linux-jiotty-photos-uploader-${version}-1.x86_64.rpm"
+            ant.move file: "$buildDir/jpackage/jiotty-photos-uploader_$version-1_amd64.deb",
+                    tofile: "$buildDir/jpackage/Linux-jiotty-photos-uploader_$version-1_amd64.deb"
+            ant.move file: "$buildDir/jpackage/jiotty-photos-uploader-$version-1.x86_64.rpm",
+                    tofile: "$buildDir/jpackage/Linux-jiotty-photos-uploader-$version-1.x86_64.rpm"
         }
     }
 }
+
+/**
+ * Package the app on the current platform.
+ */
 task fullpackage {
     dependsOn ensureVersionReleaseReady
 
@@ -279,6 +290,51 @@ task fullpackage {
 
     dependsOn renameDistribution
     renameDistribution.mustRunAfter 'runOsSpecificPackaging'
+}
+
+ext {
+    windowsVmPath = "$System.env.HOME/Virtual Machines.localized/Windows 10 x64.vmwarevm/Windows 10 x64.vmx"
+}
+
+def copyFileFromWindowsGuestToHost(src, dest, ignoreExitCode) {
+    logger.info("Copying VM $src to $dest ...")
+    exec {
+        commandLine windowsVmrunCommandBase + "vmrun", "-T", "ws", "-gu", "Alexey", "-gp", "", "copyFileFromGuestToHost", windowsVmPath, src, dest
+        ignoreExitValue ignoreExitCode
+    }
+}
+
+task runRemoteWindowsBuild {
+    doLast {
+        def remoteCloneDirWindows = "C:\\java\\jiotty-photos-uploader"
+        exec { commandLine "vmrun", "-T", "ws", "-gu", "Alexey", "-gp", "", "start", windowsVmPath }
+        def exitValue = exec {
+            commandLine "vmrun", "-T", "ws", "-gu", "Alexey", "-gp", "", "runProgramInGuest",
+                    windowsVmPath, "-interactive", "-activeWindow",
+                    "$remoteCloneDirWindows\\pull_and_build.bat", "$version"
+            ignoreExitValue true
+        }.exitValue
+        mkdir "$buildDir/jpackage"
+        copyFileFromWindowsGuestToHost("$remoteCloneDirWindows\\pull_and_build.log", "$buildDir/pull_and_build.windows.log", true)
+        def remoteLogFile = Paths.get("$buildDir/pull_and_build.windows.log")
+        if (exitValue != 0) {
+            if (Files.exists(remoteLogFile)) {
+                println Files.readString(remoteLogFile)
+            }
+            throw new GradleScriptException("VM build execution failed, see errors above", null)
+        }
+        copyFileFromWindowsGuestToHost("$remoteCloneDirWindows\\build\\jpackage\\$finalFileNameWindowsMsi", "$buildDir/jpackage/$finalFileNameWindowsMsi", false)
+        copyFileFromWindowsGuestToHost("$remoteCloneDirWindows\\build\\jpackage\\$finalFileNameWindowsMsix", "$buildDir/jpackage/$finalFileNameWindowsMsix", false)
+        exec { commandLine "vmrun", "-T", "ws", "-gu", "Alexey", "-gp", "", "suspend", windowsVmPath }
+    }
+}
+
+/**
+ * Package the app all platforms.
+ */
+task hyperpackage {
+    dependsOn fullpackage
+    dependsOn runRemoteWindowsBuild
 }
 
 private static readEnvOrNull(String variableName) {
