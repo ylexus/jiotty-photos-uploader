@@ -7,7 +7,7 @@ del %LOG%
 git fetch --all >>%LOG% 2>&1
 git reset --hard origin/master >>%LOG% 2>&1
 echo Version=%1 >>%LOG%
-gradlew clean fullPackage -DVERSION=%1 -DCLIENT_SECRET_PATH=build/clientSecret.json >>%LOG% 2>&1
+gradlew clean fullPackage -DVERSION=%1 -DCLIENT_SECRET_PATH=c:\java\clientSecret.json >>%LOG% 2>&1
 goto eof
 
 :error
