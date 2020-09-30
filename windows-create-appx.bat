@@ -3,6 +3,7 @@ if [%1]==[] goto usage
 wmic product where name="Jiotty Photos Uploader" call uninstall
 if %errorlevel% neq 0 exit /b %errorlevel%
 
+echo Running as %USERNAME%
 "%LOCALAPPDATA%\Microsoft\WindowsApps\MsixPackagingTool.exe" create-package --template build\packaging-resources\windows\out\msix-template.xml
 if %errorlevel% neq 0 exit /b %errorlevel%
 
