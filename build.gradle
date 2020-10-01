@@ -222,13 +222,15 @@ task copyPackagingResources(type: Copy) {
             filter(ReplaceTokens, tokens: [version: version])
         }
         into "$buildDir/packaging-resources/macOS/out"
-    }
-    if (org.gradle.internal.os.OperatingSystem.current().windows) {
+    } else if (org.gradle.internal.os.OperatingSystem.current().windows) {
         from("$rootDir/src/main/packaging-resources/windows/out") {
             include '**/*.xml'
             filter(ReplaceTokens, tokens: [version: version, appName: project.name])
         }
         into "$buildDir/packaging-resources/windows/out"
+    } else {
+        // workaround for "task.destinationDir must not be null"
+        destinationDir buildDir
     }
 }
 jpackage.dependsOn 'copyPackagingResources'
