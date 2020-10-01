@@ -342,10 +342,11 @@ task runRemoteWindowsBuild(dependsOn: requireClientSecret) {
             }
             throw new GradleScriptException("VM build execution failed, see errors above", null)
         }
+        mkdir fullPackageOutputDir
         vmrunWindows 'CopyFileFromGuestToHost',
-                ["$remoteCloneDir\\build\\fullpackage\\$finalFileNameWindowsMsi", "$buildDir/fullpackage/$finalFileNameWindowsMsi"]
+                ["$remoteCloneDir\\build\\fullpackage\\$finalFileNameWindowsMsi", "$fullPackageOutputDir/$finalFileNameWindowsMsi"]
         vmrunWindows 'CopyFileFromGuestToHost',
-                ["$remoteCloneDir\\build\\fullpackage\\$finalFileNameWindowsMsix", "$buildDir/fullpackage/$finalFileNameWindowsMsix"]
+                ["$remoteCloneDir\\build\\fullpackage\\$finalFileNameWindowsMsix", "$fullPackageOutputDir/$finalFileNameWindowsMsix"]
         vmrunWindows 'suspend'
     }
 }
@@ -374,8 +375,9 @@ task runRemoteLinuxBuild(dependsOn: requireClientSecret) {
             }
             throw new GradleScriptException("VM build execution failed, see errors above", null)
         }
-        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/fullpackage/$finalFileNameLinuxDeb", "$buildDir/fullpackage/$finalFileNameLinuxDeb"]
-        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/fullpackage/$finalFileNameLinuxRpm", "$buildDir/fullpackage/$finalFileNameLinuxRpm"]
+        mkdir fullPackageOutputDir
+        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/fullpackage/$finalFileNameLinuxDeb", "$fullPackageOutputDir/$finalFileNameLinuxDeb"]
+        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/fullpackage/$finalFileNameLinuxRpm", "$fullPackageOutputDir/$finalFileNameLinuxRpm"]
         vmrunLinux 'suspend'
     }
 }
