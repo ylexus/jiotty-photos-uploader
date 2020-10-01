@@ -121,7 +121,7 @@ task copyClientSecretIfDefined {
     doLast {
         if (clientSecretPath) {
             if (!file(clientSecretPath).exists()) {
-                throw new InvalidUserDataException("Client secret file not found: " + clientSecretPath)
+                throw new InvalidUserDataException("Client secret file not found: $clientSecretPath")
             }
             processResources {
                 from clientSecretPath
@@ -280,9 +280,9 @@ task renameDistribution() {
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
             ant.move file: "$buildDir/jpackage/jiotty-photos-uploader_$version-1_amd64.deb",
-                    tofile: "$fullPackageOutputDir/" + finalFileNameLinuxDeb
+                    tofile: "$fullPackageOutputDir/$finalFileNameLinuxDeb"
             ant.move file: "$buildDir/jpackage/jiotty-photos-uploader-$version-1.x86_64.rpm",
-                    tofile: "$fullPackageOutputDir/" + finalFileNameLinuxRpm
+                    tofile: "$fullPackageOutputDir/$finalFileNameLinuxRpm"
         }
     }
 }

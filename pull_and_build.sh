@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
+while ! ping -c 1 -W 1 github.com; do
+  echo "Waiting for github.com - network interface might be down..."
+  sleep 1
+done
 
+set -e
 VERSION="$1"
 [[ -z "${VERSION}" ]] && {
   echo "Missing version argument"
