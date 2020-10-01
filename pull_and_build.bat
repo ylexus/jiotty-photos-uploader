@@ -1,4 +1,3 @@
-@echo off
 cd /D "%~dp0"
 if [%1]==[] goto error
 if not exist build mkdir build
