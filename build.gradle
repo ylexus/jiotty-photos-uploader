@@ -207,7 +207,7 @@ runtime {
 jpackage.dependsOn 'check'
 jpackage.dependsOn 'requireClientSecret'
 
-task copyPackagingResources(type: Copy) {
+task copyPackagingResources(type: Copy, onlyIf: !org.gradle.internal.os.OperatingSystem.current().linux) {
     if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
         from("$rootDir/src/main/packaging-resources/macOS/out") {
             exclude '**/*.plist'
@@ -258,6 +258,9 @@ task runOsSpecificPackaging(type: Exec) {
     }
 }
 
+def finalFileNameLinuxDeb = "Linux-jiotty-photos-uploader_$version-1_amd64.deb"
+def finalFileNameLinuxRpm = "Linux-jiotty-photos-uploader-$version-1.x86_64.rpm"
+
 task renameDistribution() {
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
@@ -266,9 +269,9 @@ task renameDistribution() {
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
             ant.move file: "$buildDir/jpackage/jiotty-photos-uploader_$version-1_amd64.deb",
-                    tofile: "$buildDir/jpackage/Linux-jiotty-photos-uploader_$version-1_amd64.deb"
+                    tofile: "$buildDir/jpackage/" + finalFileNameLinuxDeb
             ant.move file: "$buildDir/jpackage/jiotty-photos-uploader-$version-1.x86_64.rpm",
-                    tofile: "$buildDir/jpackage/Linux-jiotty-photos-uploader-$version-1.x86_64.rpm"
+                    tofile: "$buildDir/jpackage/" + finalFileNameLinuxRpm
         }
     }
 }
@@ -294,51 +297,97 @@ task fullpackage {
 
 ext {
     windowsVmPath = "$System.env.HOME/Virtual Machines.localized/Windows 10 x64.vmwarevm/Windows 10 x64.vmx"
+    linuxVmPath = "$System.env.HOME/Virtual Machines.localized/OpenSUSE.vmwarevm/OpenSUSE.vmx"
 }
 
-def copyFileFromWindowsGuestToHost(src, dest, ignoreExitCode) {
-    logger.info("Copying VM $src to $dest ...")
-    exec {
-        commandLine windowsVmrunCommandBase + "vmrun", "-T", "ws", "-gu", "Alexey", "-gp", "", "copyFileFromGuestToHost", windowsVmPath, src, dest
+int vmrun(GString vmPath, String usernamePropertyName, String pwdPropertyName, String command, List<String> args = [], ignoreExitCode = false) {
+    def vmUser = readEnvOrFail usernamePropertyName
+    def vmPassword = readEnvOrFail pwdPropertyName
+    logger.info("Execute vmrun $command $args ...")
+    def argsFull = ['vmrun', '-T', 'ws', '-gu', vmUser, '-gp', vmPassword, command, vmPath] + args
+    return exec {
+        commandLine argsFull
         ignoreExitValue ignoreExitCode
-    }
+    }.exitValue
 }
 
-task runRemoteWindowsBuild {
+int vmrunWindows(String command, List<String> args = [], ignoreExitCode = false) {
+    vmrun windowsVmPath, 'VMRUN_WIN_USER', 'VMRUN_WIN_PWD', command, args, ignoreExitCode
+}
+
+task runRemoteWindowsBuild(dependsOn: requireClientSecret) {
     doLast {
-        def remoteCloneDirWindows = "C:\\java\\jiotty-photos-uploader"
-        exec { commandLine "vmrun", "-T", "ws", "-gu", "Alexey", "-gp", "", "start", windowsVmPath }
-        def exitValue = exec {
-            commandLine "vmrun", "-T", "ws", "-gu", "Alexey", "-gp", "", "runProgramInGuest",
-                    windowsVmPath, "-interactive", "-activeWindow",
-                    "$remoteCloneDirWindows\\pull_and_build.bat", "$version"
-            ignoreExitValue true
-        }.exitValue
+        def remoteCloneDir = "C:\\java\\jiotty-photos-uploader"
+        vmrunWindows 'start'
+        def tmpClientSecretGuestPath = 'C:\\java\\clientSecret.json'
+        vmrunWindows 'CopyFileFromHostToGuest', [clientSecretPath, tmpClientSecretGuestPath]
         mkdir "$buildDir/jpackage"
-        copyFileFromWindowsGuestToHost("$remoteCloneDirWindows\\pull_and_build.log", "$buildDir/pull_and_build.windows.log", true)
-        def remoteLogFile = Paths.get("$buildDir/pull_and_build.windows.log")
-        if (exitValue != 0) {
+        def pullAndBuildExitCode = vmrunWindows 'runProgramInGuest', ['-interactive', '-activeWindow', "$remoteCloneDir\\pull_and_build.bat", "$version"], true
+        vmrunWindows 'deleteFileInGuest', [tmpClientSecretGuestPath]
+        def buildLogGuestPath = "$buildDir/pull_and_build.windows.log"
+        vmrunWindows 'CopyFileFromGuestToHost', ["$remoteCloneDir\\pull_and_build.log", buildLogGuestPath], true
+        def remoteLogFile = Paths.get(buildLogGuestPath)
+        if (pullAndBuildExitCode != 0) {
             if (Files.exists(remoteLogFile)) {
                 println Files.readString(remoteLogFile)
             }
             throw new GradleScriptException("VM build execution failed, see errors above", null)
         }
-        copyFileFromWindowsGuestToHost("$remoteCloneDirWindows\\build\\jpackage\\$finalFileNameWindowsMsi", "$buildDir/jpackage/$finalFileNameWindowsMsi", false)
-        copyFileFromWindowsGuestToHost("$remoteCloneDirWindows\\build\\jpackage\\$finalFileNameWindowsMsix", "$buildDir/jpackage/$finalFileNameWindowsMsix", false)
-        exec { commandLine "vmrun", "-T", "ws", "-gu", "Alexey", "-gp", "", "suspend", windowsVmPath }
+        vmrunWindows 'CopyFileFromGuestToHost', ["$remoteCloneDir\\build\\jpackage\\$finalFileNameWindowsMsi", "$buildDir/jpackage/$finalFileNameWindowsMsi"]
+        vmrunWindows 'CopyFileFromGuestToHost', ["$remoteCloneDir\\build\\jpackage\\$finalFileNameWindowsMsix", "$buildDir/jpackage/$finalFileNameWindowsMsix"]
+        vmrunWindows 'suspend'
+    }
+}
+
+int vmrunLinux(String command, List<String> args = [], ignoreExitCode = false) {
+    vmrun linuxVmPath, 'VMRUN_LINUX_USER', 'VMRUN_LINUX_PWD', command, args, ignoreExitCode
+}
+
+task runRemoteLinuxBuild {
+    doLast {
+        def remoteCloneDir = '/home/alexey/java/jiotty-photos-uploader'
+        def vmUser = readEnvOrFail 'VMRUN_LINUX_USER'
+        vmrunLinux 'start'
+        def tmpClientSecretGuestPath = "/home/$vmUser/java/clientSecret.json"
+        vmrunLinux 'CopyFileFromHostToGuest', [clientSecretPath, tmpClientSecretGuestPath]
+        mkdir "$buildDir/jpackage"
+        vmrunLinux 'runScriptInGuest', ['/bin/bash', "chmod +x $remoteCloneDir/pull_and_build.sh"]
+        def pullAndBuildExitCode = vmrunLinux 'runProgramInGuest', ["$remoteCloneDir/pull_and_build.sh", "$version"], true
+        vmrunLinux 'deleteFileInGuest', [tmpClientSecretGuestPath]
+        def buildLogPath = "$buildDir/pull_and_build.linux.log"
+        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/pull_and_build.log", buildLogPath], true
+        def remoteLogFile = Paths.get(buildLogPath)
+        if (pullAndBuildExitCode != 0) {
+            if (Files.exists(remoteLogFile)) {
+                println Files.readString(remoteLogFile)
+            }
+            throw new GradleScriptException("VM build execution failed, see errors above", null)
+        }
+        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/jpackage/$finalFileNameLinuxDeb", "$buildDir/jpackage/$finalFileNameLinuxDeb"]
+        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/jpackage/$finalFileNameLinuxRpm", "$buildDir/jpackage/$finalFileNameLinuxRpm"]
+        vmrunLinux 'suspend'
     }
 }
 
 /**
- * Package the app all platforms.
+ * Package the app on all platforms.
  */
 task hyperpackage {
     dependsOn fullpackage
     dependsOn runRemoteWindowsBuild
+    dependsOn runRemoteLinuxBuild
 }
 
 private static readEnvOrNull(String variableName) {
     System.getProperty(variableName, System.getenv(variableName))
+}
+
+private static readEnvOrFail(String variableName) {
+    def value = readEnvOrNull(variableName)
+    if (value == null) {
+        throw new InvalidUserDataException("Missing environment or system property ${variableName}")
+    }
+    return value
 }
 
 private static readEnvOrDefault(String variableName, String defaultValue) {
