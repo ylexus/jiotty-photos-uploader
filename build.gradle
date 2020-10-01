@@ -246,6 +246,7 @@ def finalFileNameWindowsMsi = "Windows7-jiotty-photos-uploader-${version}.msi"
 def finalFileNameWindowsMsix = "Windows10-jiotty-photos-uploader-${version}.msix"
 
 task prepareOsSpecificPackaging {
+    onlyIf { org.gradle.internal.os.OperatingSystem.current().windows }
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().windows) {
             ant.move file: "$buildDir/jpackage/$applicationName-${version}.msi",
