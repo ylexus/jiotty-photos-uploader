@@ -226,6 +226,10 @@ task copyPackagingResources(type: Copy) {
         }
         into "$buildDir/packaging-resources/windows/out"
     }
+    // workaround
+    if (org.gradle.internal.os.OperatingSystem.current().linux) {
+        destinationDir buildDir
+    }
 }
 jpackage.dependsOn 'copyPackagingResources'
 
