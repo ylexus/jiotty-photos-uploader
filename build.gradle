@@ -16,10 +16,14 @@ plugins {
     id "ca.cutterslade.analyze" version "1.4.2"
 }
 
-version = readEnvOrDefault('VERSION', '0.DEV')
-//noinspection GroovyUnusedAssignment
+version = readEnvOrDefault 'VERSION', '0.DEV'
 sourceCompatibility = '14'
-ext.javafxVersion = '14.0.2'
+
+ext {
+    javafxVersion = '14.0.2'
+    windowsVmPath = "$System.env.HOME/Virtual Machines.localized/Windows 10 x64.vmwarevm/Windows 10 x64.vmx"
+    linuxVmPath = "$System.env.HOME/Virtual Machines.localized/OpenSUSE.vmwarevm/OpenSUSE.vmx"
+}
 
 repositories {
     mavenLocal() {
@@ -226,10 +230,6 @@ task copyPackagingResources(type: Copy) {
         }
         into "$buildDir/packaging-resources/windows/out"
     }
-    // workaround
-    if (org.gradle.internal.os.OperatingSystem.current().linux) {
-        destinationDir buildDir
-    }
 }
 jpackage.dependsOn 'copyPackagingResources'
 
@@ -269,6 +269,7 @@ def finalFileNameLinuxDeb = "Linux-jiotty-photos-uploader_$version-1_amd64.deb"
 def finalFileNameLinuxRpm = "Linux-jiotty-photos-uploader-$version-1.x86_64.rpm"
 
 task renameDistribution() {
+    onlyIf { !org.gradle.internal.os.OperatingSystem.current().windows }
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             ant.move file: "$buildDir/jpackage/$applicationName-${version}.dmg",
@@ -302,15 +303,9 @@ task fullpackage {
     renameDistribution.mustRunAfter 'runOsSpecificPackaging'
 }
 
-ext {
-    windowsVmPath = "$System.env.HOME/Virtual Machines.localized/Windows 10 x64.vmwarevm/Windows 10 x64.vmx"
-    linuxVmPath = "$System.env.HOME/Virtual Machines.localized/OpenSUSE.vmwarevm/OpenSUSE.vmx"
-}
-
 int vmrun(GString vmPath, String usernamePropertyName, String pwdPropertyName, String command, List<String> args = [], ignoreExitCode = false) {
     def vmUser = readEnvOrFail usernamePropertyName
     def vmPassword = readEnvOrFail pwdPropertyName
-    logger.info("Execute vmrun $command $args ...")
     def argsFull = ['vmrun', '-T', 'ws', '-gu', vmUser, '-gp', vmPassword, command, vmPath] + args
     return exec {
         commandLine argsFull
