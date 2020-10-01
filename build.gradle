@@ -256,6 +256,7 @@ task prepareOsSpecificPackaging {
 }
 
 task runOsSpecificPackaging(type: Exec) {
+    onlyIf { !org.gradle.internal.os.OperatingSystem.current().linux }
     if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
         commandLine "$projectDir/macos_notarize_dmg.sh", "$project.name", "$version", Jvm.current().getJavaHome()
     }
@@ -358,7 +359,7 @@ task runRemoteLinuxBuild {
         vmrunLinux 'CopyFileFromHostToGuest', [clientSecretPath, tmpClientSecretGuestPath]
         mkdir "$buildDir/jpackage"
         vmrunLinux 'runScriptInGuest', ['/bin/bash', "chmod +x $remoteCloneDir/pull_and_build.sh"]
-        def pullAndBuildExitCode = vmrunLinux 'runProgramInGuest', ["$remoteCloneDir/pull_and_build.sh", "$version"], true
+        def pullAndBuildExitCode = vmrunLinux 'runProgramInGuest', ['-interactive', '-activeWindow', "$remoteCloneDir/pull_and_build.sh", "$version"], true
         vmrunLinux 'deleteFileInGuest', [tmpClientSecretGuestPath]
         def buildLogPath = "$buildDir/pull_and_build.linux.log"
         vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/pull_and_build.log", buildLogPath], true
