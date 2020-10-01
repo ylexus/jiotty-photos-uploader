@@ -207,7 +207,8 @@ runtime {
 jpackage.dependsOn 'check'
 jpackage.dependsOn 'requireClientSecret'
 
-task copyPackagingResources(type: Copy, onlyIf: !org.gradle.internal.os.OperatingSystem.current().linux) {
+task copyPackagingResources(type: Copy) {
+    onlyIf { !org.gradle.internal.os.OperatingSystem.current().linux }
     if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
         from("$rootDir/src/main/packaging-resources/macOS/out") {
             exclude '**/*.plist'
