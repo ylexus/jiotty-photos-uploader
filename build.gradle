@@ -23,6 +23,7 @@ ext {
     javafxVersion = '14.0.2'
     windowsVmPath = "$System.env.HOME/Virtual Machines.localized/Windows 10 x64.vmwarevm/Windows 10 x64.vmx"
     linuxVmPath = "$System.env.HOME/Virtual Machines.localized/OpenSUSE.vmwarevm/OpenSUSE.vmx"
+    fullPackageOutputDir = "$buildDir/fullpackage"
 }
 
 repositories {
@@ -252,7 +253,7 @@ task prepareOsSpecificPackaging {
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().windows) {
             ant.move file: "$buildDir/jpackage/$applicationName-${version}.msi",
-                    tofile: "$buildDir/jpackage/$finalFileNameWindowsMsi"
+                    tofile: "$fullPackageOutputDir/$finalFileNameWindowsMsi"
         }
     }
 }
@@ -275,13 +276,13 @@ task renameDistribution() {
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             ant.move file: "$buildDir/jpackage/$applicationName-${version}.dmg",
-                    tofile: "${buildDir}/jpackage/macOS-jiotty-photos-uploader-${version}.dmg"
+                    tofile: "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
             ant.move file: "$buildDir/jpackage/jiotty-photos-uploader_$version-1_amd64.deb",
-                    tofile: "$buildDir/jpackage/" + finalFileNameLinuxDeb
+                    tofile: "$fullPackageOutputDir/" + finalFileNameLinuxDeb
             ant.move file: "$buildDir/jpackage/jiotty-photos-uploader-$version-1.x86_64.rpm",
-                    tofile: "$buildDir/jpackage/" + finalFileNameLinuxRpm
+                    tofile: "$fullPackageOutputDir/" + finalFileNameLinuxRpm
         }
     }
 }
@@ -290,6 +291,10 @@ task renameDistribution() {
  * Package the app on the current platform.
  */
 task fullpackage {
+    doFirst {
+        mkdir fullPackageOutputDir
+    }
+
     dependsOn ensureVersionReleaseReady
 
     dependsOn jpackage
@@ -337,8 +342,10 @@ task runRemoteWindowsBuild(dependsOn: requireClientSecret) {
             }
             throw new GradleScriptException("VM build execution failed, see errors above", null)
         }
-        vmrunWindows 'CopyFileFromGuestToHost', ["$remoteCloneDir\\build\\jpackage\\$finalFileNameWindowsMsi", "$buildDir/jpackage/$finalFileNameWindowsMsi"]
-        vmrunWindows 'CopyFileFromGuestToHost', ["$remoteCloneDir\\build\\jpackage\\$finalFileNameWindowsMsix", "$buildDir/jpackage/$finalFileNameWindowsMsix"]
+        vmrunWindows 'CopyFileFromGuestToHost',
+                ["$remoteCloneDir\\build\\fullpackage\\$finalFileNameWindowsMsi", "$buildDir/fullpackage/$finalFileNameWindowsMsi"]
+        vmrunWindows 'CopyFileFromGuestToHost',
+                ["$remoteCloneDir\\build\\fullpackage\\$finalFileNameWindowsMsix", "$buildDir/fullpackage/$finalFileNameWindowsMsix"]
         vmrunWindows 'suspend'
     }
 }
@@ -347,7 +354,7 @@ int vmrunLinux(String command, List<String> args = [], ignoreExitCode = false) {
     vmrun linuxVmPath, 'VMRUN_LINUX_USER', 'VMRUN_LINUX_PWD', command, args, ignoreExitCode
 }
 
-task runRemoteLinuxBuild {
+task runRemoteLinuxBuild(dependsOn: requireClientSecret) {
     doLast {
         def remoteCloneDir = '/home/alexey/java/jiotty-photos-uploader'
         def vmUser = readEnvOrFail 'VMRUN_LINUX_USER'
@@ -367,12 +374,21 @@ task runRemoteLinuxBuild {
             }
             throw new GradleScriptException("VM build execution failed, see errors above", null)
         }
-        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/jpackage/$finalFileNameLinuxDeb", "$buildDir/jpackage/$finalFileNameLinuxDeb"]
-        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/jpackage/$finalFileNameLinuxRpm", "$buildDir/jpackage/$finalFileNameLinuxRpm"]
+        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/fullpackage/$finalFileNameLinuxDeb", "$buildDir/fullpackage/$finalFileNameLinuxDeb"]
+        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/fullpackage/$finalFileNameLinuxRpm", "$buildDir/fullpackage/$finalFileNameLinuxRpm"]
         vmrunLinux 'suspend'
     }
 }
 
+task moveFinalArtifactsToDeploymentDir() {
+    doLast {
+        def destinationRootPath = Paths.get(readEnvOrFail('HYPERPACKAGE_DESTINATION_DIR'))
+        def destinationVersionPath = destinationRootPath.resolve version
+        mkdir destinationVersionPath
+        ant.move file: "$fullPackageOutputDir",
+                tofile: "$destinationVersionPath"
+    }
+}
 /**
  * Package the app on all platforms.
  */
@@ -380,6 +396,8 @@ task hyperpackage {
     dependsOn fullpackage
     dependsOn runRemoteWindowsBuild
     dependsOn runRemoteLinuxBuild
+    dependsOn moveFinalArtifactsToDeploymentDir
+    moveFinalArtifactsToDeploymentDir.mustRunAfter 'fullpackage', 'runRemoteWindowsBuild', 'runRemoteLinuxBuild'
 }
 
 private static readEnvOrNull(String variableName) {

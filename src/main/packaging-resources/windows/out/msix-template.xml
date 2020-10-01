@@ -63,8 +63,8 @@
         </ExclusionItems>
     </Settings>
     <PrepareComputer DisableWindowsSearchService="true" DisableWindowsUpdateService="true"/>
-    <SaveLocation PackagePath="build\jpackage\Windows10-jiotty-photos-uploader-@version@.msix" TemplatePath="build\jpackage\"/>
-    <Installer Path="build\jpackage\Windows7-jiotty-photos-uploader-@version@.msi"/>
+    <SaveLocation PackagePath="build\fullpackage\Windows10-jiotty-photos-uploader-@version@.msix" TemplatePath="build\jpackage\"/>
+    <Installer Path="build\fullpackage\Windows7-jiotty-photos-uploader-@version@.msi"/>
     <PackageInformation xmlns:p4="http://schemas.microsoft.com/msix/msixpackagingtool/template/1910" PackageName="JiottyPhotosUploader"
                         PackageDisplayName="@appName@"
                         PublisherName="CN=Alexey Yudichev, O=Alexey Yudichev, L=Pinner, S=Middlesex, PostalCode=HA5 1HL, C=GB"
