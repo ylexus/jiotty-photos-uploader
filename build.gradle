@@ -17,10 +17,10 @@ plugins {
 }
 
 version = readEnvOrDefault 'VERSION', '0.DEV'
-sourceCompatibility = '14'
+sourceCompatibility = '15'
 
 ext {
-    javafxVersion = '14.0.2'
+    javafxVersion = '15'
     windowsVmPath = "$System.env.HOME/Virtual Machines.localized/Windows 10 x64.vmwarevm/Windows 10 x64.vmx"
     linuxVmPath = "$System.env.HOME/Virtual Machines.localized/OpenSUSE.vmwarevm/OpenSUSE.vmx"
     fullPackageOutputDir = "$buildDir/fullpackage"
@@ -352,6 +352,7 @@ task runRemoteWindowsBuild(dependsOn: requireClientSecret) {
 }
 
 int vmrunLinux(String command, List<String> args = [], ignoreExitCode = false) {
+    //noinspection GroovyAssignabilityCheck
     vmrun linuxVmPath, 'VMRUN_LINUX_USER', 'VMRUN_LINUX_PWD', command, args, ignoreExitCode
 }
 
