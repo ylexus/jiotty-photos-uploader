@@ -121,7 +121,7 @@ public final class PreferencesDialogController implements PreferencesManager {
 
     public void onPatternsDocumentationLinkAction(ActionEvent actionEvent) {
         javafxApplicationResourcesProvider.get().hostServices().showDocument(
-                "https://docs.oracle.com/en/java/javase/15/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)");
+                "https://docs.oracle.com/en/java/javase/14/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)");
         actionEvent.consume();
     }
 
