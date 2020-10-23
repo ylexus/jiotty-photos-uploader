@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutorService;
 
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 
-@SuppressWarnings("OverlyCoupledClass") // OK for module
+@SuppressWarnings({"OverlyCoupledClass", "OverlyCoupledMethod"}) // OK for module
 public final class UploadPhotosModule extends BaseLifecycleComponentModule implements ExposedKeyModule<Uploader> {
     private final int backOffInitialDelayMs;
 
@@ -21,6 +21,7 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
     @Override
     protected void configure() {
         bind(BuildVersion.class).asEagerSingleton();
+        boundLifecycleComponent(LegacyLogCleaner.class);
 
         install(new FactoryModuleBuilder()
                 .implement(StateSaver.class, StateSaverImpl.class)
