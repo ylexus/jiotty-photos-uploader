@@ -5,26 +5,24 @@ import com.google.api.gax.rpc.ApiException;
 import io.grpc.Status;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.IOException;
+import java.util.PropertyResourceBundle;
 import java.util.ResourceBundle;
 
 import static net.yudichev.googlephotosupload.core.OptionalMatchers.optionalWithValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.Mockito.lenient;
 
-@ExtendWith(MockitoExtension.class)
 class FatalUserCorrectableRemoteApiExceptionHandlerImplTest {
     private FatalUserCorrectableRemoteApiExceptionHandlerImpl resultHandler;
-    @Mock
-    private ResourceBundle resourceBundle;
 
     @BeforeEach
-    void setUp() {
-        lenient().when(resourceBundle.getString("fatalUserCorrectableRemoteApiException.maybeEmptyFile")).thenReturn("oops");
+    void setUp() throws IOException {
+        ResourceBundle resourceBundle;
+        try (var resourceAsStream = getClass().getResourceAsStream("/Resources.properties")) {
+            resourceBundle = new PropertyResourceBundle(resourceAsStream);
+        }
         resultHandler = new FatalUserCorrectableRemoteApiExceptionHandlerImpl(resourceBundle);
     }
 
