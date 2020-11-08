@@ -31,8 +31,9 @@ final class BackpressuredExecutorServiceProvider extends BaseLifecycleComponent 
 
     @Override
     protected void doStop() {
-        if (!shutdownAndAwaitTermination(executor, 30, SECONDS)) {
-            logger.warn("Failed to shutdown upload thread pool in 3 seconds!");
+        executor.shutdownNow();
+        if (!shutdownAndAwaitTermination(executor, 5, SECONDS)) {
+            logger.warn("Failed to shutdown upload thread pool in 5 seconds!");
         }
         //noinspection AssignmentToNull
         executor = null;
