@@ -1,6 +1,9 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.internal.jvm.Jvm
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 plugins {
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.0.9'
@@ -13,10 +16,15 @@ plugins {
     id "ca.cutterslade.analyze" version "1.4.2"
 }
 
-version = readEnvOrDefault('VERSION', '0.DEV')
-//noinspection GroovyUnusedAssignment
+version = readEnvOrDefault 'VERSION', '0.DEV'
 sourceCompatibility = '14'
-ext.javafxVersion = '14.0.2'
+
+ext {
+    javafxVersion = '14.0.2'
+    windowsVmPath = "$System.env.HOME/Virtual Machines.localized/Windows 10 x64.vmwarevm/Windows 10 x64.vmx"
+    linuxVmPath = "$System.env.HOME/Virtual Machines.localized/OpenSUSE.vmwarevm/OpenSUSE.vmx"
+    fullPackageOutputDir = "$buildDir/fullpackage"
+}
 
 repositories {
     mavenLocal() {
@@ -43,7 +51,7 @@ dependencies {
     ext.orgJunitJupiterVersion = '5.6.0'
     ext.orgMockitoVersion = '3.2.4'
     ext.orgImmutablesVersion = '2.8.3'
-    ext.netYudichevJiottyVersion = '1.5.1'
+    ext.netYudichevJiottyVersion = '1.6.0'
 
     annotationProcessor "org.immutables:value:$orgImmutablesVersion"
     testAnnotationProcessor "org.immutables:value:$orgImmutablesVersion"
@@ -113,7 +121,7 @@ task copyClientSecretIfDefined {
     doLast {
         if (clientSecretPath) {
             if (!file(clientSecretPath).exists()) {
-                throw new InvalidUserDataException("Client secret file not found: " + clientSecretPath)
+                throw new InvalidUserDataException("Client secret file not found: $clientSecretPath")
             }
             processResources {
                 from clientSecretPath
@@ -205,6 +213,7 @@ jpackage.dependsOn 'check'
 jpackage.dependsOn 'requireClientSecret'
 
 task copyPackagingResources(type: Copy) {
+    onlyIf { !org.gradle.internal.os.OperatingSystem.current().linux }
     if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
         from("$rootDir/src/main/packaging-resources/macOS/out") {
             exclude '**/*.plist'
@@ -214,13 +223,15 @@ task copyPackagingResources(type: Copy) {
             filter(ReplaceTokens, tokens: [version: version])
         }
         into "$buildDir/packaging-resources/macOS/out"
-    }
-    if (org.gradle.internal.os.OperatingSystem.current().windows) {
+    } else if (org.gradle.internal.os.OperatingSystem.current().windows) {
         from("$rootDir/src/main/packaging-resources/windows/out") {
             include '**/*.xml'
             filter(ReplaceTokens, tokens: [version: version, appName: project.name])
         }
         into "$buildDir/packaging-resources/windows/out"
+    } else {
+        // workaround for "task.destinationDir must not be null"
+        destinationDir buildDir
     }
 }
 jpackage.dependsOn 'copyPackagingResources'
@@ -233,16 +244,22 @@ task ensureVersionReleaseReady {
     }
 }
 
+def finalFileNameWindowsMsi = "Windows7-jiotty-photos-uploader-${version}.msi"
+// TODO this file name is duplicated
+def finalFileNameWindowsMsix = "Windows10-jiotty-photos-uploader-${version}.msix"
+
 task prepareOsSpecificPackaging {
+    onlyIf { org.gradle.internal.os.OperatingSystem.current().windows }
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().windows) {
-            ant.move file: "${buildDir}/jpackage/${applicationName}-${version}.msi",
-                    tofile: "${buildDir}/jpackage/Windows7-jiotty-photos-uploader-${version}.msi"
+            ant.move file: "$buildDir/jpackage/$applicationName-${version}.msi",
+                    tofile: "$fullPackageOutputDir/$finalFileNameWindowsMsi"
         }
     }
 }
 
 task runOsSpecificPackaging(type: Exec) {
+    onlyIf { !org.gradle.internal.os.OperatingSystem.current().linux }
     if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
         commandLine "$projectDir/macos_notarize_dmg.sh", "$project.name", "$version", Jvm.current().getJavaHome()
     }
@@ -251,21 +268,33 @@ task runOsSpecificPackaging(type: Exec) {
     }
 }
 
+def finalFileNameLinuxDeb = "Linux-jiotty-photos-uploader_$version-1_amd64.deb"
+def finalFileNameLinuxRpm = "Linux-jiotty-photos-uploader-$version-1.x86_64.rpm"
+
 task renameDistribution() {
+    onlyIf { !org.gradle.internal.os.OperatingSystem.current().windows }
     doLast {
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
-            ant.move file: "${buildDir}/jpackage/${applicationName}-${version}.dmg",
-                    tofile: "${buildDir}/jpackage/macOS-jiotty-photos-uploader-${version}.dmg"
+            ant.move file: "$buildDir/jpackage/$applicationName-${version}.dmg",
+                    tofile: "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
-            ant.move file: "${buildDir}/jpackage/jiotty-photos-uploader_${version}-1_amd64.deb",
-                    tofile: "${buildDir}/jpackage/Linux-jiotty-photos-uploader_${version}-1_amd64.deb"
-            ant.move file: "${buildDir}/jpackage/jiotty-photos-uploader-${version}-1.x86_64.rpm",
-                    tofile: "${buildDir}/jpackage/Linux-jiotty-photos-uploader-${version}-1.x86_64.rpm"
+            ant.move file: "$buildDir/jpackage/jiotty-photos-uploader_$version-1_amd64.deb",
+                    tofile: "$fullPackageOutputDir/$finalFileNameLinuxDeb"
+            ant.move file: "$buildDir/jpackage/jiotty-photos-uploader-$version-1.x86_64.rpm",
+                    tofile: "$fullPackageOutputDir/$finalFileNameLinuxRpm"
         }
     }
 }
+
+/**
+ * Package the app on the current platform.
+ */
 task fullpackage {
+    doFirst {
+        mkdir fullPackageOutputDir
+    }
+
     dependsOn ensureVersionReleaseReady
 
     dependsOn jpackage
@@ -281,8 +310,108 @@ task fullpackage {
     renameDistribution.mustRunAfter 'runOsSpecificPackaging'
 }
 
+int vmrun(GString vmPath, String usernamePropertyName, String pwdPropertyName, String command, List<String> args = [], ignoreExitCode = false) {
+    def vmUser = readEnvOrFail usernamePropertyName
+    def vmPassword = readEnvOrFail pwdPropertyName
+    def argsFull = ['vmrun', '-T', 'ws', '-gu', vmUser, '-gp', vmPassword, command, vmPath] + args
+    return exec {
+        commandLine argsFull
+        ignoreExitValue ignoreExitCode
+    }.exitValue
+}
+
+int vmrunWindows(String command, List<String> args = [], ignoreExitCode = false) {
+    vmrun windowsVmPath, 'VMRUN_WIN_USER', 'VMRUN_WIN_PWD', command, args, ignoreExitCode
+}
+
+task runRemoteWindowsBuild(dependsOn: requireClientSecret) {
+    doLast {
+        def remoteCloneDir = "C:\\java\\jiotty-photos-uploader"
+        vmrunWindows 'start'
+        def tmpClientSecretGuestPath = 'C:\\java\\clientSecret.json'
+        vmrunWindows 'CopyFileFromHostToGuest', [clientSecretPath, tmpClientSecretGuestPath]
+        mkdir "$buildDir/jpackage"
+        def pullAndBuildExitCode = vmrunWindows 'runProgramInGuest', ['-interactive', '-activeWindow', "$remoteCloneDir\\pull_and_build.bat", "$version"], true
+        vmrunWindows 'deleteFileInGuest', [tmpClientSecretGuestPath]
+        def buildLogGuestPath = "$buildDir/pull_and_build.windows.log"
+        vmrunWindows 'CopyFileFromGuestToHost', ["$remoteCloneDir\\pull_and_build.log", buildLogGuestPath], true
+        def remoteLogFile = Paths.get(buildLogGuestPath)
+        if (pullAndBuildExitCode != 0) {
+            if (Files.exists(remoteLogFile)) {
+                println Files.readString(remoteLogFile)
+            }
+            throw new GradleScriptException("VM build execution failed, see errors above", null)
+        }
+        mkdir fullPackageOutputDir
+        vmrunWindows 'CopyFileFromGuestToHost',
+                ["$remoteCloneDir\\build\\fullpackage\\$finalFileNameWindowsMsi", "$fullPackageOutputDir/$finalFileNameWindowsMsi"]
+        vmrunWindows 'CopyFileFromGuestToHost',
+                ["$remoteCloneDir\\build\\fullpackage\\$finalFileNameWindowsMsix", "$fullPackageOutputDir/$finalFileNameWindowsMsix"]
+        vmrunWindows 'suspend'
+    }
+}
+
+int vmrunLinux(String command, List<String> args = [], ignoreExitCode = false) {
+    vmrun linuxVmPath, 'VMRUN_LINUX_USER', 'VMRUN_LINUX_PWD', command, args, ignoreExitCode
+}
+
+task runRemoteLinuxBuild(dependsOn: requireClientSecret) {
+    doLast {
+        def remoteCloneDir = '/home/alexey/java/jiotty-photos-uploader'
+        def vmUser = readEnvOrFail 'VMRUN_LINUX_USER'
+        vmrunLinux 'start'
+        def tmpClientSecretGuestPath = "/home/$vmUser/java/clientSecret.json"
+        vmrunLinux 'CopyFileFromHostToGuest', [clientSecretPath, tmpClientSecretGuestPath]
+        mkdir "$buildDir/jpackage"
+        vmrunLinux 'runScriptInGuest', ['/bin/bash', "chmod +x $remoteCloneDir/pull_and_build.sh"]
+        def pullAndBuildExitCode = vmrunLinux 'runProgramInGuest', ['-interactive', '-activeWindow', "$remoteCloneDir/pull_and_build.sh", "$version"], true
+        vmrunLinux 'deleteFileInGuest', [tmpClientSecretGuestPath]
+        def buildLogPath = "$buildDir/pull_and_build.linux.log"
+        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/pull_and_build.log", buildLogPath], true
+        def remoteLogFile = Paths.get(buildLogPath)
+        if (pullAndBuildExitCode != 0) {
+            if (Files.exists(remoteLogFile)) {
+                println Files.readString(remoteLogFile)
+            }
+            throw new GradleScriptException("VM build execution failed, see errors above", null)
+        }
+        mkdir fullPackageOutputDir
+        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/fullpackage/$finalFileNameLinuxDeb", "$fullPackageOutputDir/$finalFileNameLinuxDeb"]
+        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/fullpackage/$finalFileNameLinuxRpm", "$fullPackageOutputDir/$finalFileNameLinuxRpm"]
+        vmrunLinux 'suspend'
+    }
+}
+
+task moveFinalArtifactsToDeploymentDir() {
+    doLast {
+        def destinationRootPath = Paths.get(readEnvOrFail('HYPERPACKAGE_DESTINATION_DIR'))
+        def destinationVersionPath = destinationRootPath.resolve version
+        mkdir destinationVersionPath
+        ant.move file: "$fullPackageOutputDir",
+                tofile: "$destinationVersionPath"
+    }
+}
+/**
+ * Package the app on all platforms.
+ */
+task hyperpackage {
+    dependsOn fullpackage
+    dependsOn runRemoteWindowsBuild
+    dependsOn runRemoteLinuxBuild
+    dependsOn moveFinalArtifactsToDeploymentDir
+    moveFinalArtifactsToDeploymentDir.mustRunAfter 'fullpackage', 'runRemoteWindowsBuild', 'runRemoteLinuxBuild'
+}
+
 private static readEnvOrNull(String variableName) {
     System.getProperty(variableName, System.getenv(variableName))
+}
+
+private static readEnvOrFail(String variableName) {
+    def value = readEnvOrNull(variableName)
+    if (value == null) {
+        throw new InvalidUserDataException("Missing environment or system property ${variableName}")
+    }
+    return value
 }
 
 private static readEnvOrDefault(String variableName, String defaultValue) {

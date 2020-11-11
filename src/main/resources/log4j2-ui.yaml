@@ -9,12 +9,12 @@ Configuration:
     RollingFile:
       name: FILE
       fileName: ${filename}
-      filePattern: ${filename}.%d{yyyy-MM-dd-hh-mm}
+      filePattern: ${filename}.%d{yyyy-MM-dd}-%i.gz
       PatternLayout:
         Pattern: "%d{ISO8601}{GMT} %p [%t] %C{1.} %m%n"
       Policies:
         SizeBasedTriggeringPolicy:
-          size: 10 MB
+          size: 50Mb
         OnStartupTriggeringPolicy: { }
       DefaultRollOverStrategy:
         max: 10

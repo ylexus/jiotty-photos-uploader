@@ -24,7 +24,6 @@ import static java.util.Comparator.comparing;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 import static net.yudichev.googlephotosupload.core.GooglePhotosUploaderImpl.GOOGLE_PHOTOS_API_BATCH_SIZE;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfListChaining;
-import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 
 final class AddToAlbumAfterCreatingStrategy implements AddToAlbumStrategy {
     private final Provider<ExecutorService> executorServiceProvider;
@@ -74,17 +73,15 @@ final class AddToAlbumAfterCreatingStrategy implements AddToAlbumStrategy {
                                     .collect(toFutureOfListChaining(mediaItems -> album.addMediaItems(mediaItems, executorServiceProvider.get())))
                                     .<Void>thenApply(ignored -> null),
                             fileProgressStatus::onBackoffDelay)
-                            .exceptionallyCompose(exception -> {
-                                var operationName = "adding items to album " + album.getTitle();
-                                if (fatalUserCorrectableHandler.handle(operationName, exception)) {
-                                    pathMediaItemOrErrors.stream()
-                                            .map(PathMediaItemOrError::path)
-                                            .forEach(path -> fileProgressStatus.addFailure(KeyedError.of(path, humanReadableMessage(exception))));
-                                    return CompletableFutures.completedFuture();
-                                } else {
-                                    throw new RuntimeException(exception);
-                                }
-                            });
+                            .exceptionallyCompose(exception -> fatalUserCorrectableHandler.handle(
+                                    "adding items to album " + album.getTitle(), exception)
+                                    .map(errorMessage -> {
+                                        pathMediaItemOrErrors.stream()
+                                                .map(PathMediaItemOrError::path)
+                                                .forEach(path -> fileProgressStatus.addFailure(KeyedError.of(path, errorMessage)));
+                                        return CompletableFutures.<Void>completedFuture();
+                                    })
+                                    .orElseThrow(() -> new RuntimeException(exception)));
                 })
                 .orElseGet(CompletableFutures::completedFuture);
     }

@@ -32,7 +32,6 @@ import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.stream.Collectors.toConcurrentMap;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfList;
-import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 import static net.yudichev.jiotty.common.lang.ResultOrFailure.failure;
 import static net.yudichev.jiotty.common.lang.ResultOrFailure.success;
 
@@ -191,18 +190,16 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                     }
                     return resultListBuilder.build();
                 })
-                .exceptionally(throwable -> {
-                    if (fatalUserCorrectableHandler.handle("create media items", throwable)) {
-                        //noinspection Convert2MethodRef compiler fails for some reason
-                        pendingPathStates.stream()
-                                .map(PathState::path)
-                                .map(path -> KeyedError.of(path, humanReadableMessage(throwable)))
-                                .forEach(keyedError -> fileProgressStatus.addFailure(keyedError));
-                        return ImmutableList.of();
-                    } else {
-                        throw new RuntimeException(throwable);
-                    }
-                });
+                .exceptionally(throwable -> fatalUserCorrectableHandler.handle("create media items", throwable)
+                        .map(errorMessage -> {
+                            //noinspection Convert2MethodRef compiler fails for some reason
+                            pendingPathStates.stream()
+                                    .map(PathState::path)
+                                    .map(path -> KeyedError.of(path, errorMessage))
+                                    .forEach(keyedError -> fileProgressStatus.addFailure(keyedError));
+                            return ImmutableList.<PathMediaItemOrError>of();
+                        })
+                        .orElseThrow(() -> new RuntimeException(throwable)));
     }
 
     private void forgetUploadState() {
@@ -254,14 +251,16 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                 })
                 .exceptionallyCompose(exception -> {
                     var operationName = "uploading file " + file;
-                    if (fatalUserCorrectableHandler.handle(operationName, exception)) {
-                        return completedFuture(failure(humanReadableMessage(exception)));
-                    } else if (backOffHandler.handle(operationName, exception).isPresent()) {
-                        logger.debug("Retrying upload of {}", file);
-                        return createMediaData(file);
-                    } else {
-                        throw new RuntimeException(exception);
-                    }
+                    return fatalUserCorrectableHandler.handle(operationName, exception)
+                            .<CompletableFuture<ResultOrFailure<ItemState>>>map(errorMessage -> completedFuture(failure(errorMessage)))
+                            .orElseGet(() -> {
+                                if (backOffHandler.handle(operationName, exception).isPresent()) {
+                                    logger.debug("Retrying upload of {}", file);
+                                    return createMediaData(file);
+                                } else {
+                                    throw new RuntimeException(exception);
+                                }
+                            });
                 });
     }
 
