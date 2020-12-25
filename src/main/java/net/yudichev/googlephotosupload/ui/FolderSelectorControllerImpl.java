@@ -15,6 +15,7 @@ import net.yudichev.googlephotosupload.core.Uploader;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ResourceBundle;
@@ -25,6 +26,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 public final class FolderSelectorControllerImpl extends BaseLifecycleComponent implements FolderSelectorController {
     private final Uploader uploader;
+    private final Provider<MainScreenController> mainScreenControllerProvider;
     private final ResourceBundle resourceBundle;
     public VBox folderSelector;
     public CheckBox resumeCheckbox;
@@ -35,8 +37,10 @@ public final class FolderSelectorControllerImpl extends BaseLifecycleComponent i
 
     @Inject
     FolderSelectorControllerImpl(Uploader uploader,
+                                 Provider<MainScreenController> mainScreenControllerProvider,
                                  ResourceBundle resourceBundle) {
         this.uploader = checkNotNull(uploader);
+        this.mainScreenControllerProvider = checkNotNull(mainScreenControllerProvider);
         this.resourceBundle = checkNotNull(resourceBundle);
     }
 
@@ -119,6 +123,11 @@ public final class FolderSelectorControllerImpl extends BaseLifecycleComponent i
         if (file != null) {
             notifyListener(file);
         }
+        actionEvent.consume();
+    }
+
+    public void onAlbumManagerButtonClick(ActionEvent actionEvent) {
+        mainScreenControllerProvider.get().launchAlbumManager();
         actionEvent.consume();
     }
 }

@@ -78,6 +78,8 @@ final class UiModule extends BaseLifecycleComponentModule {
         bind(UploaderStrategyChoicePanelControllerImpl.class).in(Singleton.class);
         bind(UploaderStrategyChoicePanelController.class).toProvider(UploaderStrategyChoicePanelControllerProvider.class).in(Singleton.class);
 
+        bind(AlbumEditorController.class).to(boundLifecycleComponent(AlbumEditorControllerImpl.class));
+
         // needed for FxmlLoader to find them
         expose(MainScreenControllerImpl.class);
         expose(LoginDialogControllerImpl.class);
@@ -87,5 +89,7 @@ final class UiModule extends BaseLifecycleComponentModule {
         expose(UploaderStrategyChoicePanelController.class);
         expose(UploaderStrategyChoicePanelControllerImpl.class);
         expose(uploadPaneControllerKey);
+        expose(AlbumEditorControllerImpl.class);
+        expose(AlbumEditorController.class);
     }
 }

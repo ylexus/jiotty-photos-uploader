@@ -42,6 +42,7 @@ public final class MainScreenControllerImpl implements MainScreenController {
     public VBox root;
     private Dialog preferencesDialog;
     private Dialog aboutDialog;
+    private Dialog albumEditorDialog;
 
     @Inject
     public MainScreenControllerImpl(ApplicationLifecycleControl applicationLifecycleControl,
@@ -122,9 +123,25 @@ public final class MainScreenControllerImpl implements MainScreenController {
         });
     }
 
+    @Override
+    public void launchAlbumManager() {
+        if (albumEditorDialog == null) {
+            albumEditorDialog = dialogFactory.create(
+                    resourceBundle.getString("albumEditorDialogTitle"),
+                    "AlbumEditor.fxml",
+                    stage -> {});
+        }
+        albumEditorDialog.show();
+    }
+
     public void onStopUpload(ActionEvent actionEvent) {
         menuItemStopUpload.setDisable(true);
         uploadPaneController.stopUpload();
+        actionEvent.consume();
+    }
+
+    public void onLaunchAlbumEditor(ActionEvent actionEvent) {
+        launchAlbumManager();
         actionEvent.consume();
     }
 

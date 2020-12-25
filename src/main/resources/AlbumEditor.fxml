@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" prefHeight="800.0" prefWidth="800.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/11.0.1"
+      fx:controller="net.yudichev.googlephotosupload.ui.AlbumEditorControllerImpl">
+    <HBox>
+        <Button fx:id="deleteButton" onAction="#onDeleteButtonAction" text="%albumEditorDeleteButtonText" disable="true"/>
+        <Label HBox.hgrow="ALWAYS" text="%albumEditorFilterNotice"/>
+        <ProgressIndicator fx:id="loadingIndicator" maxHeight="${deleteButton.height}" visible="false"/>
+        <padding>
+            <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+        </padding>
+    </HBox>
+    <TableView fx:id="tableView" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="selectColumn" sortable="false"/>
+            <TableColumn fx:id="titleColumn" prefWidth="500" text="%albumEditorColumnAlbumTitle"/>
+            <TableColumn fx:id="itemCountColumn" text="%albumEditorColumnAlbumItemCount"/>
+        </columns>
+    </TableView>
+</VBox>

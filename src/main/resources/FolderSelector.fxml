@@ -8,7 +8,8 @@
 <?import javafx.scene.layout.*?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="folderSelector" alignment="CENTER" onDragDropped="#folderSelectorOnDragDropped"
       onDragEntered="#folderSelectorOnDragEnter" onDragExited="#folderSelectorOnDragExit" onDragOver="#folderSelectorOnDragOver" spacing="10.0"
-      stylesheets="@style.css" VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/10.0.2-internal"
+      stylesheets="@style.css"
+      VBox.vgrow="ALWAYS" xmlns="http://javafx.com/javafx/11.0.1"
       fx:controller="net.yudichev.googlephotosupload.ui.FolderSelectorControllerImpl">
     <VBox alignment="CENTER" spacing="10.0" VBox.vgrow="ALWAYS">
         <ImageView fitWidth="250.0" preserveRatio="true" VBox.vgrow="NEVER">
@@ -19,6 +20,7 @@
         </ImageView>
         <Label alignment="CENTER" contentDisplay="CENTER" text="%folderSelectorDragHereLabel" textAlignment="CENTER" wrapText="true"/>
         <Button alignment="CENTER" mnemonicParsing="false" onAction="#onBrowseButtonClick" text="%folderSelectorBrowseButtonLabel"/>
+        <Button alignment="CENTER" mnemonicParsing="false" onAction="#onAlbumManagerButtonClick" text="%folderSelectorAlbumManagerButtonLabel"/>
     </VBox>
     <FlowPane fx:id="resumePane" alignment="BOTTOM_CENTER" hgap="4.0" visible="false">
         <CheckBox fx:id="resumeCheckbox" mnemonicParsing="false" selected="true" text="%folderSelectorResumeCheckboxLabel"/>

@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Menu?>
-<?import javafx.scene.control.MenuBar?>
-<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.*?>
 <?import javafx.scene.layout.VBox?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="root" prefHeight="700.0" prefWidth="600.0" stylesheets="@style.css"
       xmlns="http://javafx.com/javafx/10.0.2-internal" fx:controller="net.yudichev.googlephotosupload.ui.MainScreenControllerImpl">
@@ -14,6 +12,9 @@
         <Menu mnemonicParsing="false" text="%mainScreenMenuActionsText">
             <MenuItem fx:id="menuItemStopUpload" disable="true" mnemonicParsing="false" onAction="#onStopUpload" text="%mainScreenMenuActionsStopUploadText"/>
             <MenuItem fx:id="menuItemLogout" disable="true" mnemonicParsing="false" onAction="#onMenuActionLogout" text="%mainScreenMenuActionsLogoutText"/>
+        </Menu>
+        <Menu mnemonicParsing="false" text="%mainScreenMenuToolsText">
+            <MenuItem mnemonicParsing="false" onAction="#onLaunchAlbumEditor" text="%mainScreenMenuToolsLaunchAlbumEditor"/>
         </Menu>
     </MenuBar>
 </VBox>
