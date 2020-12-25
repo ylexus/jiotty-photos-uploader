@@ -63,6 +63,8 @@
 .hyperlink {
     -fx-padding: 0;
     -fx-underline: true;
+    -fx-fill: #f269f5;
+    -fx-text-fill: -fx-fill;
 }
 
 .release-notes {
