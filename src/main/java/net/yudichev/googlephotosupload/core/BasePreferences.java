@@ -73,6 +73,11 @@ abstract class BasePreferences {
 
     public abstract Optional<AddToAlbumMethod> addToAlbumStrategy();
 
+    @Value.Default
+    public String albumDelimiter() {
+        return ": ";
+    }
+
     public abstract Optional<Integer> relevantDirDepthLimit();
 
     @Value.Check

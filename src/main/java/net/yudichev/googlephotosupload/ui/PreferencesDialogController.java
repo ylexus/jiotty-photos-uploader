@@ -1,10 +1,8 @@
 package net.yudichev.googlephotosupload.ui;
 
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.scene.control.RadioButton;
-import javafx.scene.control.TextField;
-import javafx.scene.control.TextFormatter;
-import javafx.scene.control.TitledPane;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.util.converter.IntegerStringConverter;
 import net.yudichev.googlephotosupload.core.AddToAlbumMethod;
@@ -16,6 +14,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import java.util.List;
 import java.util.Optional;
+import java.util.ResourceBundle;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
@@ -32,6 +31,7 @@ public final class PreferencesDialogController implements PreferencesManager {
     private static final int DEFAULT_RELEVANT_DIR_DEPTH_LIMIT = 2;
     private final VarStore varStore;
     private final Provider<UploaderStrategyChoicePanelController> uploaderStrategyChoicePanelControllerProvider;
+    private final ResourceBundle resourceBundle;
     private final Lock lock = new ReentrantLock();
     private final Provider<JavafxApplicationResources> javafxApplicationResourcesProvider;
     public TitledPane uploaderStrategyChoiceContainer;
@@ -40,15 +40,19 @@ public final class PreferencesDialogController implements PreferencesManager {
     public RadioButton relevantDirDepthTitleFullRadioButton;
     public RadioButton relevantDirDepthTitleLimitedRadioButton;
     public TextField relevantDirDepthTitleLimitTextField;
+    public TextField albumDelimiterTextField;
+    public Label albumDelimiterExampleLabel;
     private Preferences preferences;
     private TextFormatter<Integer> relevantDirDepthTitleLimitTextFieldFormatter;
 
     @Inject
     PreferencesDialogController(VarStore varStore,
                                 Provider<UploaderStrategyChoicePanelController> uploaderStrategyChoicePanelControllerProvider,
-                                Provider<JavafxApplicationResources> javafxApplicationResourcesProvider) {
+                                Provider<JavafxApplicationResources> javafxApplicationResourcesProvider,
+                                ResourceBundle resourceBundle) {
         this.varStore = checkNotNull(varStore);
         this.uploaderStrategyChoicePanelControllerProvider = checkNotNull(uploaderStrategyChoicePanelControllerProvider);
+        this.resourceBundle = checkNotNull(resourceBundle);
         try {
             preferences = varStore.readValue(Preferences.class, VAR_STORE_KEY).orElseGet(() -> Preferences.builder().build());
         } catch (RuntimeException e) {
@@ -68,7 +72,10 @@ public final class PreferencesDialogController implements PreferencesManager {
             includePanelController.initialise(preferences.scanInclusionGlobs(), this::onIncludeGlobsChanged);
             preferences.addToAlbumStrategy().ifPresent(uploaderStrategyChoicePanelController::setSelection);
 
-            //noinspection ReturnOfNull valid for this API
+            albumDelimiterTextField.setTextFormatter(new TextFormatter<>(change -> change.getControlNewText().length() > 10 ? null : change));
+            albumDelimiterTextField.setText(preferences.albumDelimiter());
+            updateAlbumDelimiterExampleLabel(preferences.albumDelimiter());
+            albumDelimiterTextField.textProperty().addListener(this::onAlbumDelimiterChanged);
             relevantDirDepthTitleLimitTextFieldFormatter = new TextFormatter<>(
                     new IntegerStringConverter(),
                     preferences.relevantDirDepthLimit().orElse(null),
@@ -152,5 +159,19 @@ public final class PreferencesDialogController implements PreferencesManager {
         javafxApplicationResourcesProvider.get().hostServices().showDocument(
                 "https://github.com/ylexus/jiotty-photos-uploader/wiki#configurable-directory-depth-level");
         mouseEvent.consume();
+    }
+
+    @SuppressWarnings("TypeParameterExtendsFinalClass")
+    private void onAlbumDelimiterChanged(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+        updateAlbumDelimiterExampleLabel(newValue);
+        inLock(lock, () -> {
+            preferences = preferences.withAlbumDelimiter(newValue);
+            savePreferences();
+        });
+    }
+
+    private void updateAlbumDelimiterExampleLabel(String newValue) {
+        albumDelimiterExampleLabel.setText(
+                String.format(resourceBundle.getString("preferencesDialogAlbumDelimiterExampleLabel"), newValue, newValue, newValue));
     }
 }

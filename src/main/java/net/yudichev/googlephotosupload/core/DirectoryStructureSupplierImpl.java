@@ -98,7 +98,7 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
             var result = fileListBuilderByParentDir.entrySet().stream()
                     .map(entry -> AlbumDirectory.builder()
                             .setPath(entry.getKey())
-                            .setAlbumTitle(toAlbumTitle(entry.getKey(), rootNameCount))
+                            .setAlbumTitle(toAlbumTitle(entry.getKey(), preferences.albumDelimiter(), rootNameCount))
                             .setFiles(entry.getValue().build())
                             .build())
                     .collect(toImmutableList());
@@ -108,11 +108,11 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
         });
     }
 
-    private static Optional<String> toAlbumTitle(Path path, int rootNameCount) {
+    private static Optional<String> toAlbumTitle(Path path, String albumNameDelimiter, int rootNameCount) {
         var nameCount = path.getNameCount();
         if (nameCount > rootNameCount) {
             var albumNamePath = path.subpath(rootNameCount, nameCount);
-            return Optional.of(String.join(": ", Streams.stream(albumNamePath.iterator())
+            return Optional.of(String.join(albumNameDelimiter, Streams.stream(albumNamePath.iterator())
                     .map(Path::toString)
                     .collect(toImmutableList())));
         } else {
