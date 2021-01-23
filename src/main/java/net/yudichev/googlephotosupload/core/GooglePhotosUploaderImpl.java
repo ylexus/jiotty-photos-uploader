@@ -168,8 +168,10 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         }
 
         List<NewMediaItem> pendingNewMediaItems = pendingPathStates.stream()
-                .map(pathState -> NewMediaItem.of(pathState.state().toSuccess().get().uploadState().get().token(),
-                        Optional.of(pathState.path().getFileName().toString())))
+                .map(pathState -> NewMediaItem.builder()
+                        .setUploadToken(pathState.state().toSuccess().get().uploadState().get().token())
+                        .setFileName(pathState.path().getFileName().toString())
+                        .build())
                 .collect(toImmutableList());
         return cloudOperationHelper.withBackOffAndRetry(
                 "create media items",
