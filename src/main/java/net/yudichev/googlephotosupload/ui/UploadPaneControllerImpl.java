@@ -19,6 +19,7 @@ import javax.inject.Provider;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
@@ -87,7 +88,7 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     }
 
     @Override
-    public CompletableFuture<Void> startUpload(Path path, boolean resume) {
+    public CompletableFuture<Void> startUpload(List<Path> path, boolean resume) {
         checkStarted();
         stopButton.setDisable(false);
         return uploader.upload(path, resume)

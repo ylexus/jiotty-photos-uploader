@@ -14,6 +14,7 @@ import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.ResourceBundle;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -163,13 +164,13 @@ public final class MainScreenControllerImpl implements MainScreenController {
         actionEvent.consume();
     }
 
-    private void onFolderSelected(Path path, boolean resume) {
+    private void onFolderSelected(List<Path> paths, boolean resume) {
         var children = root.getChildren();
         children.remove(folderSelectionPane);
         children.add(uploadPane);
 
         menuItemStopUpload.setDisable(false);
-        uploadPaneController.startUpload(path, resume)
+        uploadPaneController.startUpload(paths, resume)
                 .whenComplete((v, e) -> runLater(() -> menuItemStopUpload.setDisable(true)));
     }
 }

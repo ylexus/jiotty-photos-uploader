@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.core;
 
+import com.google.common.collect.ImmutableList;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import org.apache.commons.cli.CommandLine;
@@ -41,7 +42,7 @@ final class IntegrationTestUploadStarter extends BaseLifecycleComponent {
 
     @Override
     protected void doStart() {
-        uploader.upload(rootDir, resume)
+        uploader.upload(ImmutableList.of(rootDir), resume)
                 .whenComplete((aVoid, throwable) -> lastFailure.set(throwable))
                 .whenComplete((aVoid, ignored) -> {
                     if (forgetUploadStateOnShutdown.getAndSet(false)) {

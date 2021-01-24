@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.cli;
 
+import com.google.common.collect.ImmutableList;
 import net.yudichev.googlephotosupload.core.Uploader;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
@@ -38,7 +39,7 @@ final class CliStarter extends BaseLifecycleComponent {
     @Override
     protected void doStart() {
         logger.info(resourceBundle.getString("googleStorageWarning"));
-        uploader.upload(rootDir, resume)
+        uploader.upload(ImmutableList.of(rootDir), resume)
                 .whenComplete(logErrorOnFailure(logger, "Failed"))
                 .whenComplete((ignored1, ignored2) -> applicationLifecycleControl.initiateShutdown());
     }

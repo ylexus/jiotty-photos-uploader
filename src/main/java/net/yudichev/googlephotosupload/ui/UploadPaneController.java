@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.ui;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 interface UploadPaneController {
@@ -8,7 +9,7 @@ interface UploadPaneController {
 
     void reset();
 
-    CompletableFuture<Void> startUpload(Path path, boolean resume);
+    CompletableFuture<Void> startUpload(List<Path> path, boolean resume);
 
     void stopUpload();
 }

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
@@ -40,11 +41,11 @@ final class UploaderImpl implements Uploader {
     }
 
     @Override
-    public CompletableFuture<Void> upload(Path rootDir, boolean resume) {
+    public CompletableFuture<Void> upload(List<Path> rootDirs, boolean resume) {
         if (!resume) {
             googlePhotosUploader.doNotResume();
         }
-        var albumDirectoriesFuture = directoryStructureSupplier.listAlbumDirectories(rootDir);
+        var albumDirectoriesFuture = directoryStructureSupplier.listAlbumDirectories(rootDirs);
         var cloudAlbumsByTitleFuture = cloudAlbumsProvider.listCloudAlbums();
         return albumDirectoriesFuture
                 .thenCompose(albumDirectories -> cloudAlbumsByTitleFuture

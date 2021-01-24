@@ -16,6 +16,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -41,71 +42,76 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
     }
 
     @Override
-    public CompletableFuture<List<AlbumDirectory>> listAlbumDirectories(Path rootDir) {
-        checkArgument(Files.isDirectory(rootDir), "Path is not a directory: %s", rootDir);
-        var preferences = preferencesManager.get();
+    public CompletableFuture<List<AlbumDirectory>> listAlbumDirectories(List<Path> rootDirs) {
         var progressStatus = progressStatusFactory.create(resourceBundle.getString("directoryStructureSupplierProgressTitle"), Optional.empty());
-        var rootNameCount = rootDir.getNameCount();
+        rootDirs.forEach(rootDir -> checkArgument(Files.isDirectory(rootDir), "Path is not a directory: %s", rootDir));
         return CompletableFuture.supplyAsync(() -> {
-            logger.info("Scanning file system starting at {}...", rootDir);
-            preferences.relevantDirDepthLimit().ifPresent(limit -> logger.info("Only using directories up to depth level {} as albums", limit));
-            var relevantDepthLimit = preferences.relevantDirDepthLimit().orElse(Integer.MAX_VALUE);
-            Map<Path, ImmutableList.Builder<Path>> fileListBuilderByParentDir = new HashMap<>();
-            asUnchecked(() -> Files.walkFileTree(rootDir, new SimpleFileVisitor<>() {
-                private int currentDepth;
-                private Path currentRelevantDir;
-
-                @Override
-                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                    if (++currentDepth <= relevantDepthLimit) {
-                        setRelevantDir(dir);
-                    }
-                    return CONTINUE;
-                }
-
-                @Override
-                public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                    if (--currentDepth <= relevantDepthLimit) {
-                        setRelevantDir(dir.getParent());
-                    }
-
-                    if (exc != null) {
-                        progressStatus.addFailure(KeyedError.of(dir, humanReadableMessage(exc)));
-                    }
-                    return CONTINUE;
-                }
-
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                    if (preferences.shouldIncludePath(file)) {
-                        fileListBuilderByParentDir
-                                .computeIfAbsent(currentRelevantDir, ignored -> ImmutableList.builder())
-                                .add(file);
-                        logger.debug("Including file: {}", file);
-                        progressStatus.incrementSuccess();
-                    } else {
-                        logger.debug("Skipping file as it does not pass include/exclude pattern test: {}", file);
-                    }
-                    return CONTINUE;
-                }
-
-                private void setRelevantDir(Path dir) {
-                    currentRelevantDir = dir;
-                    logger.debug("Current relevant dir {}", currentRelevantDir);
-                }
-            }));
-
-            var result = fileListBuilderByParentDir.entrySet().stream()
-                    .map(entry -> AlbumDirectory.builder()
-                            .setPath(entry.getKey())
-                            .setAlbumTitle(toAlbumTitle(entry.getKey(), preferences.albumDelimiter(), rootNameCount))
-                            .setFiles(entry.getValue().build())
-                            .build())
+            logger.info("Scanning file system starting at roots {}...", rootDirs);
+            var result = rootDirs.stream()
+                    .flatMap(rootDir -> listAlbumDirectories(progressStatus, rootDir))
                     .collect(toImmutableList());
             logger.info("... done, {} directories found that will be used as albums", result.size());
             progressStatus.closeSuccessfully();
             return result;
         });
+    }
+
+    private Stream<AlbumDirectory> listAlbumDirectories(ProgressStatus progressStatus, Path rootDir) {
+        var preferences = preferencesManager.get();
+        var rootNameCount = rootDir.getNameCount();
+        preferences.relevantDirDepthLimit().ifPresent(limit -> logger.info("Only using directories up to depth level {} as albums", limit));
+        var relevantDepthLimit = preferences.relevantDirDepthLimit().orElse(Integer.MAX_VALUE);
+        Map<Path, ImmutableList.Builder<Path>> fileListBuilderByParentDir = new HashMap<>();
+        asUnchecked(() -> Files.walkFileTree(rootDir, new SimpleFileVisitor<>() {
+            private int currentDepth;
+            private Path currentRelevantDir;
+
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                if (++currentDepth <= relevantDepthLimit) {
+                    setRelevantDir(dir);
+                }
+                return CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+                if (--currentDepth <= relevantDepthLimit) {
+                    setRelevantDir(dir.getParent());
+                }
+
+                if (exc != null) {
+                    progressStatus.addFailure(KeyedError.of(dir, humanReadableMessage(exc)));
+                }
+                return CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                if (preferences.shouldIncludePath(file)) {
+                    fileListBuilderByParentDir
+                            .computeIfAbsent(currentRelevantDir, ignored -> ImmutableList.builder())
+                            .add(file);
+                    logger.debug("Including file: {}", file);
+                    progressStatus.incrementSuccess();
+                } else {
+                    logger.debug("Skipping file as it does not pass include/exclude pattern test: {}", file);
+                }
+                return CONTINUE;
+            }
+
+            private void setRelevantDir(Path dir) {
+                currentRelevantDir = dir;
+                logger.debug("Current relevant dir {}", currentRelevantDir);
+            }
+        }));
+
+        return fileListBuilderByParentDir.entrySet().stream()
+                .map(entry -> AlbumDirectory.builder()
+                        .setPath(entry.getKey())
+                        .setAlbumTitle(toAlbumTitle(entry.getKey(), preferences.albumDelimiter(), rootNameCount))
+                        .setFiles(entry.getValue().build())
+                        .build());
     }
 
     private static Optional<String> toAlbumTitle(Path path, String albumNameDelimiter, int rootNameCount) {

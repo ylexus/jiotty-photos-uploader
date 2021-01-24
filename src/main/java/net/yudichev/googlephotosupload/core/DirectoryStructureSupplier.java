@@ -5,5 +5,5 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 interface DirectoryStructureSupplier {
-    CompletableFuture<List<AlbumDirectory>> listAlbumDirectories(Path rootDir);
+    CompletableFuture<List<AlbumDirectory>> listAlbumDirectories(List<Path> rootDirs);
 }
