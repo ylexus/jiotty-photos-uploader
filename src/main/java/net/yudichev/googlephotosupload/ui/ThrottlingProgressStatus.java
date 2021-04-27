@@ -31,7 +31,6 @@ final class ThrottlingProgressStatus implements ProgressStatus {
     private final AtomicReference<String> description = new AtomicReference<>();
     private final BlockingQueue<KeyedError> pendingErrors = new ArrayBlockingQueue<>(65536);
     private final SchedulingExecutor executor;
-    private final String name;
 
     private volatile boolean closed;
 
@@ -81,7 +80,6 @@ final class ThrottlingProgressStatus implements ProgressStatus {
 
     @Override
     public void close(boolean success) {
-        logger.debug("*** {}: close({})", name, success);
         closed = true;
         delegate.updateSuccess(successCount.get());
         drainPendingFailuresToDelegate();
