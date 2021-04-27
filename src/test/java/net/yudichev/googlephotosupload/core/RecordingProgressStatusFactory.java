@@ -19,6 +19,10 @@ final class RecordingProgressStatusFactory implements ProgressStatusFactory {
             }
 
             @Override
+            public void updateDescription(String newValue) {
+            }
+
+            @Override
             public void incrementSuccessBy(int increment) {
             }
 

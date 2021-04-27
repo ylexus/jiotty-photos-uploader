@@ -43,6 +43,11 @@ final class LoggingProgressStatusFactory implements ProgressStatusFactory {
             }
 
             @Override
+            public void updateDescription(String newValue) {
+                // do nothing in CLI - log is enough
+            }
+
+            @Override
             public void incrementSuccessBy(int increment) {
                 inLock(lock, () -> { successCount += increment;});
                 throttledLog();

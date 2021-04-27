@@ -75,9 +75,12 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                 resourceBundle.getString("albumManagerProgressStatusTitle"),
                 Optional.of(reconcilableAlbumCount));
         return albumDirectories.stream()
-                .map(albumDirectory -> albumDirectory.albumTitle()
-                        .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path(), progressStatus, progressStatus::onBackoffDelay)
-                                .whenComplete((album, e) -> progressStatus.incrementSuccess())))
+                .map(albumDirectory -> {
+                    progressStatus.updateDescription(albumDirectory.path().toAbsolutePath().toString());
+                    return albumDirectory.albumTitle()
+                            .map(albumTitle -> reconcile(cloudAlbumsByTitle, albumTitle, albumDirectory.path(), progressStatus, progressStatus::onBackoffDelay)
+                                    .whenComplete((album, e) -> progressStatus.incrementSuccess()));
+                })
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(toFutureOfList())

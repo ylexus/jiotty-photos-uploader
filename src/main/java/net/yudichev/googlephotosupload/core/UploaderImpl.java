@@ -64,6 +64,7 @@ final class UploaderImpl implements Uploader {
                                                         .uploadDirectory(
                                                                 albumDirectory.albumTitle().map(albumsByTitle::get),
                                                                 albumDirectory.files(),
+                                                                directoryProgressStatus,
                                                                 fileProgressStatus)
                                                         .thenRun(directoryProgressStatus::incrementSuccess))
                                                 .collect(toFutureOfList())

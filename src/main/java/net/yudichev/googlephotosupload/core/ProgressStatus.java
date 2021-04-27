@@ -3,6 +3,8 @@ package net.yudichev.googlephotosupload.core;
 public interface ProgressStatus {
     void updateSuccess(int newValue);
 
+    void updateDescription(String newValue);
+
     void incrementSuccessBy(int increment);
 
     void onBackoffDelay(long backoffDelayMs);

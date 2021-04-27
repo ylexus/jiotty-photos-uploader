@@ -7,6 +7,8 @@ import java.util.Collection;
 interface ProgressValueUpdater {
     void updateSuccess(int newValue);
 
+    void updateDescription(String description);
+
     void addFailures(Collection<KeyedError> failures);
 
     void completed(boolean success);

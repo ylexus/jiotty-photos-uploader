@@ -83,20 +83,25 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     @Override
     public CompletableFuture<Void> uploadDirectory(Optional<GooglePhotosAlbum> googlePhotosAlbum,
                                                    List<Path> files,
+                                                   ProgressStatus directoryProgressStatus,
                                                    ProgressStatus fileProgressStatus) {
         checkStarted();
 
         return supplyAsync(() -> files, executorService)
                 .thenCompose(paths -> {
+                    directoryProgressStatus.updateDescription(googlePhotosAlbum.map(GooglePhotosAlbum::getTitle).orElse(""));
                     var createMediaDataResultsFuture = paths.stream()
                             .sorted(comparing(path -> path.getFileName().toString()))
-                            .map(path -> createMediaData(path)
-                                    .thenApply(itemState -> {
-                                        itemState.toFailure().ifPresentOrElse(
-                                                error -> fileProgressStatus.addFailure(KeyedError.of(path, error)),
-                                                fileProgressStatus::incrementSuccess);
-                                        return PathState.of(path, itemState);
-                                    }))
+                            .map(path -> {
+                                fileProgressStatus.updateDescription(path.toAbsolutePath().toString());
+                                return createMediaData(path)
+                                        .thenApply(itemState -> {
+                                            itemState.toFailure().ifPresentOrElse(
+                                                    error -> fileProgressStatus.addFailure(KeyedError.of(path, error)),
+                                                    fileProgressStatus::incrementSuccess);
+                                            return PathState.of(path, itemState);
+                                        });
+                            })
                             .collect(toFutureOfList());
                     return addToAlbumStrategy.addToAlbum(
                             createMediaDataResultsFuture,

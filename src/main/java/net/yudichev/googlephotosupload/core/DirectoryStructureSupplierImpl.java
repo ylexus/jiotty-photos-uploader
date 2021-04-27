@@ -92,6 +92,7 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
                     fileListBuilderByParentDir
                             .computeIfAbsent(currentRelevantDir, ignored -> ImmutableList.builder())
                             .add(file);
+                    progressStatus.updateDescription(file.toAbsolutePath().toString());
                     logger.debug("Including file: {}", file);
                     progressStatus.incrementSuccess();
                 } else {

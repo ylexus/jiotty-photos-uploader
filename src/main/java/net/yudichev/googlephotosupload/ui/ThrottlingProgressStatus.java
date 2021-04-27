@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.annotation.ElementType.*;
@@ -27,8 +28,10 @@ final class ThrottlingProgressStatus implements ProgressStatus {
     private final ProgressValueUpdater delegate;
     private final ThrottlingConsumer<Runnable> eventSink;
     private final AtomicInteger successCount = new AtomicInteger();
+    private final AtomicReference<String> description = new AtomicReference<>();
     private final BlockingQueue<KeyedError> pendingErrors = new ArrayBlockingQueue<>(65536);
     private final SchedulingExecutor executor;
+    private final String name;
 
     private volatile boolean closed;
 
@@ -47,6 +50,13 @@ final class ThrottlingProgressStatus implements ProgressStatus {
         ensureNotClosed();
         successCount.set(newValue);
         eventSink.accept(() -> delegate.updateSuccess(successCount.get()));
+    }
+
+    @Override
+    public void updateDescription(String newValue) {
+        ensureNotClosed();
+        description.set(newValue);
+        eventSink.accept(() -> delegate.updateDescription(description.get()));
     }
 
     @Override
@@ -71,6 +81,7 @@ final class ThrottlingProgressStatus implements ProgressStatus {
 
     @Override
     public void close(boolean success) {
+        logger.debug("*** {}: close({})", name, success);
         closed = true;
         delegate.updateSuccess(successCount.get());
         drainPendingFailuresToDelegate();

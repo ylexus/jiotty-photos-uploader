@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture;
 interface GooglePhotosUploader extends LifecycleComponent {
     CompletableFuture<Void> uploadDirectory(Optional<GooglePhotosAlbum> googlePhotosAlbum,
                                             List<Path> files,
-                                            ProgressStatus fileProgressStatus);
+                                            ProgressStatus directoryProgressStatus, ProgressStatus fileProgressStatus);
 
     void doNotResume();
 

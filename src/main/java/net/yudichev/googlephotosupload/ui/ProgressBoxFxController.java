@@ -31,6 +31,7 @@ public final class ProgressBoxFxController {
     public Text progressIndicatorFailureText;
     public ImageView backoffInfoIcon;
     public GridPane topPane;
+    public Label descriptionLabel;
     private Optional<Integer> totalCount;
     private SepiaToneEffectAnimatedNode animatedBackoffInfoIcon;
     private Tooltip backoffTooltip;
@@ -63,12 +64,16 @@ public final class ProgressBoxFxController {
         });
     }
 
-    public void updateSuccess(int value) {
+    public void updateSuccessCount(int value) {
         runLater(() -> {
             totalCount.ifPresent(count -> progressIndicator.setProgress((double) value / count));
             valueLabel.setText(Integer.toString(value));
             animatedBackoffInfoIcon.hide();
         });
+    }
+
+    public void updateDescription(String description) {
+        runLater(() -> descriptionLabel.setText(description));
     }
 
     public void addFailures(Collection<KeyedError> failures) {
@@ -98,6 +103,7 @@ public final class ProgressBoxFxController {
                             progressIndicatorFailureText.setVisible(true);
                         }
                     }
+            descriptionLabel.setText(null);
                 }
         );
     }
