@@ -4,10 +4,9 @@ import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
+import javafx.stage.FileChooser;
 import javafx.util.converter.IntegerStringConverter;
-import net.yudichev.googlephotosupload.core.AddToAlbumMethod;
-import net.yudichev.googlephotosupload.core.Preferences;
-import net.yudichev.googlephotosupload.core.PreferencesManager;
+import net.yudichev.googlephotosupload.core.*;
 import net.yudichev.jiotty.common.varstore.VarStore;
 
 import javax.inject.Inject;
@@ -26,11 +25,15 @@ import static net.yudichev.googlephotosupload.ui.FatalStartupError.showFatalStar
 import static net.yudichev.jiotty.common.lang.Locks.inLock;
 
 public final class PreferencesDialogController implements PreferencesManager {
+    static final String CUSTOM_CREDENTIALS_HELP_URL = "https://github.com/ylexus/jiotty-photos-uploader/wiki#using-your-own-google-api-client-secret";
+
     private static final String VAR_STORE_KEY = "preferences";
     private static final Pattern RELEVANT_DIR_DEPTH_PATTERN = Pattern.compile("(|[1-9]\\d{0,2})");
     private static final int DEFAULT_RELEVANT_DIR_DEPTH_LIMIT = 2;
     private final VarStore varStore;
     private final Provider<UploaderStrategyChoicePanelController> uploaderStrategyChoicePanelControllerProvider;
+    private final CustomCredentialsManager customCredentialsManager;
+    private final Restarter restarter;
     private final ResourceBundle resourceBundle;
     private final Lock lock = new ReentrantLock();
     private final Provider<JavafxApplicationResources> javafxApplicationResourcesProvider;
@@ -42,16 +45,27 @@ public final class PreferencesDialogController implements PreferencesManager {
     public TextField relevantDirDepthTitleLimitTextField;
     public TextField albumDelimiterTextField;
     public Label albumDelimiterExampleLabel;
+    public TitledPane customCredentialsPane;
+    public RadioButton customCredentialsUseStandardRadioButton;
+    public RadioButton customCredentialsUseCustomRadioButton;
+    public Button customCredentialsBrowseButton;
+    public Hyperlink logoutHyperlink;
+    private Runnable selfCloseAction;
     private Preferences preferences;
     private TextFormatter<Integer> relevantDirDepthTitleLimitTextFieldFormatter;
+    private SepiaToneEffectAnimatedNode flashingCustomCredentialsPane;
 
     @Inject
     PreferencesDialogController(VarStore varStore,
                                 Provider<UploaderStrategyChoicePanelController> uploaderStrategyChoicePanelControllerProvider,
                                 Provider<JavafxApplicationResources> javafxApplicationResourcesProvider,
+                                CustomCredentialsManager customCredentialsManager,
+                                Restarter restarter,
                                 ResourceBundle resourceBundle) {
         this.varStore = checkNotNull(varStore);
         this.uploaderStrategyChoicePanelControllerProvider = checkNotNull(uploaderStrategyChoicePanelControllerProvider);
+        this.customCredentialsManager = checkNotNull(customCredentialsManager);
+        this.restarter = checkNotNull(restarter);
         this.resourceBundle = checkNotNull(resourceBundle);
         try {
             preferences = varStore.readValue(Preferences.class, VAR_STORE_KEY).orElseGet(() -> Preferences.builder().build());
@@ -85,7 +99,18 @@ public final class PreferencesDialogController implements PreferencesManager {
             relevantDirDepthTitleLimitTextField.setTextFormatter(relevantDirDepthTitleLimitTextFieldFormatter);
             relevantDirDepthTitleFullRadioButton.setSelected(preferences.relevantDirDepthLimit().isEmpty());
             relevantDirDepthTitleLimitedRadioButton.setSelected(preferences.relevantDirDepthLimit().isPresent());
+
+            customCredentialsUseStandardRadioButton.setSelected(!preferences.useCustomCredentials());
+            customCredentialsUseCustomRadioButton.setSelected(preferences.useCustomCredentials());
+            customCredentialsUpdateBrowseButtonDisabled();
+            flashingCustomCredentialsPane = new SepiaToneEffectAnimatedNode(customCredentialsPane, 4);
+
+            refreshLogoutHyperlink();
         });
+    }
+
+    public void setSelfCloseAction(Runnable selfCloseAction) {
+        this.selfCloseAction = checkNotNull(selfCloseAction);
     }
 
     private void onExcludeGlobsChanged(List<String> patterns) {
@@ -161,6 +186,71 @@ public final class PreferencesDialogController implements PreferencesManager {
         mouseEvent.consume();
     }
 
+    public void onCustomCredentialsHelp(MouseEvent mouseEvent) {
+        javafxApplicationResourcesProvider.get().hostServices().showDocument(CUSTOM_CREDENTIALS_HELP_URL);
+        mouseEvent.consume();
+    }
+
+    public void focusOnCustomCredentials() {
+        customCredentialsPane.requestFocus();
+        flashingCustomCredentialsPane.show();
+    }
+
+    public void onCustomCredentialsSelectionChange(ActionEvent actionEvent) {
+        customCredentialsUpdateBrowseButtonDisabled();
+        inLock(lock, () -> {
+            if (customCredentialsUseCustomRadioButton.isSelected()) {
+                if (!customCredentialsManager.configuredToUseCustomCredentials()) {
+                    var fileSelected = browseForCustomCredentialsFile();
+                    if (!fileSelected) {
+                        customCredentialsUseCustomRadioButton.setSelected(false);
+                        customCredentialsUseStandardRadioButton.setSelected(true);
+                        customCredentialsUpdateBrowseButtonDisabled();
+                    }
+                }
+            } else {
+                customCredentialsManager.deleteCustomCredentials();
+            }
+            inLock(lock, () -> {
+                preferences = preferences.withUseCustomCredentials(customCredentialsUseCustomRadioButton.isSelected());
+                savePreferences();
+            });
+            refreshLogoutHyperlink();
+        });
+        actionEvent.consume();
+    }
+
+    private void customCredentialsUpdateBrowseButtonDisabled() {
+        customCredentialsBrowseButton.setDisable(customCredentialsUseStandardRadioButton.isSelected());
+    }
+
+    public void onCustomCredentialsBrowseButtonAction(ActionEvent actionEvent) {
+        browseForCustomCredentialsFile();
+        actionEvent.consume();
+    }
+
+    private boolean browseForCustomCredentialsFile() {
+        var fileChooser = new FileChooser();
+        fileChooser.setTitle(resourceBundle.getString("preferencesCustomCredentialsFileChooserTitle"));
+        var file = fileChooser.showOpenDialog(customCredentialsUseCustomRadioButton.getScene().getWindow());
+        if (file != null) {
+            inLock(lock, () -> {
+                preferences = preferences.withUseCustomCredentials(true);
+                savePreferences();
+            });
+            customCredentialsManager.saveCustomCredentials(file.toPath());
+            refreshLogoutHyperlink();
+            return true;
+        }
+        return false;
+    }
+
+    public void onLogoutHyperlinkClicked(ActionEvent actionEvent) {
+        selfCloseAction.run();
+        restarter.initiateLogoutAndRestart();
+        actionEvent.consume();
+    }
+
     @SuppressWarnings("TypeParameterExtendsFinalClass")
     private void onAlbumDelimiterChanged(ObservableValue<? extends String> observable, String oldValue, String newValue) {
         updateAlbumDelimiterExampleLabel(newValue);
@@ -173,5 +263,9 @@ public final class PreferencesDialogController implements PreferencesManager {
     private void updateAlbumDelimiterExampleLabel(String newValue) {
         albumDelimiterExampleLabel.setText(
                 String.format(resourceBundle.getString("preferencesDialogAlbumDelimiterExampleLabel"), newValue, newValue, newValue));
+    }
+
+    private void refreshLogoutHyperlink() {
+        logoutHyperlink.setVisible(!customCredentialsManager.usedCredentialsMatchConfigured());
     }
 }

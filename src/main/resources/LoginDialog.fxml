@@ -1,16 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.Cursor?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.web.WebView?>
-<VBox xmlns:fx="http://javafx.com/fxml/1" alignment="TOP_CENTER" prefHeight="800.0" prefWidth="600.0" spacing="4.0"
-      stylesheets="@style.css"
-      xmlns="http://javafx.com/javafx/10.0.2-internal"
-      fx:controller="net.yudichev.googlephotosupload.ui.LoginDialogControllerImpl">
+<VBox xmlns:fx="http://javafx.com/fxml/1" alignment="TOP_CENTER" prefHeight="800.0" prefWidth="600.0" spacing="4.0" stylesheets="@style.css"
+      xmlns="http://javafx.com/javafx/16" fx:controller="net.yudichev.googlephotosupload.ui.LoginDialogControllerImpl">
     <padding>
-        <Insets top="4.0"/>
+        <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
     </padding>
+    <HBox alignment="CENTER_LEFT" spacing="4.0">
+        <Label fx:id="customCredentialsLabel" alignment="CENTER" maxWidth="1.7976931348623157E308" styleClass="side-note"
+               text="Используется личный Google API Secret (будут предупреждения системы безопасности)" textAlignment="CENTER" wrapText="true"
+               HBox.hgrow="ALWAYS"/>
+        <Button minWidth="-Infinity" onAction="#onCredentialsConfigureButtonAction" text="%loginDialogConfigureButtonText"/>
+        <ImageView fitHeight="20.0" onMouseClicked="#onCredentialsConfigureHelp" pickOnBounds="true" preserveRatio="true">
+            <Image url="@help-icon.png"/>
+            <cursor>
+                <Cursor fx:constant="HAND"/>
+            </cursor>
+        </ImageView>
+    </HBox>
     <TextField fx:id="urlTextField" editable="false" styleClass="url-bar"/>
     <WebView fx:id="webView" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS"/>
 </VBox>

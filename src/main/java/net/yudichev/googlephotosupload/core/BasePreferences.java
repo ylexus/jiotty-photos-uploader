@@ -80,6 +80,11 @@ abstract class BasePreferences {
 
     public abstract Optional<Integer> relevantDirDepthLimit();
 
+    @Value.Default
+    public boolean useCustomCredentials() {
+        return false;
+    }
+
     @Value.Check
     void validateRelevantDirDepthLimit() {
         relevantDirDepthLimit().ifPresent(value -> checkArgument(value > 0, "validateRelevantDirDepthLimit cannot be <=0: %s", value));

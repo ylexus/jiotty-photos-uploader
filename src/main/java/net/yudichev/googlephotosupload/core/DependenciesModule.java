@@ -9,14 +9,13 @@ import net.yudichev.jiotty.common.varstore.VarStoreModule;
 import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosModule;
 
+import javax.inject.Singleton;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.io.Resources.getResource;
-import static net.yudichev.googlephotosupload.core.AppGlobals.APP_SETTINGS_DIR_NAME;
-import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
+import static net.yudichev.googlephotosupload.core.AppGlobals.*;
+import static net.yudichev.jiotty.common.inject.BindingSpec.providedBy;
 
 public final class DependenciesModule extends AbstractModule {
     private final Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser;
@@ -35,14 +34,16 @@ public final class DependenciesModule extends AbstractModule {
         install(new ExecutorModule());
         install(new VarStoreModule(APP_SETTINGS_DIR_NAME));
 
-        var authDataStoreRootDir = Paths.get(System.getProperty("user.home")).resolve("." + APP_SETTINGS_DIR_NAME).resolve("auth");
+        var authDataStoreRootDir = APP_SETTINGS_AUTH_DIR;
         bind(Restarter.class).to(RestarterImpl.class);
         bind(Path.class).annotatedWith(RestarterImpl.GoogleAuthRootDir.class).toInstance(authDataStoreRootDir);
 
+        bind(CustomCredentialsManagerImpl.class).in(Singleton.class);
+        bind(CustomCredentialsManager.class).to(CustomCredentialsManagerImpl.class);
         var googleApiSettingsBuilder = GoogleApiAuthSettings.builder()
                 .setAuthDataStoreRootDir(authDataStoreRootDir)
                 .setApplicationName(APP_TITLE)
-                .setCredentialsUrl(getResource("client_secret.json"));
+                .setCredentialsUrl(providedBy(CustomCredentialsManagerImpl.class));
         googleApiSettingsCustomiser.accept(googleApiSettingsBuilder);
         install(GooglePhotosModule.builder()
                 .setSettings(googleApiSettingsBuilder.build())

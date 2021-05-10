@@ -123,6 +123,13 @@ public final class MainScreenControllerImpl implements MainScreenController {
         });
     }
 
+    @Override
+    public void openPreferencesAtCustomCredentials() {
+        showPreferencesDialog();
+        PreferencesDialogController controller = preferencesDialog.controller();
+        controller.focusOnCustomCredentials();
+    }
+
     public void onStopUpload(ActionEvent actionEvent) {
         menuItemStopUpload.setDisable(true);
         uploadPaneController.stopUpload();
@@ -150,6 +157,11 @@ public final class MainScreenControllerImpl implements MainScreenController {
     }
 
     private void onPreferences(ActionEvent actionEvent) {
+        showPreferencesDialog();
+        actionEvent.consume();
+    }
+
+    private void showPreferencesDialog() {
         if (preferencesDialog == null) {
             preferencesDialog = dialogFactory.create(
                     resourceBundle.getString("preferencesDialogTitle"),
@@ -159,9 +171,10 @@ public final class MainScreenControllerImpl implements MainScreenController {
                         dialog.setMinHeight(600);
                         dialog.setMinWidth(700);
                     });
+            PreferencesDialogController controller = preferencesDialog.controller();
+            controller.setSelfCloseAction(preferencesDialog::close);
         }
         preferencesDialog.show();
-        actionEvent.consume();
     }
 
     private void onFolderSelected(List<Path> paths, boolean resume) {

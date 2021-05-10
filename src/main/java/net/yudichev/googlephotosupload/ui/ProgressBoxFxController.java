@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static javafx.animation.Animation.INDEFINITE;
 import static javafx.application.Platform.runLater;
 
 @SuppressWarnings("ClassWithTooManyFields") // OK for a UI controller
@@ -51,7 +52,7 @@ public final class ProgressBoxFxController {
         backoffTooltip.setPrefWidth(400);
         backoffTooltip.setShowDuration(javafx.util.Duration.INDEFINITE);
         Tooltip.install(backoffInfoIcon, backoffTooltip);
-        animatedBackoffInfoIcon = new SepiaToneEffectAnimatedNode(backoffInfoIcon);
+        animatedBackoffInfoIcon = new SepiaToneEffectAnimatedNode(backoffInfoIcon, INDEFINITE);
     }
 
     public void init(String name, Optional<Integer> totalCount) {

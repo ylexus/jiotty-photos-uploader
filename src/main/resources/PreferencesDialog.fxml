@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
+<?import javafx.geometry.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.Cursor?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
-<TabPane xmlns:fx="http://javafx.com/fxml/1" stylesheets="@style.css" xmlns="http://javafx.com/javafx/11.0.1"
+<TabPane xmlns:fx="http://javafx.com/fxml/1" stylesheets="@style.css" xmlns="http://javafx.com/javafx/16"
          fx:controller="net.yudichev.googlephotosupload.ui.PreferencesDialogController">
     <Tab closable="false" text="%preferencesDialogTabMain">
         <VBox alignment="TOP_CENTER" spacing="4.0">
@@ -52,9 +52,40 @@
                         <Label text="%preferencesDialogAlbumDelimiterLabel"/>
                         <TextField fx:id="albumDelimiterTextField" prefWidth="60.0"/>
                     </HBox>
-                    <Label fx:id="albumDelimiterExampleLabel" styleClass="side-note" minHeight="-Infinity"/>
+                    <Label fx:id="albumDelimiterExampleLabel" minHeight="-Infinity" styleClass="side-note"/>
                 </VBox>
             </TitledPane>
+            <TitledPane fx:id="customCredentialsPane" animated="false" collapsible="false" contentDisplay="RIGHT" graphicTextGap="10.0" layoutX="10.0"
+                        layoutY="194.0" text="%preferencesDialogCustomCredentialsTitle">
+                <padding>
+                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                </padding>
+                <graphic>
+                    <ImageView fitHeight="20.0" onMouseClicked="#onCustomCredentialsHelp" pickOnBounds="true" preserveRatio="true">
+                        <cursor>
+                            <Cursor fx:constant="HAND"/>
+                        </cursor>
+                        <Image url="@help-icon.png"/>
+                    </ImageView>
+                </graphic>
+                <VBox spacing="4.0">
+                    <RadioButton fx:id="customCredentialsUseStandardRadioButton" minHeight="-Infinity" onAction="#onCustomCredentialsSelectionChange"
+                                 text="%preferencesCustomCredentialsStandardLabel" wrapText="true">
+                        <toggleGroup>
+                            <!--suppress JavaFxUnresolvedFxIdReference -->
+                            <ToggleGroup fx:id="customCredentialsGroup"/>
+                        </toggleGroup>
+                    </RadioButton>
+                    <HBox alignment="CENTER_LEFT" spacing="4.0">
+                        <RadioButton fx:id="customCredentialsUseCustomRadioButton" minHeight="-Infinity" onAction="#onCustomCredentialsSelectionChange"
+                                     text="%preferencesCustomCredentialsCustomLabel" toggleGroup="$customCredentialsGroup" wrapText="true">
+                        </RadioButton>
+                        <Button fx:id="customCredentialsBrowseButton" mnemonicParsing="false" onAction="#onCustomCredentialsBrowseButtonAction"
+                                text="%preferencesCustomCredentialsBrowseButtonText"/>
+                    </HBox>
+                </VBox>
+            </TitledPane>
+            <Hyperlink fx:id="logoutHyperlink" onAction="#onLogoutHyperlinkClicked" text="%preferencesLogoutHyperlinkText"/>
         </VBox>
     </Tab>
     <Tab closable="false" text="%preferencesDialogTabPatterns">
