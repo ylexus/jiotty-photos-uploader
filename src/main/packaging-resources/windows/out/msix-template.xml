@@ -42,6 +42,13 @@
             <FileExclusion ExcludePath="[{PackageDrive}]\Config.Msi"/>
             <FileExclusion ExcludePath="[{Local AppData}]\Microsoft\OneDrive"/>
             <FileExclusion ExcludePath="[{Local AppData}]\Temp"/>
+            <FileExclusion ExcludePath="[{Windows}]\ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization"/>
+            <FileExclusion ExcludePath="[{Common AppData}]\Microsoft\Windows\AppRepository"/>
+            <FileExclusion ExcludePath="[{ProgramFilesX64}]\WindowsApps"/>
+            <FileExclusion ExcludePath="[{System}]\config\TxR"/>
+            <FileExclusion ExcludePath="[{System}]\config\SECURITY.LOG"/>
+            <FileExclusion ExcludePath="[{System}]\config\SOFTWARE.LOG"/>
+            <FileExclusion ExcludePath="[{System}]\config\SYSTEM.LOG"/>
             <RegistryExclusion ExcludePath="REGISTRY\MACHINE\SOFTWARE\Wow6432Node\Microsoft\Cryptography"/>
             <RegistryExclusion ExcludePath="REGISTRY\MACHINE\SOFTWARE\Microsoft\Cryptography"/>
             <RegistryExclusion ExcludePath="REGISTRY\MACHINE\SOFTWARE\Microsoft\Microsoft Antimalware"/>
@@ -65,9 +72,11 @@
     <PrepareComputer DisableWindowsSearchService="true" DisableWindowsUpdateService="true"/>
     <SaveLocation PackagePath="build\fullpackage\Windows10-jiotty-photos-uploader-@version@.msix" TemplatePath="build\jpackage\"/>
     <Installer Path="build\fullpackage\Windows7-jiotty-photos-uploader-@version@.msi"/>
-    <PackageInformation xmlns:p4="http://schemas.microsoft.com/msix/msixpackagingtool/template/1910" PackageName="JiottyPhotosUploader"
-                        PackageDisplayName="@appName@"
-                        PublisherName="CN=Alexey Yudichev, O=Alexey Yudichev, L=Pinner, S=Middlesex, PostalCode=HA5 1HL, C=GB"
-                        PublisherDisplayName="Alexey Yudichev" Version="@version@.0"
+    <PackageInformation xmlns:p4="http://schemas.microsoft.com/msix/msixpackagingtool/template/1910"
+                        PackageName="JiottyPhotosUploader"
+                        PackageDisplayName="Jiotty Photos Uploader"
+                        PublisherName="CN=Alexey Yudichev, O=Alexey Yudichev, L=Pinner, C=GB"
+                        PublisherDisplayName="Alexey Yudichev"
+                        Version="@version@.0"
                         p4:PackageDescription="@appName@"/>
 </MsixPackagingToolTemplate>
