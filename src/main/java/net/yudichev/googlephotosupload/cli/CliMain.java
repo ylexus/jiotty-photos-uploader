@@ -50,7 +50,7 @@ public final class CliMain {
     private static void startApp(CommandLine commandLine) {
         Application.builder()
                 .addModule(() -> DependenciesModule.builder().build())
-                .addModule(() -> new UploadPhotosModule(1000))
+                .addModule(UploadPhotosModule::new)
                 .addModule(ResourceBundleModule::new)
                 .addModule(() -> new CliModule(commandLine))
                 .build()

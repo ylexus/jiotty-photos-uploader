@@ -898,13 +898,13 @@ final class IntegrationTest {
                     .addModule(() -> new VarStoreModule(varStoreAppName))
                     .addModule(() -> new MockGooglePhotosModule(googlePhotosClient))
                     .addModule(ResourceBundleModule::new)
-                    .addModule(() -> new UploadPhotosModule(1))
+                    .addModule(() -> new UploadPhotosModule(Duration.ofMillis(1)))
                     .addModule(() -> new IntegrationTestUploadStarterModule(commandLine, progressStatusFactory))
                     .build()
                     .run();
             applicationExitedLatch.countDown();
         }, "application main").start();
-        applicationExitedLatch.await(5, TimeUnit.SECONDS);
+        assertThat(applicationExitedLatch.await(5, TimeUnit.SECONDS), is(true));
     }
 
     private MediaItem uploadPhoto(GooglePhotosAlbum album, String fileName) throws Exception {

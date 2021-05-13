@@ -42,7 +42,7 @@ public final class UiMain extends javafx.application.Application {
                         .withGoogleApiSettingsCustomiser(builder -> builder.setAuthorizationBrowser(annotatedWith(AuthBrowser.class)))
                         .build())
                 .addModule(ResourceBundleModule::new)
-                .addModule(() -> new UploadPhotosModule(1000))
+                .addModule(UploadPhotosModule::new)
                 .addModule(UiAuthorizationBrowserModule::new)
                 .build()
                 .run();
