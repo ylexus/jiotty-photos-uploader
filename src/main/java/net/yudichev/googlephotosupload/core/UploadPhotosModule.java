@@ -1,30 +1,27 @@
 package net.yudichev.googlephotosupload.core;
 
+import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 
 import javax.inject.Singleton;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 
 @SuppressWarnings({"OverlyCoupledClass", "OverlyCoupledMethod"}) // OK for module
 public final class UploadPhotosModule extends BaseLifecycleComponentModule implements ExposedKeyModule<Uploader> {
-    private final Duration normalBackOffInitialDelay;
-    private final Duration resourceExhaustedBackOffInitialDelay;
+    private final Optional<Duration> globalInitialDelayOverride;
 
     public UploadPhotosModule() {
-        // defaults as per https://developers.google.com/photos/library/guides/best-practices#retrying-failed-requests
-        normalBackOffInitialDelay = Duration.ofSeconds(1);
-        resourceExhaustedBackOffInitialDelay = Duration.ofSeconds(30);
+        globalInitialDelayOverride = Optional.empty();
     }
 
-    UploadPhotosModule(Duration backOffInitialDelayMs) {
-        normalBackOffInitialDelay = checkNotNull(backOffInitialDelayMs);
-        resourceExhaustedBackOffInitialDelay = backOffInitialDelayMs;
+    UploadPhotosModule(Duration globalOverride) {
+        globalInitialDelayOverride = Optional.of(globalOverride);
     }
 
     @Override
@@ -41,10 +38,8 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
 
         bind(DirectoryStructureSupplier.class).to(DirectoryStructureSupplierImpl.class);
 
-        bind(Duration.class).annotatedWith(BackingOffRemoteApiExceptionHandlerImpl.NormalBackoffInitialDelay.class)
-                .toInstance(normalBackOffInitialDelay);
-        bind(Duration.class).annotatedWith(BackingOffRemoteApiExceptionHandlerImpl.ResourceExhaustedBackoffInitialDelay.class)
-                .toInstance(resourceExhaustedBackOffInitialDelay);
+        bind(new TypeLiteral<Optional<Duration>>() {}).annotatedWith(BackingOffRemoteApiExceptionHandlerImpl.GlobalInitialDelayOverride.class)
+                .toInstance(globalInitialDelayOverride);
         bind(BackingOffRemoteApiExceptionHandler.class).to(BackingOffRemoteApiExceptionHandlerImpl.class);
         bind(FatalUserCorrectableRemoteApiExceptionHandler.class).to(FatalUserCorrectableRemoteApiExceptionHandlerImpl.class);
 
