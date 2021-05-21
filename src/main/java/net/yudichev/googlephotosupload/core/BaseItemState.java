@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.core;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -16,13 +17,12 @@ import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 @PackagePrivateImmutablesStyle
 @JsonSerialize
 @JsonDeserialize
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(NON_NULL)
 interface BaseItemState {
     Optional<UploadMediaItemState> uploadState();
 
     Optional<String> mediaId();
-
-    Optional<String> albumId();
 
     @Immutable
     @PackagePrivateImmutablesStyle

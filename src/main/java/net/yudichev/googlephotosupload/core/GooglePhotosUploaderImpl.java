@@ -24,7 +24,6 @@ import java.util.concurrent.ExecutorService;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.time.temporal.ChronoUnit.HOURS;
 import static java.util.Comparator.comparing;
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -44,7 +43,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     private final AddToAlbumStrategy addToAlbumStrategy;
     private final FatalUserCorrectableRemoteApiExceptionHandler fatalUserCorrectableHandler;
     private final GooglePhotosClient googlePhotosClient;
-    private final StateSaverFactory stateSaverFactory;
     private final UploadStateManager uploadStateManager;
     private final CurrentDateTimeProvider currentDateTimeProvider;
     private final Provider<ExecutorService> executorServiceProvider;
@@ -55,8 +53,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     private ExecutorService executorService;
     private Map<Path, CompletableFuture<ItemState>> uploadedItemStateByPath;
-    private StateSaver stateSaver;
-    private UploadState uploadState;
     private boolean requestedToForgetUploadStateOnShutdown;
 
     @Inject
@@ -64,7 +60,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                              @Backpressured Provider<ExecutorService> executorServiceProvider,
                              BackingOffRemoteApiExceptionHandler backOffHandler,
                              FatalUserCorrectableRemoteApiExceptionHandler fatalUserCorrectableHandler,
-                             StateSaverFactory stateSaverFactory,
                              UploadStateManager uploadStateManager,
                              CurrentDateTimeProvider currentDateTimeProvider,
                              CloudOperationHelper cloudOperationHelper,
@@ -73,7 +68,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         this.backOffHandler = checkNotNull(backOffHandler);
         this.fatalUserCorrectableHandler = checkNotNull(fatalUserCorrectableHandler);
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
-        this.stateSaverFactory = checkNotNull(stateSaverFactory);
         this.uploadStateManager = checkNotNull(uploadStateManager);
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
         this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
@@ -127,9 +121,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     @Override
     protected void doStart() {
         executorService = executorServiceProvider.get();
-        stateSaver = stateSaverFactory.create("uploaded-items", this::saveState);
-        uploadState = uploadStateManager.get();
-        uploadedItemStateByPath = uploadState.uploadedMediaItemIdByAbsolutePath().entrySet().stream()
+        uploadedItemStateByPath = uploadStateManager.loadUploadedMediaItemIdByAbsolutePath().entrySet().stream()
                 .collect(toConcurrentMap(
                         entry -> Paths.get(entry.getKey()),
                         entry -> completedFuture(entry.getValue())));
@@ -139,7 +131,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     @Override
     protected void doStop() {
         checkState(memoryBarrier);
-        stateSaver.close();
         if (requestedToForgetUploadStateOnShutdown) {
             forgetUploadState();
             requestedToForgetUploadStateOnShutdown = false;
@@ -191,7 +182,11 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                                 KeyedError.of(pathState.path(), Code.forNumber(status.getCode()) + ": " + status.getMessage())));
                         mediaItemOrError.item().ifPresent(item -> {
                             uploadedItemStateByPath.compute(pathState.path(),
-                                    (path, itemStateFuture) -> checkNotNull(itemStateFuture).thenApply(itemState -> itemState.withMediaId(item.getId())));
+                                    (path, itemStateFuture) -> checkNotNull(itemStateFuture).thenApply(itemState -> {
+                                        var newItemState = itemState.withMediaId(item.getId());
+                                        uploadStateManager.saveItemState(path, newItemState);
+                                        return newItemState;
+                                    }));
                             resultListBuilder.add(PathMediaItemOrError.of(pathState.path(), item));
                         });
                     }
@@ -212,8 +207,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     private void forgetUploadState() {
         checkState(memoryBarrier);
         logger.info("Was asked not to resume - forgetting {} previously uploaded item(s)", uploadedItemStateByPath.size());
-        uploadState = UploadState.builder().build();
-        uploadStateManager.save(uploadState);
+        uploadStateManager.forgetState();
         uploadedItemStateByPath.clear();
         memoryBarrier = true;
     }
@@ -252,7 +246,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                 })
                 .thenApply(itemState -> {
                     checkState(memoryBarrier);
-                    stateSaver.save();
+                    uploadStateManager.saveItemState(file, itemState);
                     backOffHandler.reset();
                     return success(itemState);
                 })
@@ -289,20 +283,5 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                             .setUploadState(UploadMediaItemState.of(uploadToken, currentDateTimeProvider.currentInstant()))
                             .build();
                 });
-    }
-
-    private void saveState() {
-        checkState(memoryBarrier);
-        var newUploadState = UploadState.of(
-                uploadedItemStateByPath.entrySet().stream()
-                        .filter(entry -> entry.getValue().isDone() && !entry.getValue().isCompletedExceptionally())
-                        .collect(toImmutableMap(
-                                entry -> entry.getKey().toString(),
-                                entry -> entry.getValue().getNow(null))));
-        if (!newUploadState.equals(uploadState)) {
-            uploadState = newUploadState;
-            uploadStateManager.save(uploadState);
-        }
-        memoryBarrier = true;
     }
 }

@@ -59,7 +59,6 @@ final class AddToAlbumAfterCreatingStrategy implements AddToAlbumStrategy {
         return googlePhotosAlbum
                 .map(album -> {
                     var pathMediaItemOrErrors = pathMediaItemOrErrorStream
-                            .filter(pathMediaItemOrError -> itemStateRetriever.apply(pathMediaItemOrError.path()).albumId().isEmpty())
                             .collect(toImmutableList());
                     var mediaItemsToAddToAlbum = pathMediaItemOrErrors.stream()
                             .map(PathMediaItemOrError::mediaItem)

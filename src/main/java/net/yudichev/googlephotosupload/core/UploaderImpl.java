@@ -83,7 +83,7 @@ final class UploaderImpl implements Uploader {
 
     @Override
     public int numberOfUploadedItems() {
-        return uploadStateManager.get().uploadedMediaItemIdByAbsolutePath().size();
+        return uploadStateManager.itemCount();
     }
 
     @Override

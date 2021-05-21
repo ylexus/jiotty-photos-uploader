@@ -5,6 +5,7 @@ import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import net.yudichev.googlephotosupload.core.DependenciesModule;
 import net.yudichev.googlephotosupload.core.ResourceBundleModule;
+import net.yudichev.googlephotosupload.core.SettingsModule;
 import net.yudichev.googlephotosupload.core.UploadPhotosModule;
 import net.yudichev.googlephotosupload.ui.Bindings.AuthBrowser;
 import net.yudichev.jiotty.common.app.Application;
@@ -26,7 +27,8 @@ public final class UiMain extends javafx.application.Application {
     private static final AtomicReference<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler = new AtomicReference<>();
 
     public static void main(String[] args) {
-        if (otherInstanceRunning()) {
+        var coreServicesModule = new SettingsModule();
+        if (otherInstanceRunning(coreServicesModule.getSettingsRootPath())) {
             showFatalStartupError(RESOURCE_BUNDLE.getString("singleInstanceCheckDialogMessage"));
             return;
         }
@@ -34,11 +36,13 @@ public final class UiMain extends javafx.application.Application {
         logger.info("System properties {}", System.getProperties());
         logger.info("Environment {}", System.getenv());
         Application.builder()
+                .addModule(() -> coreServicesModule)
                 .addModule(() -> new UiModule(handler -> {
                     checkState(javafxApplicationResourcesHandler.compareAndSet(null, handler), "can only launch once");
                     new Thread(() -> launch(args)).start();
                 }))
                 .addModule(() -> DependenciesModule.builder()
+                        .setAppSettingsRootDir(coreServicesModule.getSettingsRootPath())
                         .withGoogleApiSettingsCustomiser(builder -> builder.setAuthorizationBrowser(annotatedWith(AuthBrowser.class)))
                         .build())
                 .addModule(ResourceBundleModule::new)

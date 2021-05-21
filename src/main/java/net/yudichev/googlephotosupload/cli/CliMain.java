@@ -2,6 +2,7 @@ package net.yudichev.googlephotosupload.cli;
 
 import net.yudichev.googlephotosupload.core.DependenciesModule;
 import net.yudichev.googlephotosupload.core.ResourceBundleModule;
+import net.yudichev.googlephotosupload.core.SettingsModule;
 import net.yudichev.googlephotosupload.core.UploadPhotosModule;
 import net.yudichev.jiotty.common.app.Application;
 import org.apache.commons.cli.*;
@@ -31,10 +32,11 @@ public final class CliMain {
                 logger.info("Version {}", buildVersion());
             }
             if (commandLine.hasOption('r')) {
-                if (otherInstanceRunning()) {
+                var settingsModule = new SettingsModule();
+                if (otherInstanceRunning(settingsModule.getSettingsRootPath())) {
                     logger.error("Another copy of the app is already running");
                 } else {
-                    startApp(commandLine);
+                    startApp(settingsModule, commandLine);
                 }
             } else if (!helpRequested && !versionRequested) {
                 logger.error("Missing option -r");
@@ -47,9 +49,12 @@ public final class CliMain {
         LogManager.shutdown();
     }
 
-    private static void startApp(CommandLine commandLine) {
+    private static void startApp(SettingsModule settingsModule, CommandLine commandLine) {
         Application.builder()
-                .addModule(() -> DependenciesModule.builder().build())
+                .addModule(() -> settingsModule)
+                .addModule(() -> DependenciesModule.builder()
+                        .setAppSettingsRootDir(settingsModule.getSettingsRootPath())
+                        .build())
                 .addModule(UploadPhotosModule::new)
                 .addModule(ResourceBundleModule::new)
                 .addModule(() -> new CliModule(commandLine))

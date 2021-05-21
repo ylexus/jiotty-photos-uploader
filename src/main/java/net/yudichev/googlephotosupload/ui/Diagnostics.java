@@ -7,6 +7,8 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
+import javafx.stage.Stage;
+import net.yudichev.googlephotosupload.core.UploadStateManager;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +35,7 @@ import static javafx.scene.control.Alert.AlertType.ERROR;
 import static javafx.scene.control.Alert.AlertType.INFORMATION;
 import static javafx.scene.input.KeyCombination.*;
 import static javafx.scene.input.KeyEvent.KEY_RELEASED;
-import static net.yudichev.googlephotosupload.core.AppGlobals.APP_SETTINGS_DIR;
+import static net.yudichev.googlephotosupload.core.Bindings.SettingsRoot;
 import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.Runnables.guarded;
@@ -43,28 +45,34 @@ final class Diagnostics extends BaseLifecycleComponent {
     private static final Logger logger = LoggerFactory.getLogger(Diagnostics.class);
 
     private final Provider<JavafxApplicationResources> javafxApplicationResourcesProvider;
+    private final Path settingsRoot;
+    private final UploadStateManager uploadStateManager;
     private final ResourceBundle resourceBundle;
 
     @Inject
     Diagnostics(Provider<JavafxApplicationResources> javafxApplicationResourcesProvider,
+                @SettingsRoot Path settingsRoot,
+                UploadStateManager uploadStateManager,
                 ResourceBundle resourceBundle) {
         this.javafxApplicationResourcesProvider = checkNotNull(javafxApplicationResourcesProvider);
+        this.settingsRoot = checkNotNull(settingsRoot);
+        this.uploadStateManager = checkNotNull(uploadStateManager);
         this.resourceBundle = checkNotNull(resourceBundle);
     }
 
     @Override
     protected void doStart() {
         var primaryStage = javafxApplicationResourcesProvider.get().primaryStage();
-        KeyCombination threadDumpCombination = new KeyCodeCombination(KeyCode.T, CONTROL_DOWN, ALT_DOWN, SHIFT_DOWN);
+        registerThreadDumpHandler(primaryStage);
+        registerHeapDumpHandler(primaryStage);
+        registerDbUiLauncher(primaryStage);
+    }
+
+    private void registerHeapDumpHandler(Stage primaryStage) {
+        KeyCombination keyCodeCombination = new KeyCodeCombination(KeyCode.H, CONTROL_DOWN, ALT_DOWN, SHIFT_DOWN);
         primaryStage.addEventHandler(KEY_RELEASED, event -> {
-            if (threadDumpCombination.match(event)) {
-                new ThreadDumps().writeSeveralThreadDumpsAsync();
-            }
-        });
-        KeyCombination heapDumpCombination = new KeyCodeCombination(KeyCode.H, CONTROL_DOWN, ALT_DOWN, SHIFT_DOWN);
-        primaryStage.addEventHandler(KEY_RELEASED, event -> {
-            if (heapDumpCombination.match(event)) {
-                HeapDumps.writeHeapDump()
+            if (keyCodeCombination.match(event)) {
+                new HeapDumps().writeHeapDump()
                         .whenComplete((path, e) -> Platform.runLater(() -> {
                             if (e != null) {
                                 logger.error("Failed to write heap dump", e);
@@ -79,6 +87,27 @@ final class Diagnostics extends BaseLifecycleComponent {
                                 alert.showAndWait();
                             }
                         }));
+                event.consume();
+            }
+        });
+    }
+
+    private void registerThreadDumpHandler(Stage primaryStage) {
+        KeyCombination keyCodeCombination = new KeyCodeCombination(KeyCode.T, CONTROL_DOWN, ALT_DOWN, SHIFT_DOWN);
+        primaryStage.addEventHandler(KEY_RELEASED, event -> {
+            if (keyCodeCombination.match(event)) {
+                new ThreadDumps().writeSeveralThreadDumpsAsync();
+                event.consume();
+            }
+        });
+    }
+
+    private void registerDbUiLauncher(Stage primaryStage) {
+        KeyCombination keyCodeCombination = new KeyCodeCombination(KeyCode.D, CONTROL_DOWN, ALT_DOWN, SHIFT_DOWN);
+        primaryStage.addEventHandler(KEY_RELEASED, event -> {
+            if (keyCodeCombination.match(event)) {
+                uploadStateManager.startWebServer();
+                event.consume();
             }
         });
     }
@@ -87,14 +116,14 @@ final class Diagnostics extends BaseLifecycleComponent {
         return DUMP_FILE_NAME_DATE_FORMATTER.format(Instant.now().atZone(UTC));
     }
 
-    private static final class HeapDumps {
-        public static CompletableFuture<Path> writeHeapDump() {
+    private final class HeapDumps {
+        public CompletableFuture<Path> writeHeapDump() {
             logger.info("Requested heap dump");
-            return CompletableFuture.supplyAsync(HeapDumps::doWriteHeapDump);
+            return CompletableFuture.supplyAsync(this::doWriteHeapDump);
         }
 
-        private static Path doWriteHeapDump() {
-            var baseDir = APP_SETTINGS_DIR.resolve("heapdumps");
+        private Path doWriteHeapDump() {
+            var baseDir = settingsRoot.resolve("heapdumps");
             asUnchecked(() -> Files.createDirectories(baseDir));
             var dumpFile = baseDir.resolve("heapdump-" + dumpTimestamp() + ".hprof");
 
@@ -109,7 +138,7 @@ final class Diagnostics extends BaseLifecycleComponent {
         }
     }
 
-    private static final class ThreadDumps {
+    private final class ThreadDumps {
 
         private int count = 5;
         private ScheduledExecutorService scheduledExecutor;
@@ -122,7 +151,7 @@ final class Diagnostics extends BaseLifecycleComponent {
 
         private void writeThreadDump() {
             try {
-                var baseDir = APP_SETTINGS_DIR.resolve("threaddumps");
+                var baseDir = settingsRoot.resolve("threaddumps");
                 asUnchecked(() -> Files.createDirectories(baseDir));
                 var dumpFile = baseDir.resolve("threaddump-" + dumpTimestamp() + ".txt");
                 var infos = getThreadMXBean().dumpAllThreads(true, true);

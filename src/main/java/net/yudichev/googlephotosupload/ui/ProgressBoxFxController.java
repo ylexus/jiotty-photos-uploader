@@ -104,7 +104,7 @@ public final class ProgressBoxFxController {
                             progressIndicatorFailureText.setVisible(true);
                         }
                     }
-            descriptionLabel.setText(null);
+                    descriptionLabel.setText(null);
                 }
         );
     }
