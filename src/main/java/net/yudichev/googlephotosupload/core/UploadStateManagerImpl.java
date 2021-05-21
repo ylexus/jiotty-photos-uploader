@@ -49,13 +49,10 @@ final class UploadStateManagerImpl extends BaseLifecycleComponent implements Upl
 
     @Override
     protected void doStart() {
-        connection = getAsUnchecked(() -> {
-            @SuppressWarnings("CallToDriverManagerGetConnection") // no need
-            var conn = DriverManager.getConnection("jdbc:h2:" + h2DbPath.toAbsolutePath(), "sa", "");
-            conn.setAutoCommit(false);
-            return conn;
-        });
         inLock(lock, () -> asUnchecked(() -> {
+            //noinspection CallToDriverManagerGetConnection no need
+            connection = DriverManager.getConnection("jdbc:h2:" + h2DbPath.toAbsolutePath(), "sa", "");
+            connection.setAutoCommit(false);
             try (var statement = connection.createStatement()) {
                 statement.execute("CREATE TABLE IF NOT EXISTS MEDIA_ITEMS(" +
                         "PATH VARCHAR(4096) PRIMARY KEY, " +
@@ -64,28 +61,26 @@ final class UploadStateManagerImpl extends BaseLifecycleComponent implements Upl
                         "MEDIA_ID VARCHAR(256)" +
                         ");");
             }
+
+            queryAllStmt = connection.prepareStatement("SELECT PATH, TOKEN, UPL_TIMESTAMP, MEDIA_ID FROM MEDIA_ITEMS");
+            queryCountStmt = connection.prepareStatement("SELECT COUNT(*) FROM MEDIA_ITEMS");
+            removeAllStmt = connection.prepareStatement("TRUNCATE TABLE MEDIA_ITEMS");
+            updateOneStateStmt = connection.prepareStatement("MERGE INTO MEDIA_ITEMS (PATH, TOKEN, UPL_TIMESTAMP, MEDIA_ID) VALUES (?,?,?,?)");
+
             migrateFromOldStorage();
         }));
-        queryAllStmt = getAsUnchecked(() -> connection.prepareStatement("SELECT PATH, TOKEN, UPL_TIMESTAMP, MEDIA_ID FROM MEDIA_ITEMS"));
-        queryCountStmt = getAsUnchecked(() -> connection.prepareStatement("SELECT COUNT(*) FROM MEDIA_ITEMS"));
-        removeAllStmt = getAsUnchecked(() -> connection.prepareStatement("TRUNCATE TABLE MEDIA_ITEMS"));
-        updateOneStateStmt = getAsUnchecked(() -> connection.prepareStatement(
-                "MERGE INTO MEDIA_ITEMS (PATH, TOKEN, UPL_TIMESTAMP, MEDIA_ID) VALUES (?,?,?,?)"));
     }
 
     private void migrateFromOldStorage() throws SQLException {
         var uploadState = varStore.readValue(UploadState.class, VAR_STORE_KEY).orElseGet(() -> UploadState.builder().build());
         if (!uploadState.uploadedMediaItemIdByAbsolutePath().isEmpty()) {
             logger.info("Migrating {} items to new state storage...", uploadState.uploadedMediaItemIdByAbsolutePath().size());
-            try (var statement = connection
-                    .prepareStatement("INSERT INTO MEDIA_ITEMS (PATH, TOKEN, UPL_TIMESTAMP, MEDIA_ID) VALUES (?,?,?,?)")) {
-                for (var entry : uploadState.uploadedMediaItemIdByAbsolutePath().entrySet()) {
-                    addRowUpdateBatch(statement, entry.getKey(), entry.getValue());
-                }
-                statement.executeBatch();
+            for (var entry : uploadState.uploadedMediaItemIdByAbsolutePath().entrySet()) {
+                addRowUpdateBatch(entry.getKey(), entry.getValue());
             }
+            updateOneStateStmt.executeBatch();
             connection.commit();
-            varStore.saveValue(VAR_STORE_KEY, uploadState);
+            varStore.saveValue(VAR_STORE_KEY, UploadState.builder().build());
             logger.info("Migrated successfully");
         }
     }
@@ -127,7 +122,7 @@ final class UploadStateManagerImpl extends BaseLifecycleComponent implements Upl
     @Override
     public void saveItemState(Path path, ItemState itemState) {
         inLock(lock, () -> asUnchecked(() -> {
-            addRowUpdateBatch(updateOneStateStmt, path.toAbsolutePath().toString(), itemState);
+            addRowUpdateBatch(path.toAbsolutePath().toString(), itemState);
             updateOneStateStmt.execute();
             connection.commit();
         }));
@@ -150,23 +145,23 @@ final class UploadStateManagerImpl extends BaseLifecycleComponent implements Upl
         logger.info("DB Console Disconnected");
     }
 
-    private static void addRowUpdateBatch(PreparedStatement statement, String absolutePath, ItemState itemState) throws SQLException {
-        statement.clearParameters();
-        statement.setString(1, absolutePath);
+    private void addRowUpdateBatch(String absolutePath, ItemState itemState) throws SQLException {
+        updateOneStateStmt.clearParameters();
+        updateOneStateStmt.setString(1, absolutePath);
         if (itemState.uploadState().isPresent()) {
             var uploadMediaItemState = itemState.uploadState().get();
-            statement.setString(2, uploadMediaItemState.token());
-            statement.setObject(3, uploadMediaItemState.uploadInstant());
+            updateOneStateStmt.setString(2, uploadMediaItemState.token());
+            updateOneStateStmt.setObject(3, uploadMediaItemState.uploadInstant());
         } else {
-            statement.setNull(2, Types.NULL);
-            statement.setNull(3, Types.NULL);
+            updateOneStateStmt.setNull(2, Types.NULL);
+            updateOneStateStmt.setNull(3, Types.NULL);
         }
         if (itemState.mediaId().isPresent()) {
-            statement.setString(4, itemState.mediaId().get());
+            updateOneStateStmt.setString(4, itemState.mediaId().get());
         } else {
-            statement.setNull(4, Types.NULL);
+            updateOneStateStmt.setNull(4, Types.NULL);
         }
-        statement.addBatch();
+        updateOneStateStmt.addBatch();
     }
 
     @BindingAnnotation
