@@ -78,7 +78,6 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-annotations"
     implementation "com.google.api:gax"
     implementation "com.google.api.grpc:proto-google-common-protos"
-    implementation "com.google.http-client:google-http-client"
     implementation "commons-cli:commons-cli:1.4"
     implementation "com.fasterxml.jackson.core:jackson-databind"
     implementation "de.codecentric.centerdevice:centerdevice-nsmenufx:2.1.7"
