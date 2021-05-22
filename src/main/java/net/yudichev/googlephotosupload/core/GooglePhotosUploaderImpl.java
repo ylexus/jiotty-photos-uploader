@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -86,23 +87,20 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                     directoryProgressStatus.updateDescription(googlePhotosAlbum.map(GooglePhotosAlbum::getTitle).orElse(""));
                     var createMediaDataResultsFuture = paths.stream()
                             .sorted(comparing(path -> path.getFileName().toString()))
-                            .map(path -> {
-                                fileProgressStatus.updateDescription(path.toAbsolutePath().toString());
-                                return createMediaData(path)
-                                        .thenApply(itemState -> {
-                                            itemState.toFailure().ifPresentOrElse(
-                                                    error -> fileProgressStatus.addFailure(KeyedError.of(path, error)),
-                                                    fileProgressStatus::incrementSuccess);
-                                            return PathState.of(path, itemState);
-                                        });
-                            })
+                            .map(path -> createMediaData(path, fileProgressStatus)
+                                    .thenApply(itemState -> {
+                                        itemState.toFailure().ifPresentOrElse(
+                                                error -> fileProgressStatus.addFailure(KeyedError.of(path, error)),
+                                                fileProgressStatus::incrementSuccess);
+                                        return PathState.of(path, itemState);
+                                    }))
                             .collect(toFutureOfList());
                     return addToAlbumStrategy.addToAlbum(
                             createMediaDataResultsFuture,
                             googlePhotosAlbum,
                             fileProgressStatus,
-                            (albumId, pathStates) -> createMediaItems(albumId, fileProgressStatus, pathStates),
-                            this::getItemState);
+                            directoryProgressStatus,
+                            (albumId, pathStates) -> createMediaItems(albumId, fileProgressStatus, pathStates), this::getItemState);
                 });
     }
 
@@ -212,14 +210,14 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         memoryBarrier = true;
     }
 
-    private CompletableFuture<ResultOrFailure<ItemState>> createMediaData(Path file) {
+    private CompletableFuture<ResultOrFailure<ItemState>> createMediaData(Path file, ProgressStatus fileProgressStatus) {
         checkStarted();
         checkState(memoryBarrier);
         return uploadedItemStateByPath.compute(file,
                 (theFile, currentFuture) -> {
                     if (currentFuture == null || currentFuture.isCompletedExceptionally()) {
                         logger.info("Scheduling upload of {}", file);
-                        currentFuture = doCreateMediaData(theFile);
+                        currentFuture = doCreateMediaData(theFile, fileProgressStatus);
                     } else {
                         var itemState = currentFuture.getNow(null);
                         if (itemState != null) {
@@ -236,7 +234,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                                     })
                                     .orElseGet(() -> {
                                         logger.info("Uploaded, but upload token expired, re-uploading: {}", file);
-                                        return doCreateMediaData(theFile);
+                                        return doCreateMediaData(theFile, fileProgressStatus);
                                     });
                         } else {
                             logger.error("Unexpected future state for {}: {}", file, currentFuture);
@@ -257,7 +255,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                             .orElseGet(() -> {
                                 if (backOffHandler.handle(operationName, exception).isPresent()) {
                                     logger.debug("Retrying upload of {}", file);
-                                    return createMediaData(file);
+                                    return createMediaData(file, fileProgressStatus);
                                 } else {
                                     throw new RuntimeException(exception);
                                 }
@@ -274,8 +272,8 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         return notExpired;
     }
 
-    private CompletableFuture<ItemState> doCreateMediaData(Path file) {
-        return googlePhotosClient.uploadMediaData(file, executorService)
+    private CompletableFuture<ItemState> doCreateMediaData(Path file, ProgressStatus fileProgressStatus) {
+        return googlePhotosClient.uploadMediaData(file, statusUpdatingExecutor(file, fileProgressStatus))
                 .thenApply(uploadToken -> {
                     logger.info("Uploaded file {}", file);
                     logger.debug("Upload token {}", uploadToken);
@@ -283,5 +281,12 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                             .setUploadState(UploadMediaItemState.of(uploadToken, currentDateTimeProvider.currentInstant()))
                             .build();
                 });
+    }
+
+    private Executor statusUpdatingExecutor(Path file, ProgressStatus fileProgressStatus) {
+        return command -> executorService.execute(() -> {
+            fileProgressStatus.updateDescription(file.toAbsolutePath().toString());
+            command.run();
+        });
     }
 }

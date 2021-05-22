@@ -37,9 +37,15 @@ final class SelectingAddToAlbumStrategy implements AddToAlbumStrategy {
     public CompletableFuture<Void> addToAlbum(CompletableFuture<List<PathState>> createMediaDataResultsFuture,
                                               Optional<GooglePhotosAlbum> googlePhotosAlbum,
                                               ProgressStatus fileProgressStatus,
+                                              ProgressStatus directoryProgressStatus,
                                               BiFunction<Optional<String>, List<PathState>, CompletableFuture<List<PathMediaItemOrError>>> createMediaItems,
                                               Function<Path, ItemState> itemStateRetriever) {
-        return selectDelegate().addToAlbum(createMediaDataResultsFuture, googlePhotosAlbum, fileProgressStatus, createMediaItems, itemStateRetriever);
+        return selectDelegate().addToAlbum(createMediaDataResultsFuture,
+                googlePhotosAlbum,
+                fileProgressStatus,
+                directoryProgressStatus,
+                createMediaItems,
+                itemStateRetriever);
     }
 
     private AddToAlbumStrategy selectDelegate() {

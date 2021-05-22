@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -43,19 +44,23 @@ final class AddToAlbumAfterCreatingStrategy implements AddToAlbumStrategy {
     public CompletableFuture<Void> addToAlbum(CompletableFuture<List<PathState>> createMediaDataResultsFuture,
                                               Optional<GooglePhotosAlbum> googlePhotosAlbum,
                                               ProgressStatus fileProgressStatus,
+                                              ProgressStatus directoryProgressStatus,
                                               BiFunction<Optional<String>, List<PathState>, CompletableFuture<List<PathMediaItemOrError>>> createMediaItems,
                                               Function<Path, ItemState> itemStateRetriever) {
         return createMediaDataResultsFuture
                 .thenCompose(createMediaDataResults -> partition(createMediaDataResults, GOOGLE_PHOTOS_API_BATCH_SIZE).stream()
                         .collect(toFutureOfListChaining(pathStates -> createMediaItems.apply(Optional.empty(), pathStates)))
                         .thenApply(lists -> lists.stream().flatMap(Collection::stream)))
-                .thenCompose(pathMediaItemOrErrorStream -> addToAlbum(googlePhotosAlbum, pathMediaItemOrErrorStream, fileProgressStatus, itemStateRetriever));
+                .thenCompose(pathMediaItemOrErrorStream -> addToAlbum(googlePhotosAlbum,
+                        pathMediaItemOrErrorStream,
+                        fileProgressStatus,
+                        directoryProgressStatus));
     }
 
     private CompletionStage<Void> addToAlbum(Optional<GooglePhotosAlbum> googlePhotosAlbum,
                                              Stream<PathMediaItemOrError> pathMediaItemOrErrorStream,
                                              ProgressStatus fileProgressStatus,
-                                             Function<Path, ItemState> itemStateRetriever) {
+                                             ProgressStatus directoryProgressStatus) {
         return googlePhotosAlbum
                 .map(album -> {
                     var pathMediaItemOrErrors = pathMediaItemOrErrorStream
@@ -69,7 +74,8 @@ final class AddToAlbumAfterCreatingStrategy implements AddToAlbumStrategy {
                             .collect(toImmutableList());
                     return cloudOperationHelper.withBackOffAndRetry("add items to album",
                             () -> partition(mediaItemsToAddToAlbum, GOOGLE_PHOTOS_API_BATCH_SIZE).stream()
-                                    .collect(toFutureOfListChaining(mediaItems -> album.addMediaItems(mediaItems, executorServiceProvider.get())))
+                                    .collect(toFutureOfListChaining(mediaItems -> album
+                                            .addMediaItems(mediaItems, statusUpdatingExecutor(album, directoryProgressStatus))))
                                     .<Void>thenApply(ignored -> null),
                             fileProgressStatus::onBackoffDelay)
                             .exceptionallyCompose(exception -> fatalUserCorrectableHandler.handle(
@@ -83,5 +89,12 @@ final class AddToAlbumAfterCreatingStrategy implements AddToAlbumStrategy {
                                     .orElseThrow(() -> new RuntimeException(exception)));
                 })
                 .orElseGet(CompletableFutures::completedFuture);
+    }
+
+    private Executor statusUpdatingExecutor(GooglePhotosAlbum album, ProgressStatus directoryProgressStatus) {
+        return command -> executorServiceProvider.get().execute(() -> {
+            directoryProgressStatus.updateDescription(album.getTitle());
+            command.run();
+        });
     }
 }

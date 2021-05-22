@@ -18,11 +18,15 @@ final class AddToAlbumWhileCreatingStrategy implements AddToAlbumStrategy {
     public CompletableFuture<Void> addToAlbum(CompletableFuture<List<PathState>> createMediaDataResultsFuture,
                                               Optional<GooglePhotosAlbum> googlePhotosAlbum,
                                               ProgressStatus fileProgressStatus,
+                                              ProgressStatus directoryProgressStatus,
                                               BiFunction<Optional<String>, List<PathState>, CompletableFuture<List<PathMediaItemOrError>>> createMediaItems,
                                               Function<Path, ItemState> itemStateRetriever) {
         return createMediaDataResultsFuture
                 .thenCompose(createMediaDataResults -> partition(createMediaDataResults, GOOGLE_PHOTOS_API_BATCH_SIZE).stream()
-                        .map(pathStates -> createMediaItems.apply(googlePhotosAlbum.map(GooglePhotosAlbum::getId), pathStates))
+                        .map(pathStates -> {
+                            directoryProgressStatus.updateDescription(googlePhotosAlbum.map(GooglePhotosAlbum::getTitle).orElse(""));
+                            return createMediaItems.apply(googlePhotosAlbum.map(GooglePhotosAlbum::getId), pathStates);
+                        })
                         .collect(toFutureOfList())
                         .thenApply(voids -> null));
     }
