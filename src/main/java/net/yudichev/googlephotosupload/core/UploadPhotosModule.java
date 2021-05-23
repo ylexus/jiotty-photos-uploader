@@ -1,7 +1,6 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.inject.TypeLiteral;
-import com.google.inject.assistedinject.FactoryModuleBuilder;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 
@@ -29,10 +28,6 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
         bind(BuildVersion.class).asEagerSingleton();
         boundLifecycleComponent(LegacyLogCleaner.class);
 
-        install(new FactoryModuleBuilder()
-                .implement(StateSaver.class, StateSaverImpl.class)
-                .build(StateSaverFactory.class));
-
         bind(ExecutorService.class).annotatedWith(Backpressured.class)
                 .toProvider(boundLifecycleComponent(BackpressuredExecutorServiceProvider.class));
 
@@ -48,7 +43,6 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
 
         bind(AlbumManager.class).to(boundLifecycleComponent(AlbumManagerImpl.class));
 
-        bind(UploadStateManager.class).to(UploadStateManagerImpl.class).in(Singleton.class);
         bind(AddToAlbumStrategy.class)
                 .annotatedWith(SelectingAddToAlbumStrategy.WhileCreatingItems.class)
                 .to(AddToAlbumWhileCreatingStrategy.class)

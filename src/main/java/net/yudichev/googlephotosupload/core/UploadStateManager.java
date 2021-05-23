@@ -1,7 +1,16 @@
 package net.yudichev.googlephotosupload.core;
 
-interface UploadStateManager {
-    UploadState get();
+import java.nio.file.Path;
+import java.util.Map;
 
-    void save(UploadState uploadState);
+public interface UploadStateManager {
+    Map<String, ItemState> loadUploadedMediaItemIdByAbsolutePath();
+
+    void forgetState();
+
+    void saveItemState(Path path, ItemState itemState);
+
+    int itemCount();
+
+    void startWebServer();
 }

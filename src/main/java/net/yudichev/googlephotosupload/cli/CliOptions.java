@@ -13,7 +13,7 @@ public final class CliOptions {
                     .build())
             .addOption(Option.builder("n")
                     .longOpt("no-resume")
-                    .desc("Forget previous state and force re-uploading all files")
+                    .desc("Forget previous state and force re-upload of all files")
                     .build())
             .addOption(Option.builder("v")
                     .longOpt("version")

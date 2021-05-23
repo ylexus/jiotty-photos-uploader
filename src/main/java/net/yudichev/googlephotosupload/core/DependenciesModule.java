@@ -5,7 +5,6 @@ import com.google.inject.Module;
 import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 import net.yudichev.jiotty.common.time.TimeModule;
-import net.yudichev.jiotty.common.varstore.VarStoreModule;
 import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosModule;
 
@@ -14,13 +13,16 @@ import java.nio.file.Path;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.yudichev.googlephotosupload.core.AppGlobals.*;
+import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 import static net.yudichev.jiotty.common.inject.BindingSpec.providedBy;
 
 public final class DependenciesModule extends AbstractModule {
+    private final Path appSettingsRootDir;
     private final Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser;
 
-    private DependenciesModule(Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser) {
+    private DependenciesModule(Path appSettingsRootDir,
+                               Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser) {
+        this.appSettingsRootDir = checkNotNull(appSettingsRootDir);
         this.googleApiSettingsCustomiser = checkNotNull(googleApiSettingsCustomiser);
     }
 
@@ -32,9 +34,8 @@ public final class DependenciesModule extends AbstractModule {
     protected void configure() {
         install(new TimeModule());
         install(new ExecutorModule());
-        install(new VarStoreModule(APP_SETTINGS_DIR_NAME));
 
-        var authDataStoreRootDir = APP_SETTINGS_AUTH_DIR;
+        var authDataStoreRootDir = appSettingsRootDir.resolve("auth");
         bind(Restarter.class).to(RestarterImpl.class);
         bind(Path.class).annotatedWith(RestarterImpl.GoogleAuthRootDir.class).toInstance(authDataStoreRootDir);
 
@@ -51,7 +52,13 @@ public final class DependenciesModule extends AbstractModule {
     }
 
     public static final class Builder implements TypedBuilder<Module> {
+        private Path appSettingsRootDir;
         private Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser = ignored -> {};
+
+        public Builder setAppSettingsRootDir(Path appSettingsRootDir) {
+            this.appSettingsRootDir = checkNotNull(appSettingsRootDir);
+            return this;
+        }
 
         public Builder withGoogleApiSettingsCustomiser(Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser) {
             this.googleApiSettingsCustomiser = checkNotNull(googleApiSettingsCustomiser);
@@ -60,7 +67,7 @@ public final class DependenciesModule extends AbstractModule {
 
         @Override
         public Module build() {
-            return new DependenciesModule(googleApiSettingsCustomiser);
+            return new DependenciesModule(appSettingsRootDir, googleApiSettingsCustomiser);
         }
     }
 }

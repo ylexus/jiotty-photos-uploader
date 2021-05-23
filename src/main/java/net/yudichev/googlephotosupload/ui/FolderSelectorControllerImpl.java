@@ -11,6 +11,7 @@ import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.util.Callback;
@@ -34,6 +35,7 @@ import static javafx.scene.control.OverrunStyle.LEADING_ELLIPSIS;
 
 public final class FolderSelectorControllerImpl extends BaseLifecycleComponent implements FolderSelectorController {
     private static final String VARSTORE_KEY_SOURCE_DIRECTORIES = "sourceDirectories";
+    private final FxmlContainerFactory fxmlContainerFactory;
     private final Uploader uploader;
     private final ResourceBundle resourceBundle;
     private final VarStore varStore;
@@ -46,87 +48,97 @@ public final class FolderSelectorControllerImpl extends BaseLifecycleComponent i
     public TableColumn<Path, Void> deleteColumn;
     public VBox folderSelectorBox;
     public Button startUploadButton;
+    public Pane supportPane;
+    public Button browseButton;
     private BiConsumer<List<Path>, Boolean> folderSelectionListener;
     private volatile boolean everInitialised;
 
     @Inject
-    FolderSelectorControllerImpl(Uploader uploader,
+    FolderSelectorControllerImpl(FxmlContainerFactory fxmlContainerFactory,
+                                 Uploader uploader,
                                  ResourceBundle resourceBundle,
                                  VarStore varStore) {
+        this.fxmlContainerFactory = checkNotNull(fxmlContainerFactory);
         this.uploader = checkNotNull(uploader);
         this.resourceBundle = checkNotNull(resourceBundle);
         this.varStore = checkNotNull(varStore);
     }
 
     public void initialize() {
-        if (everInitialised) {
-            return;
+        if (!everInitialised) {
+            var sourceDirectories =
+                    varStore.readValue(SourceDirectories.class, VARSTORE_KEY_SOURCE_DIRECTORIES).orElseGet(() -> SourceDirectories.builder().build());
+            var items = folderTableView.getItems();
+            sourceDirectories.paths().stream().map(Paths::get).forEach(items::add);
+            items.addListener((ListChangeListener<Path>) this::onFolderListChanged);
+            folderTableView.setSelectionModel(null);
+
+            var resizePolicy = new HypnosResizePolicy();
+            resizePolicy.registerFixedWidthColumns(deleteColumn);
+            folderTableView.setColumnResizePolicy(resizePolicy);
+
+            updateStartUploadButtonState();
+
+            deleteColumn.setCellFactory(new Callback<>() {
+                @Override
+                public TableCell<Path, Void> call(TableColumn<Path, Void> param) {
+                    return new TableCell<>() {
+                        private final Button btn = new Button(null) {{
+                            var imageView = new ImageView(getClass().getResource("/delete-icon.png").toString());
+                            imageView.setFitHeight(20);
+                            imageView.setPreserveRatio(true);
+                            imageView.setSmooth(true);
+                            setGraphic(imageView);
+                            setPrefSize(20, 20);
+                            setPadding(EMPTY);
+                            setStyle("-fx-background-color: transparent;");
+                            setCursor(HAND);
+                        }};
+
+                        @Override
+                        protected void updateItem(Void item, boolean empty) {
+                            super.updateItem(item, empty);
+                            if (empty) {
+                                setGraphic(null);
+                            } else {
+                                btn.setOnAction(event -> getTableView().getItems().remove(getIndex()));
+                                setGraphic(btn);
+                            }
+                            setText(null);
+                        }
+                    };
+                }
+            });
+            pathColumn.setCellValueFactory(param -> new ObservableValueBase<>() {
+                @Override
+                public Path getValue() {
+                    return param.getValue();
+                }
+            });
+            pathColumn.setCellFactory(param -> new TableCell<>() {
+                {
+                    setTextOverrun(LEADING_ELLIPSIS);
+                }
+
+                @Override
+                protected void updateItem(Path item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null : item.toAbsolutePath().toString());
+                }
+            });
+
+            supportPane.getChildren().add(fxmlContainerFactory.create("SupportPane.fxml").root());
+
+            refreshViews();
+
+            everInitialised = true;
         }
 
-        var sourceDirectories =
-                varStore.readValue(SourceDirectories.class, VARSTORE_KEY_SOURCE_DIRECTORIES).orElseGet(() -> SourceDirectories.builder().build());
-        var items = folderTableView.getItems();
-        sourceDirectories.paths().stream().map(Paths::get).forEach(items::add);
-        items.addListener((ListChangeListener<Path>) this::onFolderListChanged);
-        folderTableView.setSelectionModel(null);
-
-        var resizePolicy = new HypnosResizePolicy();
-        resizePolicy.registerFixedWidthColumns(deleteColumn);
-        folderTableView.setColumnResizePolicy(resizePolicy);
-
-        updateStartUploadButtonState();
-
-        deleteColumn.setCellFactory(new Callback<>() {
-            @Override
-            public TableCell<Path, Void> call(TableColumn<Path, Void> param) {
-                return new TableCell<>() {
-                    private final Button btn = new Button(null) {{
-                        var imageView = new ImageView(getClass().getResource("/delete-icon.png").toString());
-                        imageView.setFitHeight(20);
-                        imageView.setPreserveRatio(true);
-                        imageView.setSmooth(true);
-                        setGraphic(imageView);
-                        setPrefSize(20, 20);
-                        setPadding(EMPTY);
-                        setStyle("-fx-background-color: transparent;");
-                        setCursor(HAND);
-                    }};
-
-                    @Override
-                    protected void updateItem(Void item, boolean empty) {
-                        super.updateItem(item, empty);
-                        if (empty) {
-                            setGraphic(null);
-                        } else {
-                            btn.setOnAction(event -> getTableView().getItems().remove(getIndex()));
-                            setGraphic(btn);
-                        }
-                        setText(null);
-                    }
-                };
-            }
-        });
-        pathColumn.setCellValueFactory(param -> new ObservableValueBase<>() {
-            @Override
-            public Path getValue() {
-                return param.getValue();
-            }
-        });
-        pathColumn.setCellFactory(param -> new TableCell<>() {
-            {
-                setTextOverrun(LEADING_ELLIPSIS);
-            }
-
-            @Override
-            protected void updateItem(Path item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.toAbsolutePath().toString());
-            }
-        });
-
-        refreshViews();
-
-        everInitialised = true;
+        if (startUploadButton.isDisabled()) {
+            browseButton.requestFocus();
+        } else {
+            startUploadButton.requestFocus();
+        }
     }
 
     private void updateStartUploadButtonState() {

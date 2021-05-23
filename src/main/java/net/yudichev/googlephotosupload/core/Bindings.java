@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
-final class Bindings {
+public final class Bindings {
     private Bindings() {
     }
 
@@ -16,5 +16,11 @@ final class Bindings {
     @Target({FIELD, PARAMETER, METHOD})
     @Retention(RUNTIME)
     @interface Backpressured {
+    }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    public @interface SettingsRoot {
     }
 }

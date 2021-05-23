@@ -1,39 +1,39 @@
 <?xml version="1.0" ?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
- <dict>
-  <key>LSMinimumSystemVersion</key>
-  <string>10.9</string>
-  <key>CFBundleDevelopmentRegion</key>
-  <string>English</string>
-  <key>CFBundleAllowMixedLocalizations</key>
-  <true/>
-  <key>CFBundleExecutable</key>
-  <string>Jiotty Photos Uploader</string>
-  <key>CFBundleIconFile</key>
-  <string>Jiotty Photos Uploader.icns</string>
-  <key>CFBundleIdentifier</key>
-  <string>net.yudichev.googlephotosupload.ui</string>
-  <key>CFBundleInfoDictionaryVersion</key>
-  <string>6.0</string>
-  <key>CFBundleName</key>
-  <string>Jiotty Photos Uploader</string>
-  <key>CFBundlePackageType</key>
-  <string>APPL</string>
-  <key>CFBundleShortVersionString</key>
-  <string>@version@</string>
-  <key>CFBundleSignature</key>
-  <string>????</string>
-  <!-- See https://developer.apple.com/app-store/categories/ for list of AppStore categories -->
-  <key>LSApplicationCategoryType</key>
-  <string>Unknown</string>
-  <key>CFBundleVersion</key>
-  <string>@version@</string>
-  <key>NSHumanReadableCopyright</key>
-  <string>Copyright (C) 2020</string>
-  <key>NSHighResolutionCapable</key>
-  <string>true</string>
-  <key>NSSupportsAutomaticGraphicsSwitching</key>
-  <string>YES</string>
- </dict>
+    <dict>
+        <key>LSMinimumSystemVersion</key>
+        <string>10.9</string>
+        <key>CFBundleDevelopmentRegion</key>
+        <string>English</string>
+        <key>CFBundleAllowMixedLocalizations</key>
+        <true/>
+        <key>CFBundleExecutable</key>
+        <string>Jiotty Photos Uploader</string>
+        <key>CFBundleIconFile</key>
+        <string>Jiotty Photos Uploader.icns</string>
+        <key>CFBundleIdentifier</key>
+        <string>net.yudichev.googlephotosupload.ui</string>
+        <key>CFBundleInfoDictionaryVersion</key>
+        <string>6.0</string>
+        <key>CFBundleName</key>
+        <string>Jiotty Photos Uploader</string>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleShortVersionString</key>
+        <string>@version@</string>
+        <key>CFBundleSignature</key>
+        <string>????</string>
+        <!-- See https://developer.apple.com/app-store/categories/ for list of AppStore categories -->
+        <key>LSApplicationCategoryType</key>
+        <string>Unknown</string>
+        <key>CFBundleVersion</key>
+        <string>@version@</string>
+        <key>NSHumanReadableCopyright</key>
+        <string>Copyright (C) 2020</string>
+        <key>NSHighResolutionCapable</key>
+        <string>true</string>
+        <key>NSSupportsAutomaticGraphicsSwitching</key>
+        <string>YES</string>
+    </dict>
 </plist>

@@ -6,10 +6,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.file.Path;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
-import static net.yudichev.googlephotosupload.core.AppGlobals.APP_SETTINGS_DIR;
 
 public final class SingleInstanceCheck {
     private static final Logger logger = LoggerFactory.getLogger(SingleInstanceCheck.class);
@@ -17,8 +17,8 @@ public final class SingleInstanceCheck {
     @SuppressWarnings({"FieldCanBeLocal", "StaticVariableMayNotBeInitialized"})
     private static FileLock LOCK;
 
-    public static boolean otherInstanceRunning() {
-        var lockFile = APP_SETTINGS_DIR.resolve("instance.lock");
+    public static boolean otherInstanceRunning(Path settingsRootPath) {
+        var lockFile = settingsRootPath.resolve("instance.lock");
         try {
             LOCK = FileChannel.open(lockFile, CREATE, WRITE).tryLock();
         } catch (IOException | RuntimeException e) {

@@ -15,7 +15,7 @@ import static com.google.common.io.Resources.getResource;
 import static com.google.common.io.Resources.toByteArray;
 import static java.nio.file.Files.*;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
-import static net.yudichev.googlephotosupload.core.AppGlobals.APP_SETTINGS_DIR;
+import static net.yudichev.googlephotosupload.core.Bindings.SettingsRoot;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
@@ -23,7 +23,7 @@ final class CustomCredentialsManagerImpl implements Provider<URL>, CustomCredent
     private static final URL STANDARD_CREDENTIALS_URL = getResource("client_secret.json");
     private static final byte[] STANDARD_CREDENTIALS_URL_HASH = crc32(STANDARD_CREDENTIALS_URL);
     private final PreferencesManager preferencesManager;
-    private final Path CUSTOM_CREDENTIALS_PATH = APP_SETTINGS_DIR.resolve("client_secret.json");
+    private final Path customCredentialsPath;
     private final AtomicReference<Boolean> usingCustomCredentials = new AtomicReference<>();
     @Nullable
     private byte[] hashOfUsedCredentials;
@@ -31,13 +31,15 @@ final class CustomCredentialsManagerImpl implements Provider<URL>, CustomCredent
     private byte[] hashOfConfiguredCredentials;
 
     @Inject
-    CustomCredentialsManagerImpl(PreferencesManager preferencesManager) {
+    CustomCredentialsManagerImpl(@SettingsRoot Path settingsRoot,
+                                 PreferencesManager preferencesManager) {
         this.preferencesManager = checkNotNull(preferencesManager);
+        customCredentialsPath = settingsRoot.resolve("client_secret.json");
     }
 
     @Override
     public void saveCustomCredentials(Path sourceFile) {
-        asUnchecked(() -> copy(sourceFile, CUSTOM_CREDENTIALS_PATH, REPLACE_EXISTING));
+        asUnchecked(() -> copy(sourceFile, customCredentialsPath, REPLACE_EXISTING));
         refreshHashOfConfiguredCredentials();
     }
 
@@ -48,12 +50,12 @@ final class CustomCredentialsManagerImpl implements Provider<URL>, CustomCredent
 
     @Override
     public boolean configuredToUseCustomCredentials() {
-        return preferencesManager.get().useCustomCredentials() && isRegularFile(CUSTOM_CREDENTIALS_PATH);
+        return preferencesManager.get().useCustomCredentials() && isRegularFile(customCredentialsPath);
     }
 
     @Override
     public void deleteCustomCredentials() {
-        asUnchecked(() -> deleteIfExists(CUSTOM_CREDENTIALS_PATH));
+        asUnchecked(() -> deleteIfExists(customCredentialsPath));
         refreshHashOfConfiguredCredentials();
     }
 
@@ -68,7 +70,7 @@ final class CustomCredentialsManagerImpl implements Provider<URL>, CustomCredent
         this.usingCustomCredentials.set(usingCustomCredentials);
         URL url;
         if (usingCustomCredentials) {
-            url = getAsUnchecked(() -> CUSTOM_CREDENTIALS_PATH.toUri().toURL());
+            url = getAsUnchecked(() -> customCredentialsPath.toUri().toURL());
             hashOfUsedCredentials = crc32(url);
         } else {
             url = STANDARD_CREDENTIALS_URL;
@@ -80,7 +82,7 @@ final class CustomCredentialsManagerImpl implements Provider<URL>, CustomCredent
 
     private void refreshHashOfConfiguredCredentials() {
         hashOfConfiguredCredentials = configuredToUseCustomCredentials() ?
-                crc32(getAsUnchecked(() -> CUSTOM_CREDENTIALS_PATH.toUri().toURL())) :
+                crc32(getAsUnchecked(() -> customCredentialsPath.toUri().toURL())) :
                 STANDARD_CREDENTIALS_URL_HASH;
     }
 

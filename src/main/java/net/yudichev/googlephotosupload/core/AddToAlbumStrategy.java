@@ -13,6 +13,7 @@ interface AddToAlbumStrategy {
     CompletableFuture<Void> addToAlbum(CompletableFuture<List<PathState>> createMediaDataResultsFuture,
                                        Optional<GooglePhotosAlbum> googlePhotosAlbum,
                                        ProgressStatus fileProgressStatus,
+                                       ProgressStatus directoryProgressStatus,
                                        BiFunction<Optional<String>, List<PathState>, CompletableFuture<List<PathMediaItemOrError>>> createMediaItems,
                                        Function<Path, ItemState> itemStateRetriever);
 }
