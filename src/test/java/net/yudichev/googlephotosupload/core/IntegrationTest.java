@@ -96,6 +96,10 @@ final class IntegrationTest {
         doUploadTest();
 
         getLastFailure().ifPresent(Assertions::fail);
+
+        var spaceUsedProgress = progressStatusFactory.getStatusByName().get("Google Account Space Used (currently unreliable!)");
+        assertThat(spaceUsedProgress.getTotalCount(), optionalWithValue(equalTo(1024)));
+        assertThat(spaceUsedProgress.getDescription(), not(endsWith(" 0 B")));
     }
 
     @Test
@@ -489,7 +493,6 @@ final class IntegrationTest {
                 contains(KeyedError.of(invalidMediaItemPath.toAbsolutePath(),
                         "INVALID_ARGUMENT: createMediaItems"))));
 
-        progressStatusFactory.reset();
         googlePhotosClient.disableFileNameBaseFailures();
 
         doExecuteUpload();
@@ -898,6 +901,7 @@ final class IntegrationTest {
                 .build()
                 .toArray(String[]::new)));
         var applicationExitedLatch = new CountDownLatch(1);
+        progressStatusFactory.reset();
         new Thread(() -> {
             var coreServicesModule = new SettingsModule(settingsRootPath);
             Application.builder()
@@ -905,6 +909,7 @@ final class IntegrationTest {
                     .addModule(ExecutorModule::new)
                     .addModule(() -> coreServicesModule)
                     .addModule(() -> new MockGooglePhotosModule(googlePhotosClient))
+                    .addModule(MockGoogleDriveModule::new)
                     .addModule(ResourceBundleModule::new)
                     .addModule(() -> new UploadPhotosModule(Duration.ofMillis(1)))
                     .addModule(() -> new IntegrationTestUploadStarterModule(commandLine, progressStatusFactory))

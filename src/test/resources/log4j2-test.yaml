@@ -8,7 +8,7 @@ Configuration:
 
   Loggers:
     logger:
-      - name: net.yudichev.jiotty.connector.google.photos
+      - name: net.yudichev.jiotty.connector.google
         level: debug
         includeLocation: true
       - name: net.yudichev.googlephotosupload

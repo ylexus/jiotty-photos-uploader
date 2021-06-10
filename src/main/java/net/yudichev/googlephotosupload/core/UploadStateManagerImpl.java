@@ -50,8 +50,10 @@ final class UploadStateManagerImpl extends BaseLifecycleComponent implements Upl
     @Override
     protected void doStart() {
         inLock(lock, () -> asUnchecked(() -> {
+            var url = "jdbc:h2:" + h2DbPath.toAbsolutePath();
+            logger.debug("Creating connection to {}", url);
             //noinspection CallToDriverManagerGetConnection no need
-            connection = DriverManager.getConnection("jdbc:h2:" + h2DbPath.toAbsolutePath(), "sa", "");
+            connection = DriverManager.getConnection(url, "sa", "");
             connection.setAutoCommit(false);
             try (var statement = connection.createStatement()) {
                 statement.execute("CREATE TABLE IF NOT EXISTS MEDIA_ITEMS(" +
@@ -117,6 +119,7 @@ final class UploadStateManagerImpl extends BaseLifecycleComponent implements Upl
     @Override
     public void forgetState() {
         inLock(lock, () -> asUnchecked(() -> removeAllStmt.execute()));
+        logger.trace("Forgot state");
     }
 
     @Override
@@ -126,6 +129,7 @@ final class UploadStateManagerImpl extends BaseLifecycleComponent implements Upl
             updateOneStateStmt.execute();
             connection.commit();
         }));
+        logger.trace("Saved state: {}->{}", path, itemState);
     }
 
     @Override

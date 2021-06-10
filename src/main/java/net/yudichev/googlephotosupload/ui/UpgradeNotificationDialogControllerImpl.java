@@ -1,6 +1,6 @@
 package net.yudichev.googlephotosupload.ui;
 
-import com.sandec.mdfx.MDFXNode;
+import com.sandec.mdfx.MarkdownView;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -47,7 +47,9 @@ public final class UpgradeNotificationDialogControllerImpl implements UpgradeNot
                         .append("### ").append(revision.tag_name()).append(lineSeparator())
                         .append(revision.body().get()).append(lineSeparator()));
 
-        releaseNotesScrollPane.setContent(new MDFXNode(builder.toString()));
+        var markdownView = new MarkdownView(builder.toString());
+        markdownView.getStylesheets().add("/com/sandec/mdfx/mdfx-default.css");
+        releaseNotesScrollPane.setContent(markdownView);
         releaseNotesPane.heightProperty().addListener((obs, oldHeight, newHeight) -> dialogResizeAction.run());
     }
 

@@ -7,13 +7,13 @@ import java.nio.file.Paths
 plugins {
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.0.9'
-    id 'org.beryx.runtime' version '1.8.5'
-    id "name.remal.check-updates" version "1.0.211"
+    id 'org.beryx.runtime' version '1.12.5'
+    id "name.remal.check-updates" version "1.3.1"
 
     // TODO no good alternative to maven duplicate finder
     // id "net.idlestate.gradle-duplicate-classes-check" version "1.0.2"
 
-    id "ca.cutterslade.analyze" version "1.4.2"
+    id "ca.cutterslade.analyze" version "1.6.0"
 }
 
 version = readEnvOrDefault 'VERSION', '0.DEV'
@@ -48,29 +48,25 @@ repositories {
 }
 
 dependencies {
-    ext.orgJunitJupiterVersion = '5.6.0'
-    ext.orgMockitoVersion = '3.2.4'
-    ext.orgImmutablesVersion = '2.8.3'
-    ext.netYudichevJiottyVersion = '1.7.1'
+    ext.orgJunitJupiterVersion = '5.7.2'
+    ext.orgMockitoVersion = '3.10.0'
+    ext.orgImmutablesVersion = '2.8.8'
+    ext.netYudichevJiottyVersion = '2.0-SNAPSHOT'
+    ext.orgApacheLoggingLog4jVersion = '2.14.1'
 
     annotationProcessor "org.immutables:value:$orgImmutablesVersion"
     testAnnotationProcessor "org.immutables:value:$orgImmutablesVersion"
 
     implementation platform("net.yudichev.jiotty:jiotty-bom:$netYudichevJiottyVersion")
-    implementation platform("com.google.inject:guice-bom:4.2.2")
 
-    // This is needed as we depend on no_aop guice instead (regular Guice does not work on Java 14)
-    def withoutGuice = {
-        exclude group: "com.google.inject", module: "guice"
-    }
-
-    implementation "net.yudichev.jiotty:jiotty-common", withoutGuice
-    implementation "net.yudichev.jiotty:jiotty-connector-google-common", withoutGuice
-    implementation "net.yudichev.jiotty:jiotty-connector-google-photos", withoutGuice
-    implementation "com.google.inject.extensions:guice-assistedinject", withoutGuice
+    implementation "net.yudichev.jiotty:jiotty-common"
+    implementation "net.yudichev.jiotty:jiotty-connector-google-common"
+    implementation "net.yudichev.jiotty:jiotty-connector-google-photos"
+    implementation "net.yudichev.jiotty:jiotty-connector-google-drive"
+    implementation "com.google.inject.extensions:guice-assistedinject"
     implementation "org.slf4j:slf4j-api"
     implementation "org.apache.logging.log4j:log4j-api"
-    implementation "com.google.inject:guice::no_aop"
+    implementation "com.google.inject:guice"
     implementation "javax.inject:javax.inject"
     implementation "com.google.guava:guava:29.0-jre"
     implementation "com.google.code.findbugs:jsr305"
@@ -83,23 +79,24 @@ dependencies {
     implementation "de.codecentric.centerdevice:centerdevice-nsmenufx:2.1.7"
     implementation "io.grpc:grpc-api"
     implementation "com.squareup.okhttp3:okhttp"
-    implementation "com.sandec:mdfx:0.1.8"
+    implementation "com.sandec:mdfx:0.2.1"
     implementation 'com.h2database:h2:1.4.200'
 
     // This is to test dependency analyser
     //implementation "org.apache.commons:commons-skin:4.2"
     compileOnly "org.immutables:value:$orgImmutablesVersion"
-    runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:2.12.1"
-    runtimeOnly "org.apache.logging.log4j:log4j-jcl:2.12.1"
-    runtimeOnly "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.9.9"
-    runtimeOnly "com.lmax:disruptor:3.4.2"
+    runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$orgApacheLoggingLog4jVersion"
+    runtimeOnly "org.apache.logging.log4j:log4j-jcl:$orgApacheLoggingLog4jVersion"
+    runtimeOnly "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.12.3"
+    runtimeOnly "com.lmax:disruptor:3.4.4"
 
     testImplementation "net.yudichev.jiotty:jiotty-common"
     testImplementation "org.junit.jupiter:junit-jupiter-api:$orgJunitJupiterVersion"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$orgJunitJupiterVersion"
+    testImplementation "net.yudichev.jiotty:jiotty-connector-google-drive::tests"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$orgJunitJupiterVersion"
     testImplementation "org.mockito:mockito-junit-jupiter:$orgMockitoVersion"
-    testImplementation "org.hamcrest:hamcrest:2.1"
+    testImplementation "org.hamcrest:hamcrest:2.2"
     testCompileOnly "org.immutables:value:$orgImmutablesVersion"
 
     // these are added by the javafx plugin
@@ -169,14 +166,14 @@ javafx {
 }
 
 runtime {
-    //noinspection GroovyAssignabilityCheck, GroovyAccessibility
+    //noinspection GroovyAssignabilityCheck, GroovyAccessibility, GrFinalVariableAccess
     options = ['--strip-debug',
                '--compress', '2',
                '--no-header-files',
                '--no-man-pages']
 
     // required by httpclient, missed by default when building and running on Windows
-    //noinspection GroovyAssignabilityCheck,GroovyAccessibility
+    //noinspection GroovyAssignabilityCheck,GroovyAccessibility,GrFinalVariableAccess
     modules = [
             // required by httpclient, missed by default when building and running on Windows
             'java.naming',
@@ -185,6 +182,7 @@ runtime {
             // required for a heap dump via JMX
             'jdk.management'
     ]
+    //noinspection GroovyAssignabilityCheck,GroovyAccessibility,GrFinalVariableAccess
     additive = true
 
     jpackage {

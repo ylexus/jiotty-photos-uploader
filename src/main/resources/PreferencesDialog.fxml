@@ -55,6 +55,38 @@
                     <Label fx:id="albumDelimiterExampleLabel" minHeight="-Infinity" styleClass="side-note"/>
                 </VBox>
             </TitledPane>
+        </VBox>
+    </Tab>
+    <Tab closable="false" text="%preferencesDialogTabAccount">
+        <VBox alignment="TOP_CENTER" spacing="4.0">
+            <TitledPane animated="false" collapsible="false" contentDisplay="RIGHT" graphicTextGap="10.0" text="%preferencesDialogDriveSpaceTitle">
+                <padding>
+                    <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>
+                </padding>
+                <VBox spacing="4.0">
+                    <HBox alignment="CENTER_LEFT" spacing="4.0">
+                        <RadioButton fx:id="driveSpacePercentageRadioButton" minHeight="-Infinity" onAction="#onDriveSpaceSelectionChange"
+                                     text="%preferencesDriveSpacePercentageTitle" wrapText="true">
+                            <toggleGroup>
+                                <!--suppress JavaFxUnresolvedFxIdReference -->
+                                <ToggleGroup fx:id="driveSpaceGroup"/>
+                            </toggleGroup>
+                        </RadioButton>
+                        <TextField fx:id="driveSpacePercentageTextField" disable="${!(driveSpacePercentageRadioButton.selected)}" prefWidth="80.0"
+                                   HBox.hgrow="NEVER"/>
+                        <Label text="\%"/>
+                    </HBox>
+                    <HBox alignment="CENTER_LEFT" spacing="4.0">
+                        <RadioButton fx:id="driveSpaceFreeSpaceRadioButton" minHeight="-Infinity" onAction="#onDriveSpaceSelectionChange"
+                                     text="%preferencesDriveSpaceFreeSpaceTitle" toggleGroup="$driveSpaceGroup" wrapText="true"/>
+                        <TextField fx:id="driveSpaceFreeSpaceRadioTextField" disable="${!(driveSpaceFreeSpaceRadioButton.selected)}" prefWidth="160.0"
+                                   HBox.hgrow="NEVER"/>
+                        <Label text="MB"/>
+                    </HBox>
+                    <RadioButton fx:id="driveSpaceDisabledRadioButton" minHeight="-Infinity" onAction="#onDriveSpaceSelectionChange"
+                                 text="%preferencesDriveSpaceDisabledTitle" toggleGroup="$driveSpaceGroup" wrapText="true"/>
+                </VBox>
+            </TitledPane>
             <TitledPane fx:id="customCredentialsPane" animated="false" collapsible="false" contentDisplay="RIGHT" graphicTextGap="10.0" layoutX="10.0"
                         layoutY="194.0" text="%preferencesDialogCustomCredentialsTitle">
                 <padding>

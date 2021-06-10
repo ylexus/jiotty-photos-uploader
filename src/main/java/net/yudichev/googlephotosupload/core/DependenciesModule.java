@@ -6,12 +6,14 @@ import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 import net.yudichev.jiotty.common.time.TimeModule;
 import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
+import net.yudichev.jiotty.connector.google.drive.GoogleDriveModule;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosModule;
 
 import javax.inject.Singleton;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
+import static com.google.api.services.drive.DriveScopes.DRIVE_APPDATA;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 import static net.yudichev.jiotty.common.inject.BindingSpec.providedBy;
@@ -46,8 +48,13 @@ public final class DependenciesModule extends AbstractModule {
                 .setApplicationName(APP_TITLE)
                 .setCredentialsUrl(providedBy(CustomCredentialsManagerImpl.class));
         googleApiSettingsCustomiser.accept(googleApiSettingsBuilder);
+        var settings = googleApiSettingsBuilder.build();
         install(GooglePhotosModule.builder()
-                .setSettings(googleApiSettingsBuilder.build())
+                .setSettings(settings)
+                .build());
+        install(GoogleDriveModule.builder()
+                .setSettings(settings)
+                .addScopes(DRIVE_APPDATA)
                 .build());
     }
 

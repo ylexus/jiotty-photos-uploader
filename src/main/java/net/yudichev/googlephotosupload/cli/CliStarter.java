@@ -16,8 +16,7 @@ import java.util.ResourceBundle;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
 
-final class
-CliStarter extends BaseLifecycleComponent {
+final class CliStarter extends BaseLifecycleComponent {
     private static final Logger logger = LoggerFactory.getLogger(CliStarter.class);
     private final Path rootDir;
     private final Uploader uploader;

@@ -85,6 +85,8 @@ abstract class BasePreferences {
         return false;
     }
 
+    public abstract Optional<FailOnDriveSpaceOption> failOnDriveSpace();
+
     @Value.Check
     void validateRelevantDirDepthLimit() {
         relevantDirDepthLimit().ifPresent(value -> checkArgument(value > 0, "validateRelevantDirDepthLimit cannot be <=0: %s", value));
@@ -146,5 +148,18 @@ abstract class BasePreferences {
         return strings.stream()
                 .map(fileSystem::getPathMatcher)
                 .collect(toImmutableSet());
+    }
+
+    @Immutable
+    @PublicImmutablesStyle
+    interface BaseFailOnDriveSpaceOption {
+        Optional<Integer> minFreeMegabytes();
+
+        Optional<Double> maxUsedPercentage();
+
+        @Value.Check
+        default void validate() {
+            checkArgument(minFreeMegabytes().isPresent() ^ maxUsedPercentage().isPresent());
+        }
     }
 }

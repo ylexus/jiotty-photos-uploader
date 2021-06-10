@@ -28,6 +28,7 @@ final class ThrottlingProgressStatus implements ProgressStatus {
     private final ProgressValueUpdater delegate;
     private final ThrottlingConsumer<Runnable> eventSink;
     private final AtomicInteger successCount = new AtomicInteger();
+    private final AtomicInteger totalCount = new AtomicInteger();
     private final AtomicReference<String> description = new AtomicReference<>();
     private final BlockingQueue<KeyedError> pendingErrors = new ArrayBlockingQueue<>(65536);
     private final SchedulingExecutor executor;
@@ -49,6 +50,13 @@ final class ThrottlingProgressStatus implements ProgressStatus {
         ensureNotClosed();
         successCount.set(newValue);
         eventSink.accept(() -> delegate.updateSuccess(successCount.get()));
+    }
+
+    @Override
+    public void updateTotal(int newValue) {
+        ensureNotClosed();
+        totalCount.set(newValue);
+        eventSink.accept(() -> delegate.updateTotal(totalCount.get()));
     }
 
     @Override

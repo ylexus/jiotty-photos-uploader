@@ -31,6 +31,11 @@ final class ProgressStatusBarImpl implements ProgressStatusBar {
     }
 
     @Override
+    public void updateTotal(int newValue) {
+        controller.updateTotalCount(newValue);
+    }
+
+    @Override
     public void updateDescription(String description) {
         controller.updateDescription(description);
     }

@@ -42,6 +42,7 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     public Button stopButton;
     public VBox topVBox;
     public Button uploadMoreButton;
+    private boolean everInitialised;
 
     @Inject
     UploadPaneControllerImpl(Uploader uploader,
@@ -59,6 +60,7 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     public void initialize() {
         Pane supportPane = fxmlContainerFactory.create("SupportPane.fxml").root();
         topVBox.getChildren().add(supportPane);
+        everInitialised = true;
     }
 
     @Override
@@ -72,6 +74,9 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     @Override
     public void reset() {
         runLater(() -> {
+            if (!everInitialised) {
+                return;
+            }
             logArea.getStyleClass().remove("success-background");
             logArea.getStyleClass().remove("failed-background");
             logArea.getStyleClass().remove("partial-success-background");

@@ -30,15 +30,22 @@ final class LoggingProgressStatusFactory implements ProgressStatusFactory {
     }
 
     @Override
-    public ProgressStatus create(String name, Optional<Integer> totalCount) {
+    public ProgressStatus create(String name, @SuppressWarnings("ParameterNameDiffersFromOverriddenParameter") Optional<Integer> totalCountOpt) {
         return new ProgressStatus() {
             private final Lock lock = new ReentrantLock();
             private int successCount;
+            private Optional<Integer> totalCount = totalCountOpt;
             private int failureCount;
 
             @Override
             public void updateSuccess(int newValue) {
                 inLock(lock, () -> { successCount = newValue;});
+                throttledLog();
+            }
+
+            @Override
+            public void updateTotal(int newValue) {
+                inLock(lock, () -> { totalCount = Optional.of(newValue);});
                 throttledLog();
             }
 

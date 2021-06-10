@@ -27,7 +27,9 @@ public final class ResourceBundleModule extends BaseLifecycleComponentModule imp
         public ResourceBundle newBundle(String baseName, Locale locale, String format, ClassLoader loader, boolean reload)
                 throws IllegalAccessException, InstantiationException, IOException {
             var resourceBundle = super.newBundle(baseName, locale, format, loader, reload);
-            logger.debug("newBundle {}, {} = {}", locale, format, resourceBundle.getLocale());
+            if (resourceBundle != null) {
+                logger.debug("newBundle {}, {} = {}", locale, format, resourceBundle.getLocale());
+            }
             return resourceBundle;
         }
 

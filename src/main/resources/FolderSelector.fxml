@@ -50,8 +50,8 @@
         <ImageView fitWidth="20.0" pickOnBounds="true" preserveRatio="true" HBox.hgrow="SOMETIMES">
             <Image url="@warning-icon.png"/>
         </ImageView>
-        <Label alignment="CENTER" contentDisplay="CENTER" styleClass="side-note" text="%googleStorageWarning" textAlignment="CENTER" wrapText="true"
-               HBox.hgrow="NEVER">
+        <Label alignment="CENTER" contentDisplay="CENTER" styleClass="side-note" text="%googleStorageWarning" textAlignment="CENTER"
+               wrapText="true" HBox.hgrow="NEVER">
             <opaqueInsets>
                 <Insets/>
             </opaqueInsets>

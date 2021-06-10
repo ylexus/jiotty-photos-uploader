@@ -4,6 +4,8 @@ import com.google.common.collect.ImmutableList;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import org.apache.commons.cli.CommandLine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.nio.file.Path;
@@ -13,8 +15,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
 
 final class IntegrationTestUploadStarter extends BaseLifecycleComponent {
+    private static final Logger logger = LoggerFactory.getLogger(IntegrationTestUploadStarter.class);
+
     private static final AtomicReference<Throwable> lastFailure = new AtomicReference<>();
     private static final AtomicBoolean forgetUploadStateOnShutdown = new AtomicBoolean();
     private final Path rootDir;
@@ -43,12 +48,13 @@ final class IntegrationTestUploadStarter extends BaseLifecycleComponent {
     @Override
     protected void doStart() {
         uploader.upload(ImmutableList.of(rootDir), resume)
-                .whenComplete((aVoid, throwable) -> lastFailure.set(throwable))
-                .whenComplete((aVoid, ignored) -> {
+                .whenComplete(logErrorOnFailure(logger, "Failed"))
+                .whenComplete((aVoid, throwable) -> {
+                    lastFailure.set(throwable);
                     if (forgetUploadStateOnShutdown.getAndSet(false)) {
                         uploader.forgetUploadState();
                     }
-                })
-                .whenComplete((ignored1, ignored2) -> applicationLifecycleControl.initiateShutdown());
+                    applicationLifecycleControl.initiateShutdown();
+                });
     }
 }

@@ -5,7 +5,7 @@
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.layout.VBox?>
-<VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="root" prefHeight="700.0" prefWidth="600.0" spacing="10.0" stylesheets="@style.css"
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="root" prefHeight="700.0" minWidth="800.0" spacing="10.0" stylesheets="@style.css"
       xmlns="http://javafx.com/javafx/11.0.1" fx:controller="net.yudichev.googlephotosupload.ui.MainScreenControllerImpl">
     <padding>
         <Insets bottom="4.0" left="4.0" right="4.0" top="4.0"/>

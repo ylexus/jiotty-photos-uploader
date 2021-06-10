@@ -37,6 +37,7 @@ public final class ProgressBoxFxController {
     private SepiaToneEffectAnimatedNode animatedBackoffInfoIcon;
     private Tooltip backoffTooltip;
     private Dialog failuresDialog;
+    private int successCount;
 
     @Inject
     public ProgressBoxFxController(ResourceBundle resourceBundle,
@@ -67,8 +68,17 @@ public final class ProgressBoxFxController {
 
     public void updateSuccessCount(int value) {
         runLater(() -> {
+            successCount = value;
             totalCount.ifPresent(count -> progressIndicator.setProgress((double) value / count));
             valueLabel.setText(Integer.toString(value));
+            animatedBackoffInfoIcon.hide();
+        });
+    }
+
+    public void updateTotalCount(int newValue) {
+        runLater(() -> {
+            totalCount = Optional.of(newValue);
+            progressIndicator.setProgress((double) successCount / newValue);
             animatedBackoffInfoIcon.hide();
         });
     }

@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.rpc.Code;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.ResultOrFailure;
@@ -18,9 +19,11 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -30,18 +33,26 @@ import static java.util.Comparator.comparing;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static java.util.stream.Collectors.toConcurrentMap;
+import static java.util.stream.Collectors.toList;
 import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfList;
+import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfListChaining;
 import static net.yudichev.jiotty.common.lang.ResultOrFailure.failure;
 import static net.yudichev.jiotty.common.lang.ResultOrFailure.success;
 
 final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements GooglePhotosUploader {
     public static final int GOOGLE_PHOTOS_API_BATCH_SIZE = 50;
+    /**
+     * Max number of media items to upload in one directory before drive space is checked; only applicable if drive space check is enabled.
+     */
+    public static final int DRIVE_SPACE_MONITORING_BATCH_SIZE = 20;
 
     @SuppressWarnings("NonConstantLogger") // as designed
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final CloudOperationHelper cloudOperationHelper;
     private final AddToAlbumStrategy addToAlbumStrategy;
+    private final DriveSpaceTracker driveSpaceTracker;
+    private final ResourceBundle resourceBundle;
     private final FatalUserCorrectableRemoteApiExceptionHandler fatalUserCorrectableHandler;
     private final GooglePhotosClient googlePhotosClient;
     private final UploadStateManager uploadStateManager;
@@ -64,7 +75,9 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                              UploadStateManager uploadStateManager,
                              CurrentDateTimeProvider currentDateTimeProvider,
                              CloudOperationHelper cloudOperationHelper,
-                             AddToAlbumStrategy addToAlbumStrategy) {
+                             AddToAlbumStrategy addToAlbumStrategy,
+                             DriveSpaceTracker driveSpaceTracker,
+                             ResourceBundle resourceBundle) {
         this.executorServiceProvider = checkNotNull(executorServiceProvider);
         this.backOffHandler = checkNotNull(backOffHandler);
         this.fatalUserCorrectableHandler = checkNotNull(fatalUserCorrectableHandler);
@@ -73,6 +86,8 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
         this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
         this.addToAlbumStrategy = checkNotNull(addToAlbumStrategy);
+        this.driveSpaceTracker = checkNotNull(driveSpaceTracker);
+        this.resourceBundle = checkNotNull(resourceBundle);
     }
 
     @Override
@@ -85,22 +100,32 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         return supplyAsync(() -> files, executorService)
                 .thenCompose(paths -> {
                     directoryProgressStatus.updateDescription(googlePhotosAlbum.map(GooglePhotosAlbum::getTitle).orElse(""));
-                    var createMediaDataResultsFuture = paths.stream()
+                    var sortedPaths = paths.stream()
                             .sorted(comparing(path -> path.getFileName().toString()))
-                            .map(path -> createMediaData(path, fileProgressStatus)
-                                    .thenApply(itemState -> {
-                                        itemState.toFailure().ifPresentOrElse(
-                                                error -> fileProgressStatus.addFailure(KeyedError.of(path, error)),
-                                                fileProgressStatus::incrementSuccess);
-                                        return PathState.of(path, itemState);
-                                    }))
-                            .collect(toFutureOfList());
-                    return addToAlbumStrategy.addToAlbum(
-                            createMediaDataResultsFuture,
-                            googlePhotosAlbum,
-                            fileProgressStatus,
-                            directoryProgressStatus,
-                            (albumId, pathStates) -> createMediaItems(albumId, fileProgressStatus, pathStates), this::getItemState);
+                            .collect(toList());
+                    Function<List<Path>, CompletableFuture<Void>> uploader = partition -> {
+                        var createMediaDataResultsFuture = partition.stream()
+                                .map(path -> createMediaData(path, fileProgressStatus)
+                                        .thenApply(itemState -> {
+                                            itemState.toFailure().ifPresentOrElse(
+                                                    error -> fileProgressStatus.addFailure(KeyedError.of(path, error)),
+                                                    fileProgressStatus::incrementSuccess);
+                                            return PathState.of(path, itemState);
+                                        }))
+                                .collect(toFutureOfList());
+                        return addToAlbumStrategy.addToAlbum(
+                                createMediaDataResultsFuture,
+                                googlePhotosAlbum,
+                                fileProgressStatus,
+                                directoryProgressStatus,
+                                (albumId, pathStates) -> createMediaItems(albumId, fileProgressStatus, pathStates),
+                                this::getItemState);
+                    };
+                    return driveSpaceTracker.validationEnabled() ?
+                            Lists.partition(sortedPaths, DRIVE_SPACE_MONITORING_BATCH_SIZE).stream()
+                                    .collect(toFutureOfListChaining(partition -> uploader.apply(files)))
+                                    .<Void>thenApply(list -> null) :
+                            uploader.apply(sortedPaths);
                 });
     }
 
@@ -169,7 +194,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                 .collect(toImmutableList());
         return cloudOperationHelper.withBackOffAndRetry(
                 "create media items",
-                () -> googlePhotosClient.createMediaItems(albumId, pendingNewMediaItems, executorService),
+                () -> googlePhotosClient.createMediaItems(albumId, pendingNewMediaItems, createMediaItemsExecutor(pendingPathStates, fileProgressStatus)),
                 fileProgressStatus::onBackoffDelay)
                 .<List<PathMediaItemOrError>>thenApply(mediaItemOrErrors -> {
                     ImmutableList.Builder<PathMediaItemOrError> resultListBuilder = ImmutableList.builder();
@@ -229,11 +254,11 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                                         return uploadTokenNotExpired(file, uploadMediaItemState);
                                     })
                                     .map(uploadMediaItemState -> {
-                                        logger.info("Already uploaded, skipping: {}", file);
+                                        logger.info("Media data already uploaded, skipping: {}", file);
                                         return completedFuture(itemState);
                                     })
                                     .orElseGet(() -> {
-                                        logger.info("Uploaded, but upload token expired, re-uploading: {}", file);
+                                        logger.info("Media data uploaded, but upload token expired, re-uploading: {}", file);
                                         return doCreateMediaData(theFile, fileProgressStatus);
                                     });
                         } else {
@@ -273,7 +298,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     }
 
     private CompletableFuture<ItemState> doCreateMediaData(Path file, ProgressStatus fileProgressStatus) {
-        return googlePhotosClient.uploadMediaData(file, statusUpdatingExecutor(file, fileProgressStatus))
+        return googlePhotosClient.uploadMediaData(file, createMediaDataExecutor(file, fileProgressStatus))
                 .thenApply(uploadToken -> {
                     logger.info("Uploaded file {}", file);
                     logger.debug("Upload token {}", uploadToken);
@@ -283,10 +308,19 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                 });
     }
 
-    private Executor statusUpdatingExecutor(Path file, ProgressStatus fileProgressStatus) {
+    private Executor createMediaDataExecutor(Path file, ProgressStatus fileProgressStatus) {
         return command -> executorService.execute(() -> {
             fileProgressStatus.updateDescription(file.toAbsolutePath().toString());
+            driveSpaceTracker.beforeUpload();
             command.run();
+        });
+    }
+
+    private Executor createMediaItemsExecutor(List<PathState> pathStates, ProgressStatus fileProgressStatus) {
+        return command -> executorService.execute(() -> {
+            fileProgressStatus.updateDescription(String.format(resourceBundle.getString("uploaderFinalizing"), pathStates.size()));
+            command.run();
+            driveSpaceTracker.afterUpload(pathStates);
         });
     }
 }
