@@ -9,8 +9,7 @@ import java.nio.file.Paths;
 
 import static net.yudichev.googlephotosupload.core.OptionalMatchers.emptyOptional;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 
 class PreferencesTest {
     @SuppressWarnings("deprecation")
@@ -23,6 +22,16 @@ class PreferencesTest {
         assertThat(migratedPreferences.scanExclusionPatterns(), is(emptyOptional()));
         assertThat(migratedPreferences.scanExclusionGlobs(), containsInAnyOrder(
                 "glob:**/*picasaoriginals", "glob:**/.*", "glob:**/.*/**", "regex:.*/.*custom_pattern/.*", "regex:.*/.*custom_pattern"));
+    }
+
+    @Test
+    void migrationOfDsStore() {
+        var migratedPreferences = Preferences.builder()
+                .setScanExclusionGlobs(ImmutableSet.of("glob:**/DS_Store"))
+                .build();
+
+        assertThat(migratedPreferences.scanExclusionGlobs(), not(contains("glob:**/DS_Store")));
+        assertThat(migratedPreferences.scanExclusionGlobs(), contains("glob:**/.DS_Store"));
     }
 
     @Test
