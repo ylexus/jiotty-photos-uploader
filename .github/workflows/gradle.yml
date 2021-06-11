@@ -14,4 +14,4 @@ jobs:
         with:
           java-version: 14.0.2
       - name: Build with Gradle
-        run: ./gradlew --stacktrace test --no-daemon
+        run: ./gradlew --info test --no-daemon
