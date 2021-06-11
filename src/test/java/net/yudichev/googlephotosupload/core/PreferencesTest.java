@@ -13,6 +13,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.is;
 
 class PreferencesTest {
+    @SuppressWarnings("deprecation")
     @Test
     void migrationOfPatterns() {
         var migratedPreferences = Preferences.builder()
@@ -89,7 +90,7 @@ class PreferencesTest {
             "/path/to/.file.jpg",
             "/path/.to/file.jpg",
             "/path/.to/some/file.jpg",
-            "/path/to/DS_Store",
+            "/path/to/.DS_Store",
             "/path/to/Thumbs.db",
             "/path/to/a.txt",
             "/path/to/a.exe",

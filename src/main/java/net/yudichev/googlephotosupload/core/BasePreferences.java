@@ -21,6 +21,7 @@ import java.util.Set;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+@SuppressWarnings("ClassReferencesSubclass")
 @Immutable
 @PublicImmutablesStyle
 @JsonDeserialize
@@ -29,7 +30,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 abstract class BasePreferences {
     private static final String P_DOT_FILES = "glob:**/.*";
     private static final String P_DOT_DIRS = "glob:**/.*/**";
-    private static final String P_DS_STORE = "glob:**/DS_Store";
+    private static final String P_DS_STORE = "glob:**/.DS_Store";
     private static final String P_THUMBS_DB = "glob:**/Thumbs.db";
     private static final String P_DESKTOP_INI = "glob:**/desktop.ini";
     private static final String P_PICASAORIGINALS = "glob:**/*picasaoriginals";
@@ -49,7 +50,7 @@ abstract class BasePreferences {
             .put("\\..*", ImmutableSet.of(P_DOT_FILES, P_DOT_DIRS))
             .put(".*picasaoriginals", ImmutableSet.of(P_PICASAORIGINALS))
             .put(".*[Pp]icasa.[Ii][Nn][Ii]", ImmutableSet.of(P_PICASA_INI))
-            .put("DS_Store", ImmutableSet.of(P_DS_STORE))
+            .put(".DS_Store", ImmutableSet.of(P_DS_STORE))
             .put("Thumbs.db", ImmutableSet.of(P_THUMBS_DB))
             .put(".*\\.(txt|exe|htm)", ImmutableSet.of(P_TXT_EXE_HTML))
             .put("desktop.ini", ImmutableSet.of(P_DESKTOP_INI))
@@ -111,13 +112,19 @@ abstract class BasePreferences {
         return matchers.isEmpty() || matchers.stream().anyMatch(matcher -> matcher.matches(path));
     }
 
-    @SuppressWarnings({"ClassReferencesSubclass", "deprecation"})
     @Value.Check
     BasePreferences migrateIfNeeded() {
-        var preferences = (Preferences) this;
-        return scanExclusionPatterns()
+        return migrateInvalidDsStorePattern(migrateLegacyPatterns((Preferences) this));
+    }
+
+    /**
+     * @since #62
+     */
+    @SuppressWarnings("deprecation")
+    private static Preferences migrateLegacyPatterns(Preferences preferences) {
+        return preferences.scanExclusionPatterns()
                 .map(legacyPatterns -> {
-                    checkArgument(scanExclusionGlobs().equals(DEFAULT_SCAN_EXCLUSION_GLOBS));
+                    checkArgument(preferences.scanExclusionGlobs().equals(DEFAULT_SCAN_EXCLUSION_GLOBS));
                     return preferences
                             .withScanExclusionPatterns(Optional.empty())
                             .withScanExclusionGlobs(legacyPatterns.stream()
@@ -129,6 +136,20 @@ abstract class BasePreferences {
                                     .collect(toImmutableSet()));
                 })
                 .orElse(preferences);
+    }
+
+    /**
+     * @since #112
+     */
+    private static Preferences migrateInvalidDsStorePattern(Preferences preferences) {
+        var invalidPattern = "glob:**/DS_Store";
+        if (preferences.scanExclusionGlobs().contains(invalidPattern)) {
+            preferences = preferences
+                    .withScanExclusionGlobs(preferences.scanExclusionGlobs().stream()
+                            .map(pattern -> invalidPattern.equals(pattern) ? "glob:**/.DS_Store" : pattern)
+                            .collect(toImmutableSet()));
+        }
+        return preferences;
     }
 
     @Value.Derived

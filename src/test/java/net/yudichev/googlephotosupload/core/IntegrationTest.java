@@ -781,7 +781,7 @@ final class IntegrationTest {
                 innerAlbumPhoto
             outerAlbumPhoto
             picasa.ini
-        DS_Store
+        .DS_Store
         rootPhoto
          */
         rootPhoto = uploadRoot.resolve("root-photo.jpg");
@@ -793,7 +793,7 @@ final class IntegrationTest {
         writeMediaFile(outerAlbumPhoto);
         writeMediaFile(outerAlbum.resolve("picasa.ini"));
 
-        Files.createDirectories(uploadRoot.resolve("DS_Store"));
+        Files.createDirectories(uploadRoot.resolve(".DS_Store"));
 
         var innerAlbum = outerAlbum.resolve("inner-album");
         Files.createDirectories(innerAlbum);
