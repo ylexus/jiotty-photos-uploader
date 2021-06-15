@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -25,10 +26,12 @@ final class LegacyAuthCleaner extends BaseLifecycleComponent {
     @Override
     protected void doStart() {
         var legacyAuthDir = googleAuthRootDir.resolve("photos");
-        try {
-            MoreFiles.deleteRecursively(legacyAuthDir, ALLOW_INSECURE);
-        } catch (IOException e) {
-            logger.warn("Unable to remove legacy auth dir {}", legacyAuthDir, e);
+        if (Files.exists(legacyAuthDir)) {
+            try {
+                MoreFiles.deleteRecursively(legacyAuthDir, ALLOW_INSECURE);
+            } catch (IOException e) {
+                logger.warn("Unable to remove legacy auth dir {}", legacyAuthDir, e);
+            }
         }
     }
 }
