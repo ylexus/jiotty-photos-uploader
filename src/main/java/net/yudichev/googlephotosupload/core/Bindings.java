@@ -23,4 +23,10 @@ public final class Bindings {
     @Retention(RUNTIME)
     public @interface SettingsRoot {
     }
+
+    @BindingAnnotation
+    @Target({FIELD, PARAMETER, METHOD})
+    @Retention(RUNTIME)
+    @interface GoogleAuthRootDir {
+    }
 }

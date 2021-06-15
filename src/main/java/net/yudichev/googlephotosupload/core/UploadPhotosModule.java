@@ -27,6 +27,7 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
     protected void configure() {
         bind(BuildVersion.class).asEagerSingleton();
         boundLifecycleComponent(LegacyLogCleaner.class);
+        boundLifecycleComponent(LegacyAuthCleaner.class);
 
         bind(ExecutorService.class).annotatedWith(Backpressured.class)
                 .toProvider(boundLifecycleComponent(BackpressuredExecutorServiceProvider.class));

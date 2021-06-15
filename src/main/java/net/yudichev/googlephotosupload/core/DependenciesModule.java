@@ -6,6 +6,8 @@ import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 import net.yudichev.jiotty.common.time.TimeModule;
 import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
+import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
+import net.yudichev.jiotty.connector.google.common.GoogleAuthorizationModule;
 import net.yudichev.jiotty.connector.google.drive.GoogleDriveModule;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosModule;
 
@@ -16,7 +18,10 @@ import java.util.function.Consumer;
 import static com.google.api.services.drive.DriveScopes.DRIVE_APPDATA;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
+import static net.yudichev.googlephotosupload.core.Bindings.GoogleAuthRootDir;
+import static net.yudichev.jiotty.common.inject.BindingSpec.boundTo;
 import static net.yudichev.jiotty.common.inject.BindingSpec.providedBy;
+import static net.yudichev.jiotty.connector.google.photos.GooglePhotosScopes.SCOPE_PHOTOS_LIBRARY;
 
 public final class DependenciesModule extends AbstractModule {
     private final Path appSettingsRootDir;
@@ -39,7 +44,7 @@ public final class DependenciesModule extends AbstractModule {
 
         var authDataStoreRootDir = appSettingsRootDir.resolve("auth");
         bind(Restarter.class).to(RestarterImpl.class);
-        bind(Path.class).annotatedWith(RestarterImpl.GoogleAuthRootDir.class).toInstance(authDataStoreRootDir);
+        bind(Path.class).annotatedWith(GoogleAuthRootDir.class).toInstance(authDataStoreRootDir);
 
         bind(CustomCredentialsManagerImpl.class).in(Singleton.class);
         bind(CustomCredentialsManager.class).to(CustomCredentialsManagerImpl.class);
@@ -49,12 +54,15 @@ public final class DependenciesModule extends AbstractModule {
                 .setCredentialsUrl(providedBy(CustomCredentialsManagerImpl.class));
         googleApiSettingsCustomiser.accept(googleApiSettingsBuilder);
         var settings = googleApiSettingsBuilder.build();
-        install(GooglePhotosModule.builder()
+        install(GoogleAuthorizationModule.builder()
                 .setSettings(settings)
+                .addRequiredScopes(DRIVE_APPDATA, SCOPE_PHOTOS_LIBRARY)
+                .build());
+        install(GooglePhotosModule.builder()
+                .setAuthorization(boundTo(GoogleAuthorization.class))
                 .build());
         install(GoogleDriveModule.builder()
-                .setSettings(settings)
-                .addScopes(DRIVE_APPDATA)
+                .setAuthorization(boundTo(GoogleAuthorization.class))
                 .build());
     }
 
