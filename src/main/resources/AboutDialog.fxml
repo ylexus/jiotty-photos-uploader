@@ -18,7 +18,9 @@
         <TextField fx:id="versionLabel" editable="false" focusTraversable="false" styleClass="copyable-label" text="1.0.1"/>
     </HBox>
     <Label text="%aboutDialogCreditsText" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-    <Pane fx:id="supportPane" GridPane.columnSpan="2" GridPane.rowIndex="3"/>
+    <Pane GridPane.columnSpan="2" GridPane.rowIndex="3">
+        <fx:include source="SupportPane.fxml"/>
+    </Pane>
     <padding>
         <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
     </padding>

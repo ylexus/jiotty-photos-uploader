@@ -13,23 +13,19 @@ import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 import static net.yudichev.googlephotosupload.core.BuildVersion.buildVersion;
 
 public final class AboutDialogFxController {
-    private final FxmlContainerFactory fxmlContainerFactory;
     private final Provider<JavafxApplicationResources> javafxApplicationResourcesProvider;
     public Hyperlink titleHyperlink;
     public Pane supportPane;
     public TextField versionLabel;
 
     @Inject
-    public AboutDialogFxController(FxmlContainerFactory fxmlContainerFactory,
-                                   Provider<JavafxApplicationResources> javafxApplicationResourcesProvider) {
-        this.fxmlContainerFactory = checkNotNull(fxmlContainerFactory);
+    public AboutDialogFxController(Provider<JavafxApplicationResources> javafxApplicationResourcesProvider) {
         this.javafxApplicationResourcesProvider = checkNotNull(javafxApplicationResourcesProvider);
     }
 
     public void initialize() {
         titleHyperlink.setText(APP_TITLE);
         versionLabel.setText(buildVersion());
-        supportPane.getChildren().add(fxmlContainerFactory.create("SupportPane.fxml").root());
     }
 
     public void onTitleHyperlinkLinkAction(ActionEvent actionEvent) {

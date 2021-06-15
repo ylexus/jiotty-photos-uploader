@@ -42,4 +42,5 @@
             <Insets/>
         </VBox.margin>
     </FlowPane>
+    <fx:include source="SupportPane.fxml"/>
 </VBox>

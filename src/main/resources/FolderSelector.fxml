@@ -8,7 +8,12 @@
 <?import javafx.scene.layout.*?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="folderSelector" alignment="CENTER" spacing="10.0" stylesheets="@style.css" VBox.vgrow="ALWAYS"
       xmlns="http://javafx.com/javafx/16" fx:controller="net.yudichev.googlephotosupload.ui.FolderSelectorControllerImpl">
-    <VBox fx:id="supportPane" alignment="CENTER"/>
+    <HBox>
+        <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+            <fx:include source="SupportPane.fxml"/>
+        </VBox>
+        <Button text="%logoutButtonText" onAction="#onLogoutButtonAction"/>
+    </HBox>
     <Pane style="-fx-border-width: 0 0 1 0; -fx-border-color: black;"/>
     <VBox alignment="CENTER" spacing="10.0" VBox.vgrow="ALWAYS">
         <ImageView fitWidth="250.0" preserveRatio="true">
@@ -25,7 +30,7 @@
                 </placeholder>
                 <columns>
                     <TableColumn fx:id="pathColumn" reorderable="false" sortable="false" text="%folderSelectorTablePathColumnName"/>
-                    <TableColumn fx:id="deleteColumn" maxWidth="30" reorderable="false" sortable="false" resizable="false" style="-fx-alignment: CENTER;"/>
+                    <TableColumn fx:id="deleteColumn" maxWidth="30" reorderable="false" resizable="false" sortable="false" style="-fx-alignment: CENTER;"/>
                 </columns>
             </TableView>
             <HBox>
@@ -50,8 +55,8 @@
         <ImageView fitWidth="20.0" pickOnBounds="true" preserveRatio="true" HBox.hgrow="SOMETIMES">
             <Image url="@warning-icon.png"/>
         </ImageView>
-        <Label alignment="CENTER" contentDisplay="CENTER" styleClass="side-note" text="%googleStorageWarning" textAlignment="CENTER"
-               wrapText="true" HBox.hgrow="NEVER">
+        <Label alignment="CENTER" contentDisplay="CENTER" styleClass="side-note" text="%googleStorageWarning" textAlignment="CENTER" wrapText="true"
+               HBox.hgrow="NEVER">
             <opaqueInsets>
                 <Insets/>
             </opaqueInsets>

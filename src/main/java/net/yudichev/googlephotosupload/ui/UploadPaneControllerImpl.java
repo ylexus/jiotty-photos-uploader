@@ -2,7 +2,6 @@ package net.yudichev.googlephotosupload.ui;
 
 import javafx.event.ActionEvent;
 import javafx.scene.control.Button;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
@@ -33,7 +32,6 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
 
     private final Uploader uploader;
     private final Restarter restarter;
-    private final FxmlContainerFactory fxmlContainerFactory;
     private final Provider<MainScreenController> mainScreenControllerProvider;
     private final ResourceBundle resourceBundle;
     private final Collection<ProgressBox> progressBoxes = new ArrayList<>();
@@ -47,19 +45,15 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     @Inject
     UploadPaneControllerImpl(Uploader uploader,
                              Restarter restarter,
-                             FxmlContainerFactory fxmlContainerFactory,
                              Provider<MainScreenController> mainScreenControllerProvider,
                              ResourceBundle resourceBundle) {
         this.uploader = checkNotNull(uploader);
         this.restarter = checkNotNull(restarter);
-        this.fxmlContainerFactory = checkNotNull(fxmlContainerFactory);
         this.mainScreenControllerProvider = checkNotNull(mainScreenControllerProvider);
         this.resourceBundle = checkNotNull(resourceBundle);
     }
 
     public void initialize() {
-        Pane supportPane = fxmlContainerFactory.create("SupportPane.fxml").root();
-        topVBox.getChildren().add(supportPane);
         everInitialised = true;
     }
 

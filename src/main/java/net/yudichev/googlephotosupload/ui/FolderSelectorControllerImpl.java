@@ -11,10 +11,10 @@ import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.util.Callback;
+import net.yudichev.googlephotosupload.core.Restarter;
 import net.yudichev.googlephotosupload.core.Uploader;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.varstore.VarStore;
@@ -35,10 +35,10 @@ import static javafx.scene.control.OverrunStyle.LEADING_ELLIPSIS;
 
 public final class FolderSelectorControllerImpl extends BaseLifecycleComponent implements FolderSelectorController {
     private static final String VARSTORE_KEY_SOURCE_DIRECTORIES = "sourceDirectories";
-    private final FxmlContainerFactory fxmlContainerFactory;
     private final Uploader uploader;
     private final ResourceBundle resourceBundle;
     private final VarStore varStore;
+    private final Restarter restarter;
     public VBox folderSelector;
     public CheckBox resumeCheckbox;
     public FlowPane resumePane;
@@ -48,20 +48,19 @@ public final class FolderSelectorControllerImpl extends BaseLifecycleComponent i
     public TableColumn<Path, Void> deleteColumn;
     public VBox folderSelectorBox;
     public Button startUploadButton;
-    public Pane supportPane;
     public Button browseButton;
     private BiConsumer<List<Path>, Boolean> folderSelectionListener;
     private volatile boolean everInitialised;
 
     @Inject
-    FolderSelectorControllerImpl(FxmlContainerFactory fxmlContainerFactory,
-                                 Uploader uploader,
+    FolderSelectorControllerImpl(Uploader uploader,
                                  ResourceBundle resourceBundle,
-                                 VarStore varStore) {
-        this.fxmlContainerFactory = checkNotNull(fxmlContainerFactory);
+                                 VarStore varStore,
+                                 Restarter restarter) {
         this.uploader = checkNotNull(uploader);
         this.resourceBundle = checkNotNull(resourceBundle);
         this.varStore = checkNotNull(varStore);
+        this.restarter = checkNotNull(restarter);
     }
 
     public void initialize() {
@@ -126,8 +125,6 @@ public final class FolderSelectorControllerImpl extends BaseLifecycleComponent i
                     setText(empty || item == null ? null : item.toAbsolutePath().toString());
                 }
             });
-
-            supportPane.getChildren().add(fxmlContainerFactory.create("SupportPane.fxml").root());
 
             refreshViews();
 
@@ -242,6 +239,11 @@ public final class FolderSelectorControllerImpl extends BaseLifecycleComponent i
 
     public void onStartButtonAction(ActionEvent actionEvent) {
         folderSelectionListener.accept(folderTableView.getItems(), resumeCheckbox.isSelected());
+        actionEvent.consume();
+    }
+
+    public void onLogoutButtonAction(ActionEvent actionEvent) {
+        restarter.initiateLogoutAndRestart();
         actionEvent.consume();
     }
 }
