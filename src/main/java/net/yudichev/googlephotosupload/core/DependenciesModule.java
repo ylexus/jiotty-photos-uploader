@@ -6,7 +6,6 @@ import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 import net.yudichev.jiotty.common.time.TimeModule;
 import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
-import net.yudichev.jiotty.connector.google.common.GoogleAuthorization;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorizationModule;
 import net.yudichev.jiotty.connector.google.drive.GoogleDriveModule;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosModule;
@@ -19,7 +18,6 @@ import static com.google.api.services.drive.DriveScopes.DRIVE_APPDATA;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 import static net.yudichev.googlephotosupload.core.Bindings.GoogleAuthRootDir;
-import static net.yudichev.jiotty.common.inject.BindingSpec.boundTo;
 import static net.yudichev.jiotty.common.inject.BindingSpec.providedBy;
 import static net.yudichev.jiotty.connector.google.photos.GooglePhotosScopes.SCOPE_PHOTOS_LIBRARY;
 
@@ -58,12 +56,8 @@ public final class DependenciesModule extends AbstractModule {
                 .setSettings(settings)
                 .addRequiredScopes(DRIVE_APPDATA, SCOPE_PHOTOS_LIBRARY)
                 .build());
-        install(GooglePhotosModule.builder()
-                .setAuthorization(boundTo(GoogleAuthorization.class))
-                .build());
-        install(GoogleDriveModule.builder()
-                .setAuthorization(boundTo(GoogleAuthorization.class))
-                .build());
+        install(GooglePhotosModule.builder().build());
+        install(GoogleDriveModule.builder().build());
     }
 
     public static final class Builder implements TypedBuilder<Module> {
