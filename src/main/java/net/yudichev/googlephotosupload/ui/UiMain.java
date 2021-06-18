@@ -3,12 +3,10 @@ package net.yudichev.googlephotosupload.ui;
 import javafx.application.Platform;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
-import net.yudichev.googlephotosupload.core.DependenciesModule;
-import net.yudichev.googlephotosupload.core.ResourceBundleModule;
-import net.yudichev.googlephotosupload.core.SettingsModule;
-import net.yudichev.googlephotosupload.core.UploadPhotosModule;
+import net.yudichev.googlephotosupload.core.*;
 import net.yudichev.googlephotosupload.ui.Bindings.AuthBrowser;
 import net.yudichev.jiotty.common.app.Application;
+import net.yudichev.jiotty.common.time.TimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,8 +25,8 @@ public final class UiMain extends javafx.application.Application {
     private static final AtomicReference<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler = new AtomicReference<>();
 
     public static void main(String[] args) {
-        var coreServicesModule = new SettingsModule();
-        if (otherInstanceRunning(coreServicesModule.getSettingsRootPath())) {
+        var settingsModule = new SettingsModule();
+        if (otherInstanceRunning(settingsModule.getSettingsRootPath())) {
             showFatalStartupError(RESOURCE_BUNDLE.getString("singleInstanceCheckDialogMessage"));
             return;
         }
@@ -36,13 +34,15 @@ public final class UiMain extends javafx.application.Application {
         logger.info("System properties {}", System.getProperties());
         logger.info("Environment {}", System.getenv());
         Application.builder()
-                .addModule(() -> coreServicesModule)
+                .addModule(() -> settingsModule)
                 .addModule(() -> new UiModule(handler -> {
                     checkState(javafxApplicationResourcesHandler.compareAndSet(null, handler), "can only launch once");
                     new Thread(() -> launch(args)).start();
                 }))
-                .addModule(() -> DependenciesModule.builder()
-                        .setAppSettingsRootDir(coreServicesModule.getSettingsRootPath())
+                .addModule(TimeModule::new)
+                .addModule(() -> new CoreDependenciesModule(settingsModule.getAuthDataStoreRootPath()))
+                .addModule(() -> GoogleServicesModule.builder()
+                        .setAuthDataStoreRootDir(settingsModule.getAuthDataStoreRootPath())
                         .withGoogleApiSettingsCustomiser(builder -> builder.setAuthorizationBrowser(annotatedWith(AuthBrowser.class)))
                         .build())
                 .addModule(ResourceBundleModule::new)

@@ -1,5 +1,6 @@
-package net.yudichev.googlephotosupload.core;
+package net.yudichev.googlephotosupload.ui;
 
+import net.yudichev.googlephotosupload.core.Uploader;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 
 import javax.inject.Inject;

@@ -8,7 +8,6 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.layout.VBox;
 import net.yudichev.googlephotosupload.core.AddToAlbumMethod;
 import net.yudichev.googlephotosupload.core.PreferencesManager;
-import net.yudichev.googlephotosupload.core.Restarter;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 
 import javax.inject.Inject;

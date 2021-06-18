@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import net.yudichev.googlephotosupload.core.RecordingGooglePhotosClient.Album;
 import net.yudichev.googlephotosupload.core.RecordingGooglePhotosClient.MediaItem;
 import net.yudichev.jiotty.common.app.Application;
-import net.yudichev.jiotty.common.async.ExecutorModule;
 import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.common.varstore.VarStore;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
@@ -903,11 +902,11 @@ final class IntegrationTest {
         var applicationExitedLatch = new CountDownLatch(1);
         progressStatusFactory.reset();
         new Thread(() -> {
-            var coreServicesModule = new SettingsModule(settingsRootPath);
+            var settingsModule = new SettingsModule(settingsRootPath);
             Application.builder()
+                    .addModule(() -> settingsModule)
                     .addModule(TestTimeModule::new)
-                    .addModule(ExecutorModule::new)
-                    .addModule(() -> coreServicesModule)
+                    .addModule(() -> new CoreDependenciesModule(settingsModule.getAuthDataStoreRootPath()))
                     .addModule(() -> new MockGooglePhotosModule(googlePhotosClient))
                     .addModule(MockGoogleDriveModule::new)
                     .addModule(ResourceBundleModule::new)

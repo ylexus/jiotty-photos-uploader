@@ -26,6 +26,8 @@ final class UiModule extends BaseLifecycleComponentModule {
     protected void configure() {
         bind(new TypeLiteral<Consumer<Consumer<JavafxApplicationResources>>>() {}).toInstance(javafxApplicationResourcesHandler);
 
+        bind(Restarter.class).to(RestarterImpl.class);
+
         install(new FactoryModuleBuilder()
                 .implement(Dialog.class, DialogImpl.class)
                 .build(DialogFactory.class));

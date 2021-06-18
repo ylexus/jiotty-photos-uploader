@@ -14,7 +14,6 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.util.Callback;
-import net.yudichev.googlephotosupload.core.Restarter;
 import net.yudichev.googlephotosupload.core.Uploader;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.varstore.VarStore;

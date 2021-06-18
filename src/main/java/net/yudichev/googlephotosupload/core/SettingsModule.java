@@ -25,6 +25,10 @@ public final class SettingsModule extends BaseLifecycleComponentModule {
         return settingsRootPath;
     }
 
+    public Path getAuthDataStoreRootPath() {
+        return settingsRootPath.resolve("auth");
+    }
+
     @Override
     protected void configure() {
         var settingsRootKey = Key.get(Path.class, Bindings.SettingsRoot.class);

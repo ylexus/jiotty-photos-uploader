@@ -5,7 +5,6 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
-import net.yudichev.googlephotosupload.core.Restarter;
 import net.yudichev.googlephotosupload.core.Uploader;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;

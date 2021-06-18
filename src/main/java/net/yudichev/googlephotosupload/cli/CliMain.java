@@ -1,10 +1,8 @@
 package net.yudichev.googlephotosupload.cli;
 
-import net.yudichev.googlephotosupload.core.DependenciesModule;
-import net.yudichev.googlephotosupload.core.ResourceBundleModule;
-import net.yudichev.googlephotosupload.core.SettingsModule;
-import net.yudichev.googlephotosupload.core.UploadPhotosModule;
+import net.yudichev.googlephotosupload.core.*;
 import net.yudichev.jiotty.common.app.Application;
+import net.yudichev.jiotty.common.time.TimeModule;
 import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
 import org.slf4j.Logger;
@@ -52,8 +50,10 @@ public final class CliMain {
     private static void startApp(SettingsModule settingsModule, CommandLine commandLine) {
         Application.builder()
                 .addModule(() -> settingsModule)
-                .addModule(() -> DependenciesModule.builder()
-                        .setAppSettingsRootDir(settingsModule.getSettingsRootPath())
+                .addModule(TimeModule::new)
+                .addModule(() -> new CoreDependenciesModule(settingsModule.getAuthDataStoreRootPath()))
+                .addModule(() -> GoogleServicesModule.builder()
+                        .setAuthDataStoreRootDir(settingsModule.getAuthDataStoreRootPath())
                         .build())
                 .addModule(UploadPhotosModule::new)
                 .addModule(ResourceBundleModule::new)

@@ -1,4 +1,4 @@
-package net.yudichev.googlephotosupload.core;
+package net.yudichev.googlephotosupload.ui;
 
 public interface Restarter {
     void initiateLogoutAndRestart();
