@@ -4,4 +4,4 @@ See [Wiki](https://github.com/ylexus/jiotty-photos-uploader/wiki) for more infor
 If you to build from sources and run locally:
 
 1. Install JDK 14
-2. run `./gradlew -DDCLIENT_SECRET_PATH=/path/to/google-API-client-secret.json run`
+2. run `./gradlew -DCLIENT_SECRET_PATH=/path/to/google-API-client-secret.json run`
