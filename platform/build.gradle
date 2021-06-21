@@ -1,0 +1,11 @@
+plugins {
+    id 'java-platform'
+}
+
+javaPlatform.allowDependencies()
+
+dependencies {
+    constraints {
+        api 'org.slf4j:slf4j-api:1.7.30'
+    }
+}

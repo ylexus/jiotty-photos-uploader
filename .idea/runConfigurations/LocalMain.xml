@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="LocalMain" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="net.yudichev.googlephotosupload.LocalMain" />
-    <module name="Jiotty_Photos_Uploader.test" />
+    <module name="root.app.test" />
     <option name="VM_PARAMETERS" value="-Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false" />
     <method v="2">
       <option name="Make" enabled="true" />

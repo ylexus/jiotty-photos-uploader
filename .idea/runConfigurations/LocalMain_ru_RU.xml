@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="LocalMain ru_RU" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="net.yudichev.googlephotosupload.LocalMain" />
-    <module name="Jiotty_Photos_Uploader.test" />
+    <module name="root.app.test" />
     <option name="VM_PARAMETERS" value="-Duser.language=ru -Duser.country=RU" />
     <method v="2">
       <option name="Make" enabled="true" />

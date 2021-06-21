@@ -90,14 +90,11 @@ public class HypnosResizePolicy implements Callback<TableView.ResizeFeatures, Bo
         List<TableColumn> columnsNotAtPref = new ArrayList<>();
 
         for (TableColumn column : columns) {
-            var resizeThisColumn = false;
+            var resizeThisColumn = spaceToDistribute > 0 && column.getPrefWidth() - column.getWidth() > 1;
 
             //Choose to resize columns that aren't at their pref width and need the type of space we have (negative or positive) to get there
             //We do this pref - width > 1 thing instead of pref > width because very small differences don't matter
             //but they cause a bug where the column widths jump around wildly.
-            if (spaceToDistribute > 0 && column.getPrefWidth() - column.getWidth() > 1) {
-                resizeThisColumn = true;
-            }
             if (spaceToDistribute < 0 && column.getWidth() - column.getPrefWidth() > 1) {
                 resizeThisColumn = true;
             }
@@ -131,12 +128,9 @@ public class HypnosResizePolicy implements Callback<TableView.ResizeFeatures, Bo
 
             List<TableColumn> columnsToReceiveSpace = new ArrayList<>();
             for (TableColumn column : columns) {
-                var resizeThisColumn = true;
+                var resizeThisColumn = column.isResizable();
 
                 //Never resize columns that aren't resizable
-                if (!column.isResizable()) {
-                    resizeThisColumn = false;
-                }
 
                 //Never make columns more narrow than their min width
                 if (spaceToDistribute < 0 && column.getWidth() <= column.getMinWidth()) {
@@ -176,12 +170,9 @@ public class HypnosResizePolicy implements Callback<TableView.ResizeFeatures, Bo
 
                     for (var k = columns.indexOf(columnToResize) + 1; k < columns.size(); k++) {
                         TableColumn candidate = columns.get(k);
-                        var resizeThisColumn = true;
+                        var resizeThisColumn = candidate.isResizable();
 
                         //Never resize columns that aren't resizable
-                        if (!candidate.isResizable()) {
-                            resizeThisColumn = false;
-                        }
 
                         //Never make columns more narrow than their min width
                         if (spaceToDistribute < 0 && candidate.getWidth() <= candidate.getMinWidth()) {

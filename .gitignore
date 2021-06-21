@@ -9,3 +9,6 @@ out/**
 /.idea/workspace.xml
 /.idea/jarRepositories.xml
 /.idea/$PRODUCT_WORKSPACE_FILE$
+/app/.gradle/
+/app/build/
+/app/src/main/generated/

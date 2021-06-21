@@ -12,15 +12,13 @@ plugins {
 
     // TODO no good alternative to maven duplicate finder
     // id "net.idlestate.gradle-duplicate-classes-check" version "1.0.2"
-
-    id "ca.cutterslade.analyze" version "1.6.0"
 }
 
 version = readEnvOrDefault 'VERSION', '0.DEV'
 sourceCompatibility = '14'
 
 ext {
-    javafxVersion = '14.0.2'
+    javafxVersion = '16'
     windowsVmPath = "$System.env.HOME/Virtual Machines.localized/Windows 10 x64.vmwarevm/Windows 10 x64.vmx"
     linuxVmPath = "$System.env.HOME/Virtual Machines.localized/OpenSUSE.vmwarevm/OpenSUSE.vmx"
     fullPackageOutputDir = "$buildDir/fullpackage"
@@ -51,13 +49,14 @@ dependencies {
     ext.orgJunitJupiterVersion = '5.7.2'
     ext.orgMockitoVersion = '3.10.0'
     ext.orgImmutablesVersion = '2.8.8'
-    ext.netYudichevJiottyVersion = '2.0.2'
+    ext.netYudichevJiottyVersion = '2.1.0-SNAPSHOT'
     ext.orgApacheLoggingLog4jVersion = '2.14.1'
 
     annotationProcessor "org.immutables:value:$orgImmutablesVersion"
     testAnnotationProcessor "org.immutables:value:$orgImmutablesVersion"
 
     implementation platform("net.yudichev.jiotty:jiotty-bom:$netYudichevJiottyVersion")
+    implementation enforcedPlatform(project(':platform'))
 
     implementation "net.yudichev.jiotty:jiotty-common"
     implementation "net.yudichev.jiotty:jiotty-connector-google-common"
@@ -98,15 +97,6 @@ dependencies {
     testImplementation "org.mockito:mockito-junit-jupiter:$orgMockitoVersion"
     testImplementation "org.hamcrest:hamcrest:2.2"
     testCompileOnly "org.immutables:value:$orgImmutablesVersion"
-
-    // these are added by the javafx plugin
-    permitUnusedDeclared "org.openjfx:javafx-base:$javafxVersion"
-    permitUnusedDeclared "org.openjfx:javafx-controls:$javafxVersion"
-    permitUnusedDeclared "org.openjfx:javafx-graphics:$javafxVersion"
-    permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion"
-    permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:mac"
-    permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:linux"
-    permitUnusedDeclared "org.openjfx:javafx-media:$javafxVersion:win"
 }
 
 test {
@@ -186,6 +176,8 @@ runtime {
     additive = true
 
     jpackage {
+        imageName = 'Jiotty Photos Uploader'
+        installerName = 'Jiotty Photos Uploader'
         jvmArgs = ['-Dprism.verbose=true']
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             installerType = 'dmg'
@@ -197,13 +189,13 @@ runtime {
             installerType = 'msi'
             imageOptions = ['--verbose']
             installerOptions = ['--verbose', '--win-per-user-install', '--win-menu', '--win-upgrade-uuid', '58e3cc92-0df9-4089-9609-8ad54b2608e7']
-            resourceDir = file("$rootDir/src/main/packaging-resources/windows")
+            resourceDir = file("$projectDir/src/main/packaging-resources/windows")
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
             imageName = 'JiottyPhotosUploader'  // cannot have spaces in Debian resource names
             installerName = 'JiottyPhotosUploader' // cannot have spaces in Debian resource names
             imageOptions = ['--verbose']
-            resourceDir = file("$rootDir/src/main/packaging-resources/linux")
+            resourceDir = file("$projectDir/src/main/packaging-resources/linux")
             installerOptions = ['--verbose', '--linux-shortcut', '--linux-package-name', 'jiotty-photos-uploader']
         }
     }
@@ -214,16 +206,16 @@ jpackage.dependsOn 'requireClientSecret'
 task copyPackagingResources(type: Copy) {
     onlyIf { !org.gradle.internal.os.OperatingSystem.current().linux }
     if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
-        from("$rootDir/src/main/packaging-resources/macOS/out") {
+        from("$projectDir/src/main/packaging-resources/macOS/out") {
             exclude '**/*.plist'
         }
-        from("$rootDir/src/main/packaging-resources/macOS/out") {
+        from("$projectDir/src/main/packaging-resources/macOS/out") {
             include '**/*.plist'
             filter(ReplaceTokens, tokens: [version: version])
         }
         into "$buildDir/packaging-resources/macOS/out"
     } else if (org.gradle.internal.os.OperatingSystem.current().windows) {
-        from("$rootDir/src/main/packaging-resources/windows/out") {
+        from("$projectDir/src/main/packaging-resources/windows/out") {
             include '**/*.xml'
             filter(ReplaceTokens, tokens: [version: version, appName: project.name])
         }
@@ -260,10 +252,10 @@ task prepareOsSpecificPackaging {
 task runOsSpecificPackaging(type: Exec) {
     onlyIf { !org.gradle.internal.os.OperatingSystem.current().linux }
     if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
-        commandLine "$projectDir/macos_notarize_dmg.sh", "$project.name", "$version", Jvm.current().getJavaHome()
+        commandLine "$rootDir/macos_notarize_dmg.sh", "$project.name", "$version", Jvm.current().getJavaHome()
     }
     if (org.gradle.internal.os.OperatingSystem.current().windows) {
-        commandLine "$projectDir/windows-create-appx.bat", "$version"
+        commandLine "$rootDir/windows-create-appx.bat", "$version"
     }
 }
 
