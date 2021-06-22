@@ -23,6 +23,10 @@ Configuration:
       - name: net.yudichev.googlephotosupload
         level: info
         includeLocation: true
+        # this one prints oauth2 URL so must be included
+      - name: com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp
+        level: info
+        includeLocation: true
         # this one is spitting an irrelevant WARN on initialisation
       - name: uk.org.lidalia.sysoutslf4j.context.SysOutOverSLF4JInitialiser
         level: error

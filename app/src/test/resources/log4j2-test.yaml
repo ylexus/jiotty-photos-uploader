@@ -4,7 +4,7 @@ Configuration:
     Console:
       name: STDOUT
       PatternLayout:
-        Pattern: "%d{ISO8601}{GMT} %p [%t] %C{1.} %m%n"
+        Pattern: "%d{ISO8601}{GMT} %p [%t] %c{1.} %m%n"
 
   Loggers:
     logger:

@@ -11,7 +11,7 @@ Configuration:
       fileName: ${filename}
       filePattern: ${filename}.%d{yyyy-MM-dd}-%i.gz
       PatternLayout:
-        Pattern: "%d{ISO8601}{GMT} %p [%t] %C{1.} %m%n"
+        Pattern: "%d{ISO8601}{GMT} %p [%t] %c{1.} %m%n"
       Policies:
         SizeBasedTriggeringPolicy:
           size: 50Mb
