@@ -38,7 +38,7 @@ final class LegacyLogCleaner extends BaseLifecycleComponent {
                         }
                     });
         } catch (IOException e) {
-            logger.warn("Unable to list files in {}", logDir, e);
+            logger.info("Unable to list files in {}", logDir, e);
         }
     }
 }
