@@ -6,7 +6,7 @@ import java.nio.file.Paths
 
 plugins {
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.9'
+    id 'org.openjfx.javafxplugin' version '0.0.10'
     id 'org.beryx.runtime' version '1.12.5'
     id "name.remal.check-updates" version "1.3.1"
 
@@ -153,6 +153,10 @@ application {
 javafx {
     version = "$javafxVersion"
     modules = ['javafx.controls', 'javafx.fxml', 'javafx.web']
+    if (project.hasProperty("raspberryPi")) {
+        // do not include native libraries on RPi
+        configuration = 'compileOnly'
+    }
 }
 
 runtime {
@@ -192,14 +196,15 @@ runtime {
             resourceDir = file("$projectDir/src/main/packaging-resources/windows")
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
+            if (project.hasProperty("raspberryPi")) {
+                // do not try to build rpm on RPi
+                installerType = 'deb'
+            }
             imageName = 'JiottyPhotosUploader'  // cannot have spaces in Debian resource names
             installerName = 'JiottyPhotosUploader' // cannot have spaces in Debian resource names
             imageOptions = ['--verbose']
             resourceDir = file("$projectDir/src/main/packaging-resources/linux")
             installerOptions = ['--verbose', '--linux-shortcut', '--linux-package-name', 'jiotty-photos-uploader']
-        }
-        if (project.hasProperty("jpackageInstallerType")) {
-            installerType = jpackageInstallerType
         }
     }
 }
