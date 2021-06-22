@@ -198,6 +198,9 @@ runtime {
             resourceDir = file("$projectDir/src/main/packaging-resources/linux")
             installerOptions = ['--verbose', '--linux-shortcut', '--linux-package-name', 'jiotty-photos-uploader']
         }
+        if (project.hasProperty("jpackageInstallerType")) {
+            installerType = jpackageInstallerType
+        }
     }
 }
 jpackage.dependsOn 'check'
@@ -259,9 +262,6 @@ task runOsSpecificPackaging(type: Exec) {
     }
 }
 
-def finalFileNameLinuxDeb = "Linux-jiotty-photos-uploader_$version-1_amd64.deb"
-def finalFileNameLinuxRpm = "Linux-jiotty-photos-uploader-$version-1.x86_64.rpm"
-
 task renameDistribution() {
     onlyIf { !org.gradle.internal.os.OperatingSystem.current().windows }
     doLast {
@@ -270,10 +270,10 @@ task renameDistribution() {
                     tofile: "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
         }
         if (org.gradle.internal.os.OperatingSystem.current().linux) {
-            ant.move file: "$buildDir/jpackage/jiotty-photos-uploader_$version-1_amd64.deb",
-                    tofile: "$fullPackageOutputDir/$finalFileNameLinuxDeb"
-            ant.move file: "$buildDir/jpackage/jiotty-photos-uploader-$version-1.x86_64.rpm",
-                    tofile: "$fullPackageOutputDir/$finalFileNameLinuxRpm"
+            ant.move(todir: fullPackageOutputDir) {
+                fileset dir: "$buildDir/jpackage", includes: '*.deb,*.rpm'
+                mapper type: "glob", from : "*", to: "Linux-*"
+            }
         }
     }
 }
@@ -367,6 +367,8 @@ task runRemoteLinuxBuild(dependsOn: requireClientSecret) {
             throw new GradleScriptException("VM build execution failed, see errors above", null)
         }
         mkdir fullPackageOutputDir
+        def finalFileNameLinuxDeb = "Linux-jiotty-photos-uploader_$version-1_amd64.deb"
+        def finalFileNameLinuxRpm = "Linux-jiotty-photos-uploader-$version-1.x86_64.rpm"
         vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/fullpackage/$finalFileNameLinuxDeb", "$fullPackageOutputDir/$finalFileNameLinuxDeb"]
         vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/build/fullpackage/$finalFileNameLinuxRpm", "$fullPackageOutputDir/$finalFileNameLinuxRpm"]
         vmrunLinux 'suspend'
