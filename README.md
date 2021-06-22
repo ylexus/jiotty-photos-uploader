@@ -9,5 +9,8 @@ To build from sources and run locally:
 If build the native binary for the current platform from sources:
 
 1. Install JDK 14
-2. run `./gradlew -DCLIENT_SECRET_PATH=/path/to/google-API-client-secret.json fullPackage -DVERSION=0.0.0`
-3. look for the binary in `app/build/jpackage`
+2. Run the following, replacing `0.0.0` with the version you want:
+    1. on a desktop: `./gradlew --no-daemon -DCLIENT_SECRET_PATH=/path/to/google-API-client-secret.json fullPackage -DVERSION=0.0.0`
+    2. on Raspberry Pi:
+       `./gradlew --no-daemon -PjpackageInstallerType=deb -DCLIENT_SECRET_PATH=/path/to/google-API-client-secret.json fullPackage -DVERSION=0.0.0`
+3. look for the executable bundle in `app/build/jpackage` and for the installer in `app/build/fullpackage`
