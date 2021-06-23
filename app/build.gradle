@@ -384,10 +384,11 @@ task runRemoteRpiBuild(dependsOn: requireClientSecret) {
         exec { commandLine 'scp', clientSecretPath, "pi@$rpiHost:$tmpClientSecretGuestPath" }
         mkdir "$buildDir/jpackage"
         def pullAndBuildExitCode = exec {
-            commandLine 'ssh', "pi@$rpiHost", "chmod +x $remoteCloneDir/pull_and_build.sh && $remoteCloneDir/pull_and_build.sh $version;rm $tmpClientSecretGuestPath"
+            commandLine 'ssh', "pi@$rpiHost", "chmod +x $remoteCloneDir/pull_and_build.sh && $remoteCloneDir/pull_and_build.sh $version"
             ignoreExitValue true
         }.exitValue
-        def buildLogPath = "$buildDir/pull_and_build.linux.log"
+        exec {commandLine 'ssh', "pi@$rpiHost", "rm $tmpClientSecretGuestPath" }
+        def buildLogPath = "$buildDir/pull_and_build.rpi.log"
         exec {
             commandLine 'scp', "pi@$rpiHost:$remoteCloneDir/pull_and_build.log", buildLogPath
             ignoreExitValue true
@@ -397,10 +398,11 @@ task runRemoteRpiBuild(dependsOn: requireClientSecret) {
             if (Files.exists(remoteLogFile)) {
                 println Files.readString(remoteLogFile)
             }
-            throw new GradleScriptException("VM build execution failed, see errors above", null)
+            throw new GradleScriptException("RPi build execution failed, see errors above", null)
         }
         mkdir fullPackageOutputDir
         def finalFileNameLinuxDeb = "Linux-jiotty-photos-uploader_$version-1_armhf.deb"
+
         exec { commandLine 'scp', "pi@$rpiHost:$remoteCloneDir/app/build/fullpackage/$finalFileNameLinuxDeb", "$fullPackageOutputDir/$finalFileNameLinuxDeb" }
     }
 }

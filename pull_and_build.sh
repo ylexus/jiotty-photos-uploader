@@ -15,7 +15,7 @@ cd "$(dirname "${0}")" || exit 2
 mkdir -p build
 LOG="pull_and_build.log"
 rm -f "${LOG}"
-export JAVA_HOME="$HOME/java/jdk"
+[[ "$(uname -a)" != *raspberrypi* ]] && export JAVA_HOME="$HOME/java/jdk"
 {
   git fetch --all
   git reset --hard origin/master
