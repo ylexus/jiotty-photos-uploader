@@ -14,7 +14,7 @@ VERSION="$1"
 cd "$(dirname "${0}")" || exit 2
 mkdir -p build
 LOG="pull_and_build.log"
-rm "${LOG}"
+rm -f "${LOG}"
 export JAVA_HOME="$HOME/java/jdk"
 {
   git fetch --all

@@ -381,14 +381,17 @@ task runRemoteRpiBuild(dependsOn: requireClientSecret) {
         def remoteCloneDir = '/home/pi/java/jiotty-photos-uploader'
         def tmpClientSecretGuestPath = "/home/pi/java/clientSecret.json"
         def rpiHost = readEnvOrFail 'RPI_HOST'
-        exec { commandLine['scp', clientSecretPath, "pi@$rpiHost:$tmpClientSecretGuestPath"] }
+        exec { commandLine 'scp', clientSecretPath, "pi@$rpiHost:$tmpClientSecretGuestPath" }
         mkdir "$buildDir/jpackage"
         def pullAndBuildExitCode = exec {
-            commandLine['ssh', "pi@$rpiHost", "chmod +x $remoteCloneDir/pull_and_build.sh && $remoteCloneDir/pull_and_build.sh;rm $tmpClientSecretGuestPath"]
+            commandLine 'ssh', "pi@$rpiHost", "chmod +x $remoteCloneDir/pull_and_build.sh && $remoteCloneDir/pull_and_build.sh $version;rm $tmpClientSecretGuestPath"
             ignoreExitValue true
         }.exitValue
         def buildLogPath = "$buildDir/pull_and_build.linux.log"
-        exec { commandLine['scp', "pi@$rpiHost:$remoteCloneDir/pull_and_build.log", buildLogPath] }
+        exec {
+            commandLine 'scp', "pi@$rpiHost:$remoteCloneDir/pull_and_build.log", buildLogPath
+            ignoreExitValue true
+        }
         def remoteLogFile = Paths.get(buildLogPath)
         if (pullAndBuildExitCode != 0) {
             if (Files.exists(remoteLogFile)) {
@@ -398,7 +401,7 @@ task runRemoteRpiBuild(dependsOn: requireClientSecret) {
         }
         mkdir fullPackageOutputDir
         def finalFileNameLinuxDeb = "Linux-jiotty-photos-uploader_$version-1_armhf.deb"
-        exec { commandLine['scp', "pi@$rpiHost:$remoteCloneDir/app/build/fullpackage/$finalFileNameLinuxDeb", "$fullPackageOutputDir/$finalFileNameLinuxDeb"] }
+        exec { commandLine 'scp', "pi@$rpiHost:$remoteCloneDir/app/build/fullpackage/$finalFileNameLinuxDeb", "$fullPackageOutputDir/$finalFileNameLinuxDeb" }
     }
 }
 
