@@ -153,10 +153,6 @@ application {
 javafx {
     version = "$javafxVersion"
     modules = ['javafx.controls', 'javafx.fxml', 'javafx.web']
-    if (project.hasProperty("raspberryPi")) {
-        // do not include native libraries on RPi
-        configuration = 'compileOnly'
-    }
 }
 
 runtime {
