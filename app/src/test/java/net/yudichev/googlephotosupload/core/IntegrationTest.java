@@ -32,7 +32,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -41,6 +40,7 @@ import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.nio.file.FileVisitResult.CONTINUE;
 import static java.time.Instant.EPOCH;
 import static java.time.Instant.now;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static net.yudichev.googlephotosupload.cli.CliOptions.OPTIONS;
 import static net.yudichev.googlephotosupload.core.AddToAlbumMethod.AFTER_CREATING_ITEMS_SORTED;
@@ -112,11 +112,11 @@ final class IntegrationTest {
         try {
             var varStore = app.getInjector().getInstance(VarStore.class);
             var outerAlbumPhotoAbsolutePath = outerAlbumPhoto.toAbsolutePath().toString();
-            varStore.saveValue("photosUploader", UploadState.builder()
+            varStore.saveValue("photosUploader", net.yudichev.googlephotosupload.core.UploadState.builder()
                     .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath,
-                            ItemState.builder()
+                            net.yudichev.googlephotosupload.core.ItemState.builder()
                                     .setMediaId(outerAlbumPhotoAbsolutePath)
-                                    .setUploadState(UploadMediaItemState.of(outerAlbumPhotoAbsolutePath, now()))
+                                    .setUploadState(net.yudichev.googlephotosupload.core.UploadMediaItemState.of(outerAlbumPhotoAbsolutePath, now()))
                                     .build())
                     .build());
         } finally {
@@ -163,7 +163,7 @@ final class IntegrationTest {
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 equalTo("Uploading media files"),
-                contains(KeyedError.of(invalidMediaItemPath.toAbsolutePath(),
+                contains(net.yudichev.googlephotosupload.core.KeyedError.of(invalidMediaItemPath.toAbsolutePath(),
                         "INVALID_ARGUMENT: createMediaItems"))));
         doVerifyGoogleClientState();
 
@@ -191,7 +191,7 @@ final class IntegrationTest {
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 equalTo("Uploading media files"),
-                contains(KeyedError.of(invalidMediaItemPath.toAbsolutePath(),
+                contains(net.yudichev.googlephotosupload.core.KeyedError.of(invalidMediaItemPath.toAbsolutePath(),
                         "INVALID_ARGUMENT: uploadMediaData"))));
         doVerifyGoogleClientState();
 
@@ -204,7 +204,7 @@ final class IntegrationTest {
     @Test
     void reusesPreExistingAlbum() throws Exception {
         createStandardTestFiles();
-        googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
 
         doExecuteUpload();
         getLastFailure().ifPresent(Assertions::fail);
@@ -215,15 +215,15 @@ final class IntegrationTest {
     @Test
     void mergesPreExistingEmptyAlbumsWithSameNameAndReusesResultingAlbum() throws Exception {
         createStandardTestFiles();
-        googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
+        googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
 
         doExecuteUpload();
 
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
-                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                contains(net.yudichev.googlephotosupload.core.KeyedError.of(new URL("http://photos.com/outer-album1"),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
         doVerifyGoogleClientItemState();
         assertThat(googlePhotosClient.getAllAlbums(), containsInAnyOrder(
@@ -235,7 +235,7 @@ final class IntegrationTest {
     @Test
     void doesNotMergePreExistingNonWritableAlbum() throws Exception {
         createStandardTestFiles();
-        var writableOuterAlbum = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var writableOuterAlbum = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
         var nonWritableOuterAlbum = googlePhotosClient.createNonWritableAlbum("outer-album");
 
         doExecuteUpload();
@@ -253,9 +253,9 @@ final class IntegrationTest {
     void mergesPreExistingNonEmptyAlbumsWithSameNameAndReusesResultingAlbum() throws Exception {
         createStandardTestFiles();
 
-        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        var preExistingAlbum3 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
+        var preExistingAlbum3 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
 
         var preExistingPhoto1Item = uploadPhoto(preExistingAlbum1, "photo1.jpg");
         var preExistingPhoto2Item = uploadPhoto(preExistingAlbum2, "photo2.jpg");
@@ -267,10 +267,10 @@ final class IntegrationTest {
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
                 containsInAnyOrder(
-                        KeyedError.of(new URL("http://photos.com/outer-album1"),
+                        net.yudichev.googlephotosupload.core.KeyedError.of(new URL("http://photos.com/outer-album1"),
                                 "Album 'outer-album' may now be empty and will require manual deletion " +
                                         "(Google Photos API does not allow me to delete it for you)"),
-                        KeyedError.of(new URL("http://photos.com/outer-album2"),
+                        net.yudichev.googlephotosupload.core.KeyedError.of(new URL("http://photos.com/outer-album2"),
                                 "Album 'outer-album' may now be empty and will require manual deletion " +
                                         "(Google Photos API does not allow me to delete it for you)"))));
 
@@ -292,18 +292,18 @@ final class IntegrationTest {
     @Test
     void mergesPreExistingNonEmptyAlbumsWithSamePhotoInThem() throws Exception {
         createStandardTestFiles();
-        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(3, TimeUnit.SECONDS);
-        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(3, TimeUnit.SECONDS);
+        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
 
         var preExistingPhotoItem = uploadPhoto(preExistingAlbum1, "photo1.jpg");
-        preExistingAlbum2.addMediaItemsByIds(ImmutableList.of(preExistingPhotoItem.getId())).get(3, TimeUnit.SECONDS);
+        preExistingAlbum2.addMediaItemsByIds(ImmutableList.of(preExistingPhotoItem.getId())).get(15, SECONDS);
 
         doExecuteUpload();
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
-                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                contains(net.yudichev.googlephotosupload.core.KeyedError.of(new URL("http://photos.com/outer-album1"),
                         "Album 'outer-album' may now be empty and will require manual deletion " +
                                 "(Google Photos API does not allow me to delete it for you)"))));
 
@@ -314,8 +314,8 @@ final class IntegrationTest {
     @Test
     void mergesAlbumsWithMoreThanMaxItemsAllowedPerRequest() throws Exception {
         createStandardTestFiles();
-        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
 
         uploadPhoto(preExistingAlbum1, "photo-in-album1.jpg");
         var items = IntStream.range(0, 51)
@@ -327,10 +327,10 @@ final class IntegrationTest {
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
-                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                contains(net.yudichev.googlephotosupload.core.KeyedError.of(new URL("http://photos.com/outer-album1"),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
 
-        var outerAlbumItems = preExistingAlbum1.getMediaItems().get(3, TimeUnit.SECONDS);
+        var outerAlbumItems = preExistingAlbum1.getMediaItems().get(15, SECONDS);
         assertThat(outerAlbumItems, hasSize(53));
         items.forEach(item -> assertThat(outerAlbumItems, hasItem(item)));
         assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
@@ -341,8 +341,8 @@ final class IntegrationTest {
     @Test
     void mergesAlbumsWithExactlyMaxItemsAllowedPerRequest() throws Exception {
         createStandardTestFiles();
-        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
 
         uploadPhoto(preExistingAlbum1, "photo-in-album1.jpg");
         var items = IntStream.range(0, 49)
@@ -354,10 +354,10 @@ final class IntegrationTest {
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
-                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                contains(net.yudichev.googlephotosupload.core.KeyedError.of(new URL("http://photos.com/outer-album1"),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
 
-        var outerAlbumItems = preExistingAlbum1.getMediaItems().get(3, TimeUnit.SECONDS);
+        var outerAlbumItems = preExistingAlbum1.getMediaItems().get(15, SECONDS);
         assertThat(outerAlbumItems, hasSize(51));
         items.forEach(item -> assertThat(outerAlbumItems, hasItem(item)));
         assertThat(outerAlbumItems, hasItem(itemForFile(outerAlbumPhoto)));
@@ -368,8 +368,8 @@ final class IntegrationTest {
     @Test
     void mergesPreExistingAlbumsWithSameNameSecondOneNonEmptyAndReusesResultingAlbum() throws Exception {
         createStandardTestFiles();
-        googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
 
         var preExistingPhoto2Item = uploadPhoto(preExistingAlbum2, "photo2.jpg");
 
@@ -393,8 +393,8 @@ final class IntegrationTest {
     @Test
     void mergesPreExistingAlbumsSameNameWithPreexistingItems() throws Exception {
         createStandardTestFiles();
-        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
-        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(1, TimeUnit.SECONDS);
+        var preExistingAlbum1 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
+        var preExistingAlbum2 = googlePhotosClient.createAlbum("outer-album").get(15, SECONDS);
 
         var preExistingPhoto1Item = uploadPhoto(preExistingAlbum1, "pre-existing-photo1.jpg");
         var preExistingPhoto2Item = uploadPhoto(preExistingAlbum2, "pre-existing-photo2.jpg");
@@ -405,7 +405,7 @@ final class IntegrationTest {
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
-                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                contains(net.yudichev.googlephotosupload.core.KeyedError.of(new URL("http://photos.com/outer-album1"),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
         assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
                 allOf(itemForFile(rootPhoto), itemWithNoAlbum()),
@@ -489,7 +489,7 @@ final class IntegrationTest {
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 equalTo("Uploading media files"),
-                contains(KeyedError.of(invalidMediaItemPath.toAbsolutePath(),
+                contains(net.yudichev.googlephotosupload.core.KeyedError.of(invalidMediaItemPath.toAbsolutePath(),
                         "INVALID_ARGUMENT: createMediaItems"))));
 
         googlePhotosClient.disableFileNameBaseFailures();
@@ -523,7 +523,7 @@ final class IntegrationTest {
     @Test
     void expiredUploadTokenCausesReUploadOnlyForFilesThatWereNotSuccessfullyUploaded() throws Exception {
         var invalidMediaItemPath = uploadRoot.resolve("failOnMeWithInvalidArgumentDuringCreationOfMediaItem.jpg").toAbsolutePath();
-        var contents = MediaItemContents.of(EPOCH, uniqueData());
+        var contents = net.yudichev.googlephotosupload.core.MediaItemContents.of(EPOCH, uniqueData());
         writeMediaFile(invalidMediaItemPath, contents);
 
         doExecuteUpload();
@@ -562,7 +562,7 @@ final class IntegrationTest {
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 equalTo("Uploading media files"),
-                contains(KeyedError.of(photoInPreExistingAlbumPath.toAbsolutePath(),
+                contains(net.yudichev.googlephotosupload.core.KeyedError.of(photoInPreExistingAlbumPath.toAbsolutePath(),
                         "INVALID_ARGUMENT: No permission to add media items to this album"))));
 
         assertThat(googlePhotosClient.getAllItems(), hasItem(
@@ -619,9 +619,9 @@ final class IntegrationTest {
         var file1 = albumWithSortedFilesPath.resolve("file1.jpg");
         var file2 = albumWithSortedFilesPath.resolve("file2.jpg");
 
-        writeMediaFile(file3, MediaItemContents.of(Instant.ofEpochMilli(3), uniqueData()));
-        writeMediaFile(file1, MediaItemContents.of(Instant.ofEpochMilli(1), uniqueData()));
-        writeMediaFile(file2, MediaItemContents.of(Instant.ofEpochMilli(2), uniqueData()));
+        writeMediaFile(file3, net.yudichev.googlephotosupload.core.MediaItemContents.of(Instant.ofEpochMilli(3), uniqueData()));
+        writeMediaFile(file1, net.yudichev.googlephotosupload.core.MediaItemContents.of(Instant.ofEpochMilli(1), uniqueData()));
+        writeMediaFile(file2, net.yudichev.googlephotosupload.core.MediaItemContents.of(Instant.ofEpochMilli(2), uniqueData()));
 
         doExecuteUpload();
 
@@ -668,7 +668,7 @@ final class IntegrationTest {
         Files.createDirectory(albumPath);
         var file1Path = albumPath.resolve("file1.jpg");
         var file2Path = albumPath.resolve("file2.jpg");
-        var contents = MediaItemContents.of(EPOCH, uniqueData());
+        var contents = net.yudichev.googlephotosupload.core.MediaItemContents.of(EPOCH, uniqueData());
         writeMediaFile(file1Path, contents);
         writeMediaFile(file2Path, contents);
 
@@ -698,7 +698,7 @@ final class IntegrationTest {
         // need to ensure there's two batches, so that we successfully create two media items with same ID
         var largeDirPath = uploadRoot.resolve("dirWithManyFiles").toAbsolutePath();
         Files.createDirectory(largeDirPath);
-        var mediaItemContents = MediaItemContents.of(EPOCH, uniqueData());
+        var mediaItemContents = net.yudichev.googlephotosupload.core.MediaItemContents.of(EPOCH, uniqueData());
         IntStream.range(0, GOOGLE_PHOTOS_API_BATCH_SIZE + 1)
                 .mapToObj(i -> largeDirPath.resolve("file" + i + ".jpg"))
                 .forEach(path -> asUnchecked(() -> writeMediaFile(path, mediaItemContents)));
@@ -804,13 +804,13 @@ final class IntegrationTest {
         progressStatusFactory.getRecordedErrorsByProgressName().values().forEach(keyedErrors -> assertThat(keyedErrors, is(empty())));
     }
 
-    private static MediaItemContents writeMediaFile(Path path) throws IOException {
-        var mediaItemContents = MediaItemContents.of(EPOCH, uniqueData());
+    private static net.yudichev.googlephotosupload.core.MediaItemContents writeMediaFile(Path path) throws IOException {
+        var mediaItemContents = net.yudichev.googlephotosupload.core.MediaItemContents.of(EPOCH, uniqueData());
         writeMediaFile(path, mediaItemContents);
         return mediaItemContents;
     }
 
-    private static void writeMediaFile(Path path, MediaItemContents contents) throws IOException {
+    private static void writeMediaFile(Path path, net.yudichev.googlephotosupload.core.MediaItemContents contents) throws IOException {
         Files.writeString(path, Json.stringify(contents));
     }
 
@@ -819,7 +819,7 @@ final class IntegrationTest {
         return dataGenerator++;
     }
 
-    private Map<String, ItemState> readState() throws InterruptedException {
+    private Map<String, net.yudichev.googlephotosupload.core.ItemState> readState() throws InterruptedException {
         var app = Application.builder()
                 .addModule(() -> new SettingsModule(settingsRootPath))
                 .build();
@@ -831,7 +831,7 @@ final class IntegrationTest {
         }
     }
 
-    private void doVerifyJpegFilesInVarStore(Map<String, ItemState> uploadedMediaItemIdByAbsolutePath) {
+    private void doVerifyJpegFilesInVarStore(Map<String, net.yudichev.googlephotosupload.core.ItemState> uploadedMediaItemIdByAbsolutePath) {
         var innerPhotoPath = innerAlbumPhoto.toAbsolutePath().toString();
         var outerPhotoPath = outerAlbumPhoto.toAbsolutePath().toString();
         var rootPhotoPath = rootPhoto.toAbsolutePath().toString();
@@ -916,7 +916,7 @@ final class IntegrationTest {
                     .run();
             applicationExitedLatch.countDown();
         }, "application main").start();
-        assertThat(applicationExitedLatch.await(5, TimeUnit.SECONDS), is(true));
+        assertThat(applicationExitedLatch.await(15, SECONDS), is(true));
     }
 
     private MediaItem uploadPhoto(GooglePhotosAlbum album, String fileName) throws Exception {
@@ -925,7 +925,7 @@ final class IntegrationTest {
             path = uploadRoot.resolve(fileName);
             writeMediaFile(path);
 
-            return (MediaItem) googlePhotosClient.uploadMediaItem(Optional.of(album.getId()), path).get(1, TimeUnit.SECONDS);
+            return (MediaItem) googlePhotosClient.uploadMediaItem(Optional.of(album.getId()), path).get(15, SECONDS);
         } finally {
             if (path != null) {
                 Files.delete(path);
@@ -993,7 +993,7 @@ final class IntegrationTest {
                 itemsMatcher, "album with items", "album with items") {
             @Override
             protected Iterable<GoogleMediaItem> featureValueOf(GooglePhotosAlbum actual) {
-                return getAsUnchecked(() -> actual.getMediaItems(directExecutor()).get(1, TimeUnit.SECONDS));
+                return getAsUnchecked(() -> actual.getMediaItems(directExecutor()).get(15, SECONDS));
             }
         };
     }
@@ -1030,53 +1030,54 @@ final class IntegrationTest {
         };
     }
 
-    private static Matcher<GoogleMediaItem> itemWithContents(MediaItemContents fileContents) {
+    private static Matcher<GoogleMediaItem> itemWithContents(net.yudichev.googlephotosupload.core.MediaItemContents fileContents) {
         return new FeatureMatcher<>(equalTo(fileContents), "item with contents", "item with contents") {
             @Override
-            protected MediaItemContents featureValueOf(GoogleMediaItem actual) {
+            protected net.yudichev.googlephotosupload.core.MediaItemContents featureValueOf(GoogleMediaItem actual) {
                 return ((MediaItem) actual).getBinary().getContents();
             }
         };
     }
 
-    private static MediaItemContents readContents(Path filePath) {
-        return getAsUnchecked(() -> Json.parse(Files.readString(filePath), MediaItemContents.class));
+    private static net.yudichev.googlephotosupload.core.MediaItemContents readContents(Path filePath) {
+        return getAsUnchecked(() -> Json.parse(Files.readString(filePath), net.yudichev.googlephotosupload.core.MediaItemContents.class));
     }
 
     @SuppressWarnings("TypeParameterExtendsFinalClass")
-    private static Matcher<ItemState> itemStateHavingMediaId(Matcher<Optional<? extends String>> mediaIdMatcher) {
+    private static Matcher<net.yudichev.googlephotosupload.core.ItemState> itemStateHavingMediaId(Matcher<Optional<? extends String>> mediaIdMatcher) {
         return new FeatureMatcher<>(mediaIdMatcher, "media item id", "media item id") {
             @Override
-            protected Optional<String> featureValueOf(ItemState actual) {
+            protected Optional<String> featureValueOf(net.yudichev.googlephotosupload.core.ItemState actual) {
                 return actual.mediaId();
             }
         };
     }
 
     @SuppressWarnings("TypeParameterExtendsFinalClass")
-    private static Matcher<ItemState> itemStateHavingUploadState(
-            Matcher<Optional<? extends UploadMediaItemState>> mediaItemStateMatcher) {
+    private static Matcher<net.yudichev.googlephotosupload.core.ItemState> itemStateHavingUploadState(
+            Matcher<Optional<? extends net.yudichev.googlephotosupload.core.UploadMediaItemState>> mediaItemStateMatcher) {
         return new FeatureMatcher<>(mediaItemStateMatcher, "upload media item state", "upload media item state") {
             @Override
-            protected Optional<UploadMediaItemState> featureValueOf(ItemState actual) {
+            protected Optional<net.yudichev.googlephotosupload.core.UploadMediaItemState> featureValueOf(
+                    net.yudichev.googlephotosupload.core.ItemState actual) {
                 return actual.uploadState();
             }
         };
     }
 
-    private static Matcher<UploadMediaItemState> uploadMediaItemStateHavingToken(Matcher<String> tokenMatcher) {
+    private static Matcher<net.yudichev.googlephotosupload.core.UploadMediaItemState> uploadMediaItemStateHavingToken(Matcher<String> tokenMatcher) {
         return new FeatureMatcher<>(tokenMatcher, "upload media item state token", "upload media item state token") {
             @Override
-            protected String featureValueOf(UploadMediaItemState actual) {
+            protected String featureValueOf(net.yudichev.googlephotosupload.core.UploadMediaItemState actual) {
                 return actual.token();
             }
         };
     }
 
-    private static Matcher<UploadMediaItemState> uploadMediaItemStateHavingInstant(Matcher<Instant> instantMatcher) {
+    private static Matcher<net.yudichev.googlephotosupload.core.UploadMediaItemState> uploadMediaItemStateHavingInstant(Matcher<Instant> instantMatcher) {
         return new FeatureMatcher<>(instantMatcher, "upload media item state instant", "upload media item state instant") {
             @Override
-            protected Instant featureValueOf(UploadMediaItemState actual) {
+            protected Instant featureValueOf(net.yudichev.googlephotosupload.core.UploadMediaItemState actual) {
                 return actual.uploadInstant();
             }
         };
