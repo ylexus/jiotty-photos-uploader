@@ -349,8 +349,8 @@ int vmrunLinux(String command, List<String> args = [], ignoreExitCode = false) {
 
 task runRemoteLinuxBuild(dependsOn: requireClientSecret) {
     doLast {
-        def remoteCloneDir = "/home/$vmUser/java/jiotty-photos-uploader"
         def vmUser = readEnvOrFail 'VMRUN_LINUX_USER'
+        def remoteCloneDir = "/home/$vmUser/java/jiotty-photos-uploader"
         vmrunLinux 'start'
         def tmpClientSecretGuestPath = "/home/$vmUser/java/clientSecret.json"
         vmrunLinux 'CopyFileFromHostToGuest', [clientSecretPath, tmpClientSecretGuestPath]
