@@ -61,8 +61,8 @@ final class UserInterface extends BaseLifecycleComponent implements Provider<Jav
                 primaryStage.setOnHiding(e -> applicationLifecycleControl.initiateShutdown());
                 initLatch.countDown();
             });
-            logger.info("Waiting for 10 seconds until UI is initialized");
-            checkState(getAsUnchecked(() -> initLatch.await(10, TimeUnit.SECONDS)), "UI was not initialized in 10 seconds");
+            logger.info("Waiting for 30 seconds until UI is initialized");
+            checkState(getAsUnchecked(() -> initLatch.await(30, TimeUnit.SECONDS)), "UI was not initialized in 30 seconds");
         }
     }
 }
