@@ -39,7 +39,7 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
     public Button stopButton;
     public VBox topVBox;
     public Button uploadMoreButton;
-    private boolean everInitialised;
+    private volatile boolean everInitialised;
 
     @Inject
     UploadPaneControllerImpl(Uploader uploader,
@@ -66,10 +66,10 @@ public final class UploadPaneControllerImpl extends BaseLifecycleComponent imple
 
     @Override
     public void reset() {
+        if (!everInitialised) {
+            return;
+        }
         runLater(() -> {
-            if (!everInitialised) {
-                return;
-            }
             logArea.getStyleClass().remove("success-background");
             logArea.getStyleClass().remove("failed-background");
             logArea.getStyleClass().remove("partial-success-background");
