@@ -134,7 +134,7 @@ test {
 
 jar {
     manifest {
-        attributes 'Implementation-Title': project.name,
+        attributes 'Implementation-Title': 'Jiotty Photos Uploader',
                 'Implementation-Version': archiveVersion
     }
 }
@@ -221,7 +221,7 @@ task copyPackagingResources(type: Copy) {
     } else if (org.gradle.internal.os.OperatingSystem.current().windows) {
         from("$projectDir/src/main/packaging-resources/windows/out") {
             include '**/*.xml'
-            filter(ReplaceTokens, tokens: [version: version, appName: project.name])
+            filter(ReplaceTokens, tokens: [version: version, appName: 'Jiotty Photos Uploader'])
         }
         into "$buildDir/packaging-resources/windows/out"
     } else {
@@ -256,7 +256,7 @@ task prepareOsSpecificPackaging {
 task runOsSpecificPackaging(type: Exec) {
     onlyIf { !org.gradle.internal.os.OperatingSystem.current().linux }
     if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
-        commandLine "$rootDir/macos_notarize_dmg.sh", "$project.name", "$version", Jvm.current().getJavaHome()
+        commandLine "$rootDir/macos_notarize_dmg.sh", 'Jiotty Photos Uploader', "$version", Jvm.current().getJavaHome()
     }
     if (org.gradle.internal.os.OperatingSystem.current().windows) {
         commandLine "$rootDir/windows-create-appx.bat", "$version"
