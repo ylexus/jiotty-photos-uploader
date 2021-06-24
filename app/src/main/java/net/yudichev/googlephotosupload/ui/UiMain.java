@@ -10,6 +10,7 @@ import net.yudichev.jiotty.common.time.TimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.management.ManagementFactory;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -33,6 +34,7 @@ public final class UiMain extends javafx.application.Application {
         logger.info("Version {}", buildVersion());
         logger.info("System properties {}", System.getProperties());
         logger.info("Environment {}", System.getenv());
+        logger.info("Input Arguments {}", ManagementFactory.getRuntimeMXBean().getInputArguments());
         Application.builder()
                 .addModule(() -> settingsModule)
                 .addModule(() -> new UiModule(handler -> {
