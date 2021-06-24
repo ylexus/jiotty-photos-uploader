@@ -336,9 +336,9 @@ task runRemoteWindowsBuild(dependsOn: requireClientSecret) {
         }
         mkdir fullPackageOutputDir
         vmrunWindows 'CopyFileFromGuestToHost',
-                ["$remoteCloneDir\\build\\fullpackage\\$finalFileNameWindowsMsi", "$fullPackageOutputDir/$finalFileNameWindowsMsi"]
+                ["$remoteCloneDir\\app\\build\\fullpackage\\$finalFileNameWindowsMsi", "$fullPackageOutputDir/$finalFileNameWindowsMsi"]
         vmrunWindows 'CopyFileFromGuestToHost',
-                ["$remoteCloneDir\\build\\fullpackage\\$finalFileNameWindowsMsix", "$fullPackageOutputDir/$finalFileNameWindowsMsix"]
+                ["$remoteCloneDir\\app\\build\\fullpackage\\$finalFileNameWindowsMsix", "$fullPackageOutputDir/$finalFileNameWindowsMsix"]
         vmrunWindows 'suspend'
     }
 }
