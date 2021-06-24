@@ -423,8 +423,9 @@ task hyperpackage {
     dependsOn fullpackage
     dependsOn runRemoteWindowsBuild
     dependsOn runRemoteLinuxBuild
+    dependsOn runRemoteRpiBuild
     dependsOn moveFinalArtifactsToDeploymentDir
-    moveFinalArtifactsToDeploymentDir.mustRunAfter 'fullpackage', 'runRemoteWindowsBuild', 'runRemoteLinuxBuild'
+    moveFinalArtifactsToDeploymentDir.mustRunAfter 'fullpackage', 'runRemoteWindowsBuild', 'runRemoteLinuxBuild', 'runRemoteRpiBuild'
 }
 
 private static readEnvOrNull(String variableName) {

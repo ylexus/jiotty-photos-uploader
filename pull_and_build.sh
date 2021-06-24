@@ -22,6 +22,7 @@ rm -f "${LOG}"
   echo "Version=${VERSION}"
   if [[ "$(uname -a)" == *raspberrypi* ]]; then
     RPI_ARG="-PraspberryPi"
+    echo "Building on Raspberry PI"
   else
     RPI_ARG=""
   fi
