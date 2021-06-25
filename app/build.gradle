@@ -178,7 +178,7 @@ runtime {
     jpackage {
         imageName = 'Jiotty Photos Uploader'
         installerName = 'Jiotty Photos Uploader'
-        jvmArgs = application.applicationDefaultJvmArgs + '-Dprism.verbose=true'
+        jvmArgs = application.applicationDefaultJvmArgs + ['-Dprism.verbose=true', '-Djavafx.verbose=true']
         if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
             installerType = 'dmg'
             imageOptions = ['--verbose', /*'--mac-sign',*/ '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)']
@@ -387,7 +387,7 @@ task runRemoteRpiBuild(dependsOn: requireClientSecret) {
             commandLine 'ssh', "pi@$rpiHost", "chmod +x $remoteCloneDir/pull_and_build.sh && $remoteCloneDir/pull_and_build.sh $version"
             ignoreExitValue true
         }.exitValue
-        exec {commandLine 'ssh', "pi@$rpiHost", "rm $tmpClientSecretGuestPath" }
+        exec { commandLine 'ssh', "pi@$rpiHost", "rm $tmpClientSecretGuestPath" }
         def buildLogPath = "$buildDir/pull_and_build.rpi.log"
         exec {
             commandLine 'scp', "pi@$rpiHost:$remoteCloneDir/pull_and_build.log", buildLogPath
