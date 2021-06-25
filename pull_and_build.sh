@@ -26,5 +26,5 @@ rm -f "${LOG}"
   else
     RPI_ARG=""
   fi
-  ./gradlew clean fullPackage "${RPI_ARG}" "-DVERSION=${VERSION}" "-DCLIENT_SECRET_PATH=$HOME/java/clientSecret.json"
+  ./gradlew --info clean fullPackage "${RPI_ARG}" "-DVERSION=${VERSION}" "-DCLIENT_SECRET_PATH=$HOME/java/clientSecret.json"
 } >>"${LOG}" 2>&1
