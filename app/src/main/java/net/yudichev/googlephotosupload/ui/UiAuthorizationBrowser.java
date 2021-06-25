@@ -39,10 +39,16 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     public void browse(String url) {
         runLater(() -> {
             if (dialog == null) {
-                dialog = dialogFactory.create(
-                        resourceBundle.getString("uiAuthorisationBrowserTitle"),
-                        "LoginDialog.fxml",
-                        this::customizeLoginDialog);
+                var dialogTitle = resourceBundle.getString("uiAuthorisationBrowserTitle");
+                try {
+                    dialog = dialogFactory.create(dialogTitle, "LoginDialog.fxml", this::customizeLoginDialog);
+                } catch (UnsatisfiedLinkError e) {
+                    if (e.getMessage() != null && e.getMessage().contains("jfxwebkit")) {
+                        dialog = dialogFactory.create(dialogTitle, "LoginDialogSimple.fxml", this::customizeSimpleLoginDialog);
+                    } else {
+                        throw e;
+                    }
+                }
             }
 
             dialog.show();
@@ -64,9 +70,18 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     }
 
     private void customizeLoginDialog(Stage dialog) {
-        dialog.initModality(APPLICATION_MODAL);
+        customiseCommonDialogProperties(dialog);
         dialog.setMinHeight(500);
         dialog.setMinWidth(500);
+    }
+
+    private void customizeSimpleLoginDialog(Stage dialog) {
+        customiseCommonDialogProperties(dialog);
+        dialog.setResizable(false);
+    }
+
+    private void customiseCommonDialogProperties(Stage dialog) {
+        dialog.initModality(APPLICATION_MODAL);
         dialog.setOnCloseRequest(event -> {
             applicationLifecycleControl.initiateShutdown();
             event.consume();

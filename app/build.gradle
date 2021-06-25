@@ -15,7 +15,7 @@ plugins {
 }
 
 version = readEnvOrDefault 'VERSION', '0.DEV'
-sourceCompatibility = '14'
+sourceCompatibility = '16'
 
 ext {
     javafxVersion = '16'

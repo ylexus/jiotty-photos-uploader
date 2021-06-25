@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.VBox?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" alignment="TOP_CENTER" spacing="4.0" stylesheets="@style.css"
+      xmlns="http://javafx.com/javafx/16" fx:controller="net.yudichev.googlephotosupload.ui.LoginDialogSimpleController">
+    <padding>
+        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
+    </padding>
+    <Label text="%loginDialogSimpleText"/>
+</VBox>
