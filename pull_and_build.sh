@@ -24,7 +24,7 @@ rm -f "${LOG}"
     RPI_ARG="-PraspberryPi"
     echo "Building on Raspberry PI"
   else
-    RPI_ARG=""
+    RPI_ARG="-Pdummy"
   fi
   ./gradlew --info clean fullPackage "${RPI_ARG}" "-DVERSION=${VERSION}" "-DCLIENT_SECRET_PATH=$HOME/java/clientSecret.json"
 } >>"${LOG}" 2>&1
