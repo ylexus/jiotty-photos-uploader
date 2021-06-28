@@ -17,7 +17,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static net.yudichev.jiotty.common.lang.Locks.inLock;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
@@ -55,13 +54,17 @@ final class DriveSpaceTrackerImpl implements DriveSpaceTracker {
 
     @Override
     public CompletableFuture<Void> reset() {
-        return supplyAsync(() -> {
+        return CompletableFuture.<Void>supplyAsync(() -> {
             inLock(lock, () -> {
                 //noinspection AssignmentToNull assigned in the method called next
                 driveSpaceStatus = null;
                 refreshDriveQuota();
             });
             return null;
+        }).whenComplete((ignored, e) -> {
+            if (driveSpaceStatus != null && e != null) {
+                driveSpaceStatus.close(false);
+            }
         });
     }
 
@@ -125,7 +128,8 @@ final class DriveSpaceTrackerImpl implements DriveSpaceTracker {
                         driveSpaceStatus.updateSuccess((int) toMegabytes(usage));
                         refreshStatusDescription();
                     }
-                });
+                })
+                .getNow(null); // otherwise any exceptions will be silently swallowed;
     }
 
     private void validateUsage() {

@@ -1,11 +1,17 @@
 package net.yudichev.googlephotosupload.core;
 
+import com.google.api.client.googleapis.json.GoogleJsonError;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.http.HttpHeaders;
+import com.google.api.client.http.HttpResponseException;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import net.yudichev.googlephotosupload.core.RecordingGooglePhotosClient.Album;
 import net.yudichev.googlephotosupload.core.RecordingGooglePhotosClient.MediaItem;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.common.varstore.VarStore;
+import net.yudichev.jiotty.connector.google.drive.InMemoryGoogleDriveClient;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import org.apache.commons.cli.CommandLineParser;
@@ -67,6 +73,7 @@ final class IntegrationTest {
     private RecordingGooglePhotosClient googlePhotosClient;
     private RecordingProgressStatusFactory progressStatusFactory;
     private Path settingsRootPath;
+    private InMemoryGoogleDriveClient googleDriveClient;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -81,6 +88,7 @@ final class IntegrationTest {
         TestTimeModule.resetTime();
 
         setDefaultPreferences();
+        googleDriveClient = new InMemoryGoogleDriveClient();
     }
 
     @AfterEach
@@ -773,6 +781,22 @@ final class IntegrationTest {
         ));
     }
 
+    @Test
+    void failsUploadIfDriveSpaceRefreshFails() throws InterruptedException {
+        var details = new GoogleJsonError();
+        details.setCode(403);
+        details.setMessage("Nope");
+        var rootCause = new GoogleJsonResponseException(
+                new HttpResponseException.Builder(403, "Nope", new HttpHeaders()),
+                details);
+        googleDriveClient.getBehaviour().failOnCreateFileWith(new RuntimeException(rootCause));
+
+        doExecuteUpload();
+        assertThat(getLastFailure().map(Throwables::getRootCause), optionalWithValue(equalTo(rootCause)));
+        var spaceUsedProgress = progressStatusFactory.getStatusByName().get("Google Account Space Used (currently unreliable!)");
+        assertThat(spaceUsedProgress.getClosedWithSuccess(), is(optionalWithValue(equalTo(false))));
+    }
+
     private void createStandardTestFiles() throws IOException {
         /*
         outerAlbum
@@ -877,6 +901,7 @@ final class IntegrationTest {
     }
 
     private void doVerifyGoogleClientItemState() {
+
         assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
                 allOf(
                         itemForFile(rootPhoto),
@@ -908,7 +933,7 @@ final class IntegrationTest {
                     .addModule(TestTimeModule::new)
                     .addModule(() -> new CoreDependenciesModule(settingsModule.getAuthDataStoreRootPath()))
                     .addModule(() -> new MockGooglePhotosModule(googlePhotosClient))
-                    .addModule(MockGoogleDriveModule::new)
+                    .addModule(() -> new MockGoogleDriveModule(googleDriveClient))
                     .addModule(ResourceBundleModule::new)
                     .addModule(() -> new UploadPhotosModule(Duration.ofMillis(1)))
                     .addModule(() -> new IntegrationTestUploadStarterModule(commandLine, progressStatusFactory))
@@ -948,8 +973,7 @@ final class IntegrationTest {
                 return delete(dir);
             }
 
-            @SuppressWarnings("SameReturnValue")
-            private FileVisitResult delete(Path path) throws IOException {
+            private static FileVisitResult delete(Path path) throws IOException {
                 Files.delete(path);
                 return CONTINUE;
             }

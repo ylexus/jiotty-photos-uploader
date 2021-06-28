@@ -44,6 +44,7 @@ final class RecordingProgressStatusFactory implements ProgressStatusFactory {
         private Optional<Integer> totalCount;
         private int successCount;
         private String description;
+        private Optional<Boolean> closedWithSuccess = Optional.empty();
 
         private RecordingProgressStatus(Optional<Integer> totalCount) {
             this.totalCount = checkNotNull(totalCount);
@@ -83,6 +84,9 @@ final class RecordingProgressStatusFactory implements ProgressStatusFactory {
 
         @Override
         public void close(boolean success) {
+            inLock(lock, () -> {
+                closedWithSuccess = Optional.of(success);
+            });
         }
 
         @Override
@@ -104,6 +108,10 @@ final class RecordingProgressStatusFactory implements ProgressStatusFactory {
 
         public String getDescription() {
             return inLock(lock, () -> description);
+        }
+
+        public Optional<Boolean> getClosedWithSuccess() {
+            return inLock(lock, () -> closedWithSuccess);
         }
     }
 }
