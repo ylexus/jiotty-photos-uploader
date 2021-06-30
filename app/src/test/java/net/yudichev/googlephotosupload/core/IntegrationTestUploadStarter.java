@@ -11,6 +11,7 @@ import javax.inject.Inject;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -47,7 +48,7 @@ final class IntegrationTestUploadStarter extends BaseLifecycleComponent {
 
     @Override
     protected void doStart() {
-        uploader.upload(ImmutableList.of(rootDir), resume)
+        ForkJoinPool.commonPool().execute(() -> uploader.upload(ImmutableList.of(rootDir), resume)
                 .whenComplete(logErrorOnFailure(logger, "Failed"))
                 .whenComplete((aVoid, throwable) -> {
                     lastFailure.set(throwable);
@@ -55,6 +56,6 @@ final class IntegrationTestUploadStarter extends BaseLifecycleComponent {
                         uploader.forgetUploadState();
                     }
                     applicationLifecycleControl.initiateShutdown();
-                });
+                }));
     }
 }
