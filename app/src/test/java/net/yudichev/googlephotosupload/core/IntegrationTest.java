@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.net.URL;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -60,6 +61,7 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @SuppressWarnings("ClassWithTooManyMethods")
 @ExtendWith(MockitoExtension.class)
@@ -926,7 +928,7 @@ final class IntegrationTest {
                 .toArray(String[]::new)));
         var applicationExitedLatch = new CountDownLatch(1);
         progressStatusFactory.reset();
-        new Thread(() -> {
+        var thread = new Thread(() -> {
             var settingsModule = new SettingsModule(settingsRootPath);
             Application.builder()
                     .addModule(() -> settingsModule)
@@ -940,8 +942,15 @@ final class IntegrationTest {
                     .build()
                     .run();
             applicationExitedLatch.countDown();
-        }, "application main").start();
-        assertThat(applicationExitedLatch.await(30, SECONDS), is(true));
+        }, "application main");
+        thread.start();
+        if (!applicationExitedLatch.await(30, SECONDS)) {
+            for (var info : ManagementFactory.getThreadMXBean().dumpAllThreads(true, true)) {
+                //noinspection UseOfSystemOutOrSystemErr
+                System.err.print(info);
+            }
+            fail("Application did not exit; app thread stack trace in stderr");
+        }
     }
 
     private MediaItem uploadPhoto(GooglePhotosAlbum album, String fileName) throws Exception {

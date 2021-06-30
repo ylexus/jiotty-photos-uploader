@@ -10,13 +10,15 @@
       </option>
       <option name="taskNames">
         <list>
-          <option value=":test" />
+          <option value="test" />
         </list>
       </option>
       <option name="vmOptions" value="" />
     </ExternalSystemSettings>
+    <ExternalSystemDebugServerProcess>false</ExternalSystemDebugServerProcess>
+    <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
     <extension name="coverage" sample_coverage="false" />
-    <GradleScriptDebugEnabled>false</GradleScriptDebugEnabled>
+    <DebugAllEnabled>false</DebugAllEnabled>
     <method v="2" />
   </configuration>
 </component>
