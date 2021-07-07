@@ -49,7 +49,7 @@ dependencies {
     ext.orgJunitJupiterVersion = '5.7.2'
     ext.orgMockitoVersion = '3.10.0'
     ext.orgImmutablesVersion = '2.8.8'
-    ext.netYudichevJiottyVersion = '2.1.0'
+    ext.netYudichevJiottyVersion = '2.1.2-SNAPSHOT'
     ext.orgApacheLoggingLog4jVersion = '2.14.1'
 
     annotationProcessor "org.immutables:value:$orgImmutablesVersion"

@@ -19,6 +19,7 @@ public final class CliMain {
 
     public static void main(String[] args) {
         CommandLineParser parser = new DefaultParser();
+        var exitCode = 0;
         try {
             var commandLine = parser.parse(CliOptions.OPTIONS, args);
             var helpRequested = commandLine.hasOption('h');
@@ -33,18 +34,26 @@ public final class CliMain {
                 var settingsModule = new SettingsModule();
                 if (otherInstanceRunning(settingsModule.getSettingsRootPath())) {
                     logger.error("Another copy of the app is already running");
+                    exitCode = 1;
                 } else {
                     startApp(settingsModule, commandLine);
+                    if (!CliStarter.isCompletedSuccessfully()) {
+                        exitCode = 2;
+                    }
                 }
             } else if (!helpRequested && !versionRequested) {
                 logger.error("Missing option -r");
+                exitCode = 3;
                 printHelp();
             }
         } catch (ParseException e) {
             logger.error(e.getMessage());
+            exitCode = 4;
             printHelp();
+        } finally {
+            LogManager.shutdown();
         }
-        LogManager.shutdown();
+        System.exit(exitCode);
     }
 
     private static void startApp(SettingsModule settingsModule, CommandLine commandLine) {

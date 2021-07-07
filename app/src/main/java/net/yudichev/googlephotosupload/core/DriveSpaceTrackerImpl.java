@@ -23,7 +23,7 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 final class DriveSpaceTrackerImpl implements DriveSpaceTracker {
     private static final Logger logger = LoggerFactory.getLogger(DriveSpaceTrackerImpl.class);
 
-    private static final long CHECK_SPACE_EVERY_BYTES = 50 * 1024 * 1024; // 50 MB
+    private static final long CHECK_SPACE_EVERY_BYTES = 10 * 1024 * 1024; // 50 MB
     private static final ImmutableSet<String> FIELDS = ImmutableSet.of("storageQuota/limit", "storageQuota/usage");
     private static final byte[] NO_DATA = new byte[0];
     private final ProgressStatusFactory progressStatusFactory;

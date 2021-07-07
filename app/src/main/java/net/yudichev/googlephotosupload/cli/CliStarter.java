@@ -14,10 +14,14 @@ import java.nio.file.Paths;
 import java.util.ResourceBundle;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
+import static net.yudichev.googlephotosupload.core.HumanReadableExceptionMessage.toHumanReadableMessage;
 
 final class CliStarter extends BaseLifecycleComponent {
     private static final Logger logger = LoggerFactory.getLogger(CliStarter.class);
+
+    @SuppressWarnings("StaticVariableMayNotBeInitialized")
+    private static volatile boolean completedSuccessfully;
+
     private final Path rootDir;
     private final Uploader uploader;
     private final ApplicationLifecycleControl applicationLifecycleControl;
@@ -36,11 +40,22 @@ final class CliStarter extends BaseLifecycleComponent {
         this.resourceBundle = checkNotNull(resourceBundle);
     }
 
+    @SuppressWarnings("StaticVariableUsedBeforeInitialization")
+    public static boolean isCompletedSuccessfully() {
+        return completedSuccessfully;
+    }
+
     @Override
     protected void doStart() {
         logger.info(resourceBundle.getString("googleStorageWarning"));
         uploader.upload(ImmutableList.of(rootDir), resume)
-                .whenComplete(logErrorOnFailure(logger, "Failed"))
-                .whenComplete((ignored1, ignored2) -> applicationLifecycleControl.initiateShutdown());
+                .whenComplete((ignored1, e) -> {
+                    //noinspection AssignmentToStaticFieldFromInstanceMethod
+                    completedSuccessfully = e == null;
+                    if (e != null) {
+                        logger.error("{}", toHumanReadableMessage(resourceBundle, e));
+                    }
+                    applicationLifecycleControl.initiateShutdown();
+                });
     }
 }

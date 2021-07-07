@@ -14,6 +14,9 @@ Configuration:
       - name: net.yudichev.googlephotosupload
         level: debug
         includeLocation: true
+        # this one is dumping requests/responses vua jul on CONFIG (INFO) level
+      - name: com.google.api.client.http
+        level: warn
     Root:
       level: info
       includeLocation: true
