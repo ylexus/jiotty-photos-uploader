@@ -3,8 +3,10 @@ Configuration:
   shutdownHook: disable
   properties:
     property:
-      name: filename
-      value: ${sys:user.home}/.jiottyphotosuploader/log/main.log
+      - name: logDir
+        value: ${sys:user.home}/.jiottyphotosuploader/log
+      - name: filename
+        value: ${logDir}/main.log
   appenders:
     RollingFile:
       name: FILE
@@ -18,6 +20,13 @@ Configuration:
         OnStartupTriggeringPolicy: { }
       DefaultRollOverStrategy:
         max: 10
+        Delete:
+          basePath: ${logDir}
+          maxDepth: 1
+          IfFileName:
+            glob: main.log*
+          IfLastModified:
+            age: 60d
 
   Loggers:
     logger:
