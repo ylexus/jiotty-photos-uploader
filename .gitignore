@@ -8,6 +8,7 @@ out/**
 /.idea/encodings.xml
 /.idea/workspace.xml
 /.idea/jarRepositories.xml
+/.idea/runConfigurations.xml
 /.idea/$PRODUCT_WORKSPACE_FILE$
 /app/.gradle/
 /app/build/
