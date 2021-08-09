@@ -44,6 +44,9 @@ public final class PreferencesDialogController implements PreferencesManager {
     private final RelevantDir relevantDir;
     private final DriveSpace driveSpace;
 
+    public TabPane tabPane;
+    public Tab tabAccount;
+
     public TitledPane uploaderStrategyChoiceContainer;
     public PreferencePatternEditorController excludePanelController;
     public PreferencePatternEditorController includePanelController;
@@ -256,6 +259,7 @@ public final class PreferencesDialogController implements PreferencesManager {
         }
 
         public void focus() {
+            tabPane.getSelectionModel().select(tabAccount);
             customCredentialsPane.requestFocus();
             flashingCustomCredentialsPane.show();
         }

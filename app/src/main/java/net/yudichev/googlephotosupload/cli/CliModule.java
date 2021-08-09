@@ -19,7 +19,7 @@ public final class CliModule extends BaseLifecycleComponentModule {
     @Override
     protected void configure() {
         bind(CommandLine.class).toInstance(commandLine);
-        boundLifecycleComponent(CliStarter.class);
+        registerLifecycleComponent(CliStarter.class);
 
         bind(PreferencesManager.class).to(PreferencesManagerImpl.class).in(Singleton.class);
         expose(PreferencesManager.class);

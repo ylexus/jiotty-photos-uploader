@@ -1,14 +1,13 @@
 package net.yudichev.googlephotosupload.core;
 
-import com.google.inject.AbstractModule;
 import com.google.inject.Module;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.lang.TypedBuilder;
 import net.yudichev.jiotty.connector.google.common.GoogleApiAuthSettings;
 import net.yudichev.jiotty.connector.google.common.GoogleAuthorizationModule;
 import net.yudichev.jiotty.connector.google.drive.GoogleDriveModule;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosModule;
 
-import javax.inject.Singleton;
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
@@ -18,7 +17,7 @@ import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 import static net.yudichev.jiotty.common.inject.BindingSpec.providedBy;
 import static net.yudichev.jiotty.connector.google.photos.GooglePhotosScopes.SCOPE_PHOTOS_LIBRARY;
 
-public final class GoogleServicesModule extends AbstractModule {
+public final class GoogleServicesModule extends BaseLifecycleComponentModule {
     private final Path authDataStoreRootDir;
     private final Consumer<GoogleApiAuthSettings.Builder> googleApiSettingsCustomiser;
 
@@ -34,8 +33,8 @@ public final class GoogleServicesModule extends AbstractModule {
 
     @Override
     protected void configure() {
-        bind(CustomCredentialsManagerImpl.class).in(Singleton.class);
-        bind(CustomCredentialsManager.class).to(CustomCredentialsManagerImpl.class);
+        // must start before google services, intentionally
+        bind(CustomCredentialsManager.class).to(registerLifecycleComponent(CustomCredentialsManagerImpl.class));
 
         var googleApiSettingsBuilder = GoogleApiAuthSettings.builder()
                 .setAuthDataStoreRootDir(authDataStoreRootDir)
@@ -43,12 +42,20 @@ public final class GoogleServicesModule extends AbstractModule {
                 .setCredentialsUrl(providedBy(CustomCredentialsManagerImpl.class));
         googleApiSettingsCustomiser.accept(googleApiSettingsBuilder);
         var settings = googleApiSettingsBuilder.build();
-        install(GoogleAuthorizationModule.builder()
+        installLifecycleComponentModule(GoogleAuthorizationModule.builder()
                 .setSettings(settings)
                 .addRequiredScopes(DRIVE_APPDATA, SCOPE_PHOTOS_LIBRARY)
                 .build());
-        install(GooglePhotosModule.builder().build());
-        install(GoogleDriveModule.builder().build());
+        var photosModule = GooglePhotosModule.builder().build();
+        installLifecycleComponentModule(photosModule);
+        var driveModule = GoogleDriveModule.builder().build();
+        installLifecycleComponentModule(driveModule);
+
+        registerLifecycleComponent(GoogleLoginListener.class);
+
+        expose(CustomCredentialsManager.class);
+        expose(photosModule.getExposedKey());
+        expose(driveModule.getExposedKey());
     }
 
     public static final class Builder implements TypedBuilder<Module> {

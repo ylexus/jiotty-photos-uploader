@@ -2,6 +2,8 @@ package net.yudichev.googlephotosupload.ui;
 
 import net.yudichev.googlephotosupload.core.Uploader;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.nio.file.Files;
@@ -14,6 +16,8 @@ import static net.yudichev.googlephotosupload.core.Bindings.GoogleAuthRootDir;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 
 final class RestarterImpl implements Restarter {
+    private static final Logger logger = LoggerFactory.getLogger(RestarterImpl.class);
+
     private final Path googleAuthRootDir;
     private final ApplicationLifecycleControl applicationLifecycleControl;
     private final Uploader uploader;
@@ -30,6 +34,7 @@ final class RestarterImpl implements Restarter {
     @Override
     public void initiateLogoutAndRestart() {
         if (Files.exists(googleAuthRootDir)) {
+            logger.info("Logout requested, deleting auth dir");
             asUnchecked(() -> deleteRecursively(googleAuthRootDir, ALLOW_INSECURE));
             uploader.forgetUploadState();
         }

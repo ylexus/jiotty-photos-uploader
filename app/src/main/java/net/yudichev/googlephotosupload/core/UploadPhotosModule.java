@@ -26,11 +26,11 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
     @Override
     protected void configure() {
         bind(BuildVersion.class).asEagerSingleton();
-        boundLifecycleComponent(LegacyLogCleaner.class);
-        boundLifecycleComponent(LegacyAuthCleaner.class);
+        registerLifecycleComponent(LegacyLogCleaner.class);
+        registerLifecycleComponent(LegacyAuthCleaner.class);
 
         bind(ExecutorService.class).annotatedWith(Backpressured.class)
-                .toProvider(boundLifecycleComponent(BackpressuredExecutorServiceProvider.class));
+                .toProvider(registerLifecycleComponent(BackpressuredExecutorServiceProvider.class));
 
         bind(DirectoryStructureSupplier.class).to(DirectoryStructureSupplierImpl.class);
 
@@ -40,9 +40,9 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
         bind(FatalUserCorrectableRemoteApiExceptionHandler.class).to(FatalUserCorrectableRemoteApiExceptionHandlerImpl.class);
 
         bind(CloudOperationHelper.class).to(CloudOperationHelperImpl.class);
-        bind(CloudAlbumsProvider.class).to(boundLifecycleComponent(CloudAlbumsProviderImpl.class));
+        bind(CloudAlbumsProvider.class).to(registerLifecycleComponent(CloudAlbumsProviderImpl.class));
 
-        bind(AlbumManager.class).to(boundLifecycleComponent(AlbumManagerImpl.class));
+        bind(AlbumManager.class).to(registerLifecycleComponent(AlbumManagerImpl.class));
 
         bind(AddToAlbumStrategy.class)
                 .annotatedWith(SelectingAddToAlbumStrategy.WhileCreatingItems.class)
@@ -54,7 +54,7 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
                 .in(Singleton.class);
         bind(AddToAlbumStrategy.class).to(SelectingAddToAlbumStrategy.class);
         bind(DriveSpaceTracker.class).to(DriveSpaceTrackerImpl.class).in(Singleton.class);
-        bind(GooglePhotosUploader.class).to(boundLifecycleComponent(GooglePhotosUploaderImpl.class));
+        bind(GooglePhotosUploader.class).to(registerLifecycleComponent(GooglePhotosUploaderImpl.class));
 
         bind(getExposedKey()).to(UploaderImpl.class);
         expose(getExposedKey());

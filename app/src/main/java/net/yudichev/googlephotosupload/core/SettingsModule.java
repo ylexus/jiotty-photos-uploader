@@ -42,7 +42,7 @@ public final class SettingsModule extends BaseLifecycleComponentModule {
         expose(varStoreModule.getExposedKey());
 
         bind(Path.class).annotatedWith(UploadStateManagerImpl.H2DbPath.class).toInstance(settingsRootPath.resolve("data"));
-        bind(UploadStateManager.class).to(boundLifecycleComponent(UploadStateManagerImpl.class));
+        bind(UploadStateManager.class).to(registerLifecycleComponent(UploadStateManagerImpl.class));
         expose(UploadStateManager.class);
     }
 }

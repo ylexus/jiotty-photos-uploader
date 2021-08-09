@@ -8,7 +8,7 @@ import javax.inject.Provider;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public final class LoginDialogSimpleController implements LoginDialogFxController {
+public final class LoginDialogSimpleController implements LoginDialogController {
     private static final Logger logger = LoggerFactory.getLogger(LoginDialogSimpleController.class);
 
     private final Provider<JavafxApplicationResources> javafxApplicationResourcesProvider;

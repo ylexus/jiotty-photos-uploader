@@ -1,5 +1,5 @@
 package net.yudichev.googlephotosupload.ui;
 
-interface LoginDialogFxController {
+interface LoginDialogController {
     void load(String url);
 }

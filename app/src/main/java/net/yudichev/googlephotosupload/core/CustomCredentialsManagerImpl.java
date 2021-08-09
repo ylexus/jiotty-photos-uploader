@@ -1,6 +1,10 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.common.hash.Hashing;
+import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
+import net.yudichev.jiotty.common.varstore.VarStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -11,30 +15,43 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.io.MoreFiles.deleteRecursively;
+import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static com.google.common.io.Resources.getResource;
 import static com.google.common.io.Resources.toByteArray;
 import static java.nio.file.Files.*;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static net.yudichev.googlephotosupload.core.Bindings.GoogleAuthRootDir;
 import static net.yudichev.googlephotosupload.core.Bindings.SettingsRoot;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
-final class CustomCredentialsManagerImpl implements Provider<URL>, CustomCredentialsManager {
+final class CustomCredentialsManagerImpl extends BaseLifecycleComponent implements Provider<URL>, CustomCredentialsManager {
+    private static final Logger logger = LoggerFactory.getLogger(CustomCredentialsManagerImpl.class);
+
+    private static final String VAR_STORE_KEY = "customCredentialsManager.hashOfLoggedInCredentials";
     private static final URL STANDARD_CREDENTIALS_URL = getResource("client_secret.json");
     private static final byte[] STANDARD_CREDENTIALS_URL_HASH = crc32(STANDARD_CREDENTIALS_URL);
+    private final Path googleAuthRootDir;
     private final PreferencesManager preferencesManager;
     private final Path customCredentialsPath;
+    private final VarStore varStore;
     private final AtomicReference<Boolean> usingCustomCredentials = new AtomicReference<>();
     @Nullable
     private byte[] hashOfUsedCredentials;
     @Nullable
     private byte[] hashOfConfiguredCredentials;
+    private volatile URL url;
 
     @Inject
     CustomCredentialsManagerImpl(@SettingsRoot Path settingsRoot,
-                                 PreferencesManager preferencesManager) {
+                                 @GoogleAuthRootDir Path googleAuthRootDir,
+                                 PreferencesManager preferencesManager,
+                                 VarStore varStore) {
+        this.googleAuthRootDir = checkNotNull(googleAuthRootDir);
         this.preferencesManager = checkNotNull(preferencesManager);
         customCredentialsPath = settingsRoot.resolve("client_secret.json");
+        this.varStore = checkNotNull(varStore);
     }
 
     @Override
@@ -55,6 +72,7 @@ final class CustomCredentialsManagerImpl implements Provider<URL>, CustomCredent
 
     @Override
     public void deleteCustomCredentials() {
+        logger.debug("Deleting custom credentials file {}", customCredentialsPath);
         asUnchecked(() -> deleteIfExists(customCredentialsPath));
         refreshHashOfConfiguredCredentials();
     }
@@ -65,10 +83,9 @@ final class CustomCredentialsManagerImpl implements Provider<URL>, CustomCredent
     }
 
     @Override
-    public URL get() {
+    protected void doStart() {
         var usingCustomCredentials = configuredToUseCustomCredentials();
         this.usingCustomCredentials.set(usingCustomCredentials);
-        URL url;
         if (usingCustomCredentials) {
             url = getAsUnchecked(() -> customCredentialsPath.toUri().toURL());
             hashOfUsedCredentials = crc32(url);
@@ -77,7 +94,26 @@ final class CustomCredentialsManagerImpl implements Provider<URL>, CustomCredent
             hashOfUsedCredentials = STANDARD_CREDENTIALS_URL_HASH;
         }
         refreshHashOfConfiguredCredentials(); // set initial state
+        logger.debug("Using credentials URL {}, hash {}", url, hashOfUsedCredentials);
+        varStore.readValue(byte[].class, VAR_STORE_KEY).ifPresent(hashOfLoggedInCredentials -> {
+            if (!Arrays.equals(hashOfLoggedInCredentials, hashOfUsedCredentials)) {
+                if (exists(googleAuthRootDir)) {
+                    logger.info("Forcing logout as last successfully used credentials {} does not match configured ones {}",
+                            hashOfLoggedInCredentials, hashOfUsedCredentials);
+                    asUnchecked(() -> deleteRecursively(googleAuthRootDir, ALLOW_INSECURE));
+                }
+            }
+        });
+    }
+
+    @Override
+    public URL get() {
         return url;
+    }
+
+    @Override
+    public void onSuccessfulLogin() {
+        varStore.saveValue(VAR_STORE_KEY, hashOfUsedCredentials);
     }
 
     private void refreshHashOfConfiguredCredentials() {

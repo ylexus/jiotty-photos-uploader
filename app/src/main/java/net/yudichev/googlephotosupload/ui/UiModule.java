@@ -36,7 +36,7 @@ final class UiModule extends BaseLifecycleComponentModule {
 
         bind(SupportPaneController.class).in(Singleton.class);
 
-        bind(JavafxApplicationResources.class).toProvider(boundLifecycleComponent(UserInterface.class)).in(Singleton.class);
+        bind(JavafxApplicationResources.class).toProvider(registerLifecycleComponent(UserInterface.class)).in(Singleton.class);
         expose(JavafxApplicationResources.class);
 
         bind(FxmlContainerFactory.class).to(FxmlContainerFactoryImpl.class);
@@ -50,8 +50,8 @@ final class UiModule extends BaseLifecycleComponentModule {
                 .implement(ProgressStatus.class, ThrottlingProgressStatus.class)
                 .build(ProgressStatusFactory.class));
 
-        boundLifecycleComponent(VersionCheck.class);
-        boundLifecycleComponent(Diagnostics.class);
+        registerLifecycleComponent(VersionCheck.class);
+        registerLifecycleComponent(Diagnostics.class);
 
         expose(ProgressStatusFactory.class);
         expose(FxmlContainerFactory.class);
@@ -67,14 +67,14 @@ final class UiModule extends BaseLifecycleComponentModule {
         bind(MainScreenController.class).to(MainScreenControllerImpl.class);
 
         bind(LoginDialogControllerImpl.class).in(Singleton.class);
-        bind(LoginDialogFxController.class).to(LoginDialogControllerImpl.class);
+        bind(LoginDialogController.class).to(LoginDialogControllerImpl.class);
 
-        bind(FolderSelectorController.class).to(boundLifecycleComponent(FolderSelectorControllerImpl.class));
+        bind(FolderSelectorController.class).to(registerLifecycleComponent(FolderSelectorControllerImpl.class));
 
         bind(PreferencesDialogController.class).in(Singleton.class);
         bind(PreferencesManager.class).to(PreferencesDialogController.class);
 
-        var uploadPaneControllerKey = boundLifecycleComponent(UploadPaneControllerImpl.class);
+        var uploadPaneControllerKey = registerLifecycleComponent(UploadPaneControllerImpl.class);
         bind(UploadPaneController.class).to(uploadPaneControllerKey);
 
         bind(UploaderStrategyChoicePanelControllerImpl.class).in(Singleton.class);

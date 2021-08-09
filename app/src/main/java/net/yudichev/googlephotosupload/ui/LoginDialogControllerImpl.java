@@ -14,7 +14,7 @@ import java.util.ResourceBundle;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.googlephotosupload.ui.PreferencesDialogController.CUSTOM_CREDENTIALS_HELP_URL;
 
-public final class LoginDialogControllerImpl implements LoginDialogFxController {
+public final class LoginDialogControllerImpl implements LoginDialogController {
     private final CustomCredentialsManager customCredentialsManager;
     private final Provider<JavafxApplicationResources> javafxApplicationResourcesProvider;
     private final Provider<MainScreenController> mainScreenControllerProvider;

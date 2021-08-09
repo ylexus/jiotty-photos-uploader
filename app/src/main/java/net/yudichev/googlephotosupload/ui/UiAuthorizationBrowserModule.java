@@ -20,7 +20,7 @@ final class UiAuthorizationBrowserModule extends BaseLifecycleComponentModule im
 
     @Override
     protected void configure() {
-        bind(exposedKey).to(boundLifecycleComponent(UiAuthorizationBrowser.class));
+        bind(exposedKey).to(registerLifecycleComponent(UiAuthorizationBrowser.class));
         expose(exposedKey);
     }
 }

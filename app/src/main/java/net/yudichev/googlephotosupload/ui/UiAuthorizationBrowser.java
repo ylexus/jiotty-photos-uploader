@@ -52,7 +52,7 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
             }
 
             dialog.show();
-            dialog.<LoginDialogFxController>controller().load(url);
+            dialog.<LoginDialogController>controller().load(url);
         });
     }
 

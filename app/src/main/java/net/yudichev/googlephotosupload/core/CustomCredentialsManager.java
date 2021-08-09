@@ -12,4 +12,6 @@ public interface CustomCredentialsManager {
     void deleteCustomCredentials();
 
     boolean usedCredentialsMatchConfigured();
+
+    void onSuccessfulLogin();
 }

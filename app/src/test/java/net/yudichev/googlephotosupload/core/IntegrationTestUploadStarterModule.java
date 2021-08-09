@@ -34,7 +34,7 @@ public final class IntegrationTestUploadStarterModule extends BaseLifecycleCompo
     @Override
     protected void configure() {
         bind(CommandLine.class).toInstance(commandLine);
-        boundLifecycleComponent(IntegrationTestUploadStarter.class);
+        registerLifecycleComponent(IntegrationTestUploadStarter.class);
 
         bind(PreferencesManager.class).toInstance(new PreferencesManager() {
             @Override

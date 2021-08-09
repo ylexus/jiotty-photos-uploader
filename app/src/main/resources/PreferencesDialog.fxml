@@ -7,7 +7,7 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 <TabPane xmlns:fx="http://javafx.com/fxml/1" stylesheets="@style.css" xmlns="http://javafx.com/javafx/16"
-         fx:controller="net.yudichev.googlephotosupload.ui.PreferencesDialogController">
+         fx:id="tabPane" fx:controller="net.yudichev.googlephotosupload.ui.PreferencesDialogController">
     <Tab closable="false" text="%preferencesDialogTabMain">
         <VBox alignment="TOP_CENTER" spacing="4.0">
             <TitledPane fx:id="uploaderStrategyChoiceContainer" animated="false" collapsible="false" text="%preferencesDialogUploaderStrategySectionTitle">
@@ -57,7 +57,7 @@
             </TitledPane>
         </VBox>
     </Tab>
-    <Tab closable="false" text="%preferencesDialogTabAccount">
+    <Tab closable="false" text="%preferencesDialogTabAccount" fx:id="tabAccount">
         <VBox alignment="TOP_CENTER" spacing="4.0">
             <TitledPane animated="false" collapsible="false" contentDisplay="RIGHT" graphicTextGap="10.0" text="%preferencesDialogDriveSpaceTitle">
                 <padding>
