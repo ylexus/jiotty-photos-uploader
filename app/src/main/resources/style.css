@@ -5,7 +5,6 @@
     -fx-control-inner-background: derive(-fx-base,50%);
     -fx-control-inner-background-alt: derive(-fx-control-inner-background, 30%);
     -fx-font-size: 13pt;
-    -mdfx-font-color: white;
 }
 
 .progress-box {
@@ -70,4 +69,31 @@
 .release-notes {
     -fx-border-radius: 5;
     -fx-border-width: 3;
+}
+
+/* MDFX - copied from com/sandec/mdfx/mdfx-default.css with "-mdfx-font-color" changed */
+* {
+   -mdfx-font-color: -fx-text-fill;
+   -mdfx-link-color: blue;
+   -mdfx-border-color-1: #888;
+
+   -mdfx-bg-color-1: #ccc;
+   -mdfx-bg-color-2: #ddd;
+   -mdfx-bg-color-3: #eee;
+
+   -mdfx-bq-color-border: #4488cc; /* the blockquote's border color */
+   -mdfx-bq-color-background: #0000ff0c; /* the blockquote's background color */
+}
+
+.markdown-text {
+  -fx-font-family: ARIAL;
+}
+.markdown-italic {
+  -fx-font-style: italic;
+}
+.markdown-bold {
+  -fx-font-weight: bold;
+}
+.markdown-strikethrough {
+  -fx-strikethrough: true;
 }

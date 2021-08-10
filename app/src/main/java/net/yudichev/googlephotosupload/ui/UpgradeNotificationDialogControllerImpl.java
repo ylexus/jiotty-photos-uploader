@@ -48,7 +48,6 @@ public final class UpgradeNotificationDialogControllerImpl implements UpgradeNot
                         .append(revision.body().get()).append(lineSeparator()));
 
         var markdownView = new MarkdownView(builder.toString());
-        markdownView.getStylesheets().add("/com/sandec/mdfx/mdfx-default.css");
         releaseNotesScrollPane.setContent(markdownView);
         releaseNotesPane.heightProperty().addListener((obs, oldHeight, newHeight) -> dialogResizeAction.run());
     }
