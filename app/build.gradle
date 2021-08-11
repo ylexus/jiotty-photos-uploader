@@ -432,7 +432,7 @@ task moveFinalArtifactsToDeploymentDir() {
                 tofile: destinationVersionPath
     }
     inputs.dir fullPackageOutputDir
-    inputs.dir destinationVersionPath
+    outputs.dir destinationVersionPath
 }
 /**
  * Package the app on all platforms.
