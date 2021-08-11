@@ -1,5 +1,6 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.internal.jvm.Jvm
+import org.gradle.internal.os.OperatingSystem
 
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -59,14 +60,14 @@ dependencies {
     annotationProcessor "org.immutables:value"
     testAnnotationProcessor "org.immutables:value"
 
-    implementation ('net.yudichev.jiotty:jiotty-common') {
+    implementation('net.yudichev.jiotty:jiotty-common') {
         exclude group: 'com.sparkjava'
     }
     implementation('net.yudichev.jiotty:jiotty-connector-google-photos') {
         exclude group: 'com.sparkjava'
         exclude group: 'com.squareup.okhttp3'
     }
-    implementation ('net.yudichev.jiotty:jiotty-connector-google-drive') {
+    implementation('net.yudichev.jiotty:jiotty-connector-google-drive') {
         exclude group: 'com.sparkjava'
         exclude group: 'com.squareup.okhttp3'
     }
@@ -108,17 +109,17 @@ test {
 
 String clientSecretPath = readEnvOrNull('CLIENT_SECRET_PATH')
 task copyClientSecretIfDefined {
+    onlyIf { clientSecretPath }
     doLast {
-        if (clientSecretPath) {
-            if (!file(clientSecretPath).exists()) {
-                throw new InvalidUserDataException("Client secret file not found: $clientSecretPath")
-            }
-            processResources {
-                from clientSecretPath
-                rename(file(clientSecretPath).name, 'client_secret.json')
-            }
+        if (!file(clientSecretPath).exists()) {
+            throw new InvalidUserDataException("Client secret file not found: $clientSecretPath")
+        }
+        processResources {
+            from clientSecretPath
+            rename(file(clientSecretPath).name, 'client_secret.json')
         }
     }
+    inputs.files clientSecretPath
 }
 processResources.dependsOn 'copyClientSecretIfDefined'
 
@@ -182,19 +183,19 @@ runtime {
         imageName = 'Jiotty Photos Uploader'
         installerName = 'Jiotty Photos Uploader'
         jvmArgs = application.applicationDefaultJvmArgs + ['-Dprism.verbose=true', '-Djavafx.verbose=true']
-        if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+        if (OperatingSystem.current().macOsX) {
             installerType = 'dmg'
             imageOptions = ['--verbose', /*'--mac-sign',*/ '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)']
             installerOptions = ['--verbose']
             resourceDir = file("$buildDir/packaging-resources/macOS/out")
         }
-        if (org.gradle.internal.os.OperatingSystem.current().windows) {
+        if (OperatingSystem.current().windows) {
             installerType = 'msi'
             imageOptions = ['--verbose']
             installerOptions = ['--verbose', '--win-per-user-install', '--win-menu', '--win-upgrade-uuid', '58e3cc92-0df9-4089-9609-8ad54b2608e7']
             resourceDir = file("$projectDir/src/main/packaging-resources/windows")
         }
-        if (org.gradle.internal.os.OperatingSystem.current().linux) {
+        if (OperatingSystem.current().linux) {
             if (project.hasProperty("raspberryPi")) {
                 // do not try to build rpm on RPi
                 installerType = 'deb'
@@ -211,8 +212,8 @@ jpackage.dependsOn 'check'
 jpackage.dependsOn 'requireClientSecret'
 
 task copyPackagingResources(type: Copy) {
-    onlyIf { !org.gradle.internal.os.OperatingSystem.current().linux }
-    if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+    onlyIf { !OperatingSystem.current().linux }
+    if (OperatingSystem.current().macOsX) {
         from("$projectDir/src/main/packaging-resources/macOS/out") {
             exclude '**/*.plist'
         }
@@ -221,7 +222,7 @@ task copyPackagingResources(type: Copy) {
             filter(ReplaceTokens, tokens: [version: version])
         }
         into "$buildDir/packaging-resources/macOS/out"
-    } else if (org.gradle.internal.os.OperatingSystem.current().windows) {
+    } else if (OperatingSystem.current().windows) {
         from("$projectDir/src/main/packaging-resources/windows/out") {
             include '**/*.xml'
             filter(ReplaceTokens, tokens: [version: version, appName: 'Jiotty Photos Uploader'])
@@ -247,37 +248,45 @@ def finalFileNameWindowsMsi = "Windows7-jiotty-photos-uploader-${version}.msi"
 def finalFileNameWindowsMsix = "Windows10-jiotty-photos-uploader-${version}.msix"
 
 task prepareOsSpecificPackaging {
-    onlyIf { org.gradle.internal.os.OperatingSystem.current().windows }
+    onlyIf { OperatingSystem.current().windows }
     doLast {
-        if (org.gradle.internal.os.OperatingSystem.current().windows) {
-            ant.move file: "$buildDir/jpackage/$applicationName-${version}.msi",
-                    tofile: "$fullPackageOutputDir/$finalFileNameWindowsMsi"
-        }
+        ant.move file: "$buildDir/jpackage/$applicationName-${version}.msi",
+                tofile: "$fullPackageOutputDir/$finalFileNameWindowsMsi"
     }
+    inputs.files "$buildDir/jpackage/$applicationName-${version}.msi"
+    outputs.files "$fullPackageOutputDir/$finalFileNameWindowsMsi"
 }
 
 task runOsSpecificPackaging(type: Exec) {
-    onlyIf { !org.gradle.internal.os.OperatingSystem.current().linux }
-    if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+    onlyIf { !OperatingSystem.current().linux }
+    if (OperatingSystem.current().macOsX) {
         commandLine "$rootDir/macos_notarize_dmg.sh", 'Jiotty Photos Uploader', "$version", Jvm.current().getJavaHome()
+        inputs.dir "${buildDir}/jpackage/Jiotty Photos Uploader.app"
+        inputs.file "${buildDir}/jpackage/Jiotty Photos Uploader-${version}.dmg"
+        outputs.dir "${buildDir}/jpackage/Jiotty Photos Uploader.app"
+        outputs.file "${buildDir}/jpackage/Jiotty Photos Uploader-${version}.dmg"
     }
-    if (org.gradle.internal.os.OperatingSystem.current().windows) {
+    if (OperatingSystem.current().windows) {
         commandLine "$rootDir/windows-create-appx.bat", "$version"
     }
 }
 
 task renameDistribution() {
-    onlyIf { !org.gradle.internal.os.OperatingSystem.current().windows }
+    onlyIf { !OperatingSystem.current().windows }
     doLast {
-        if (org.gradle.internal.os.OperatingSystem.current().macOsX) {
+        if (OperatingSystem.current().macOsX) {
             ant.move file: "$buildDir/jpackage/$applicationName-${version}.dmg",
                     tofile: "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
+            inputs.files "$buildDir/jpackage/$applicationName-${version}.dmg"
+            outputs.files "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
         }
-        if (org.gradle.internal.os.OperatingSystem.current().linux) {
+        if (OperatingSystem.current().linux) {
             ant.move(todir: fullPackageOutputDir) {
                 fileset dir: "$buildDir/jpackage", includes: '*.deb,*.rpm'
                 mapper type: "glob", from: "*", to: "Linux-*"
             }
+            inputs.dir "$buildDir/jpackage"
+            outputs.dir fullPackageOutputDir
         }
     }
 }
@@ -379,6 +388,7 @@ task runRemoteLinuxBuild(dependsOn: requireClientSecret) {
     }
 }
 
+def finalRpiFileNameLinuxDeb = "Linux-jiotty-photos-uploader_$version-1_armhf.deb"
 task runRemoteRpiBuild(dependsOn: requireClientSecret) {
     doLast {
         def remoteCloneDir = '/home/pi/java/jiotty-photos-uploader'
@@ -404,20 +414,22 @@ task runRemoteRpiBuild(dependsOn: requireClientSecret) {
             throw new GradleScriptException("RPi build execution failed, see errors above", null)
         }
         mkdir fullPackageOutputDir
-        def finalFileNameLinuxDeb = "Linux-jiotty-photos-uploader_$version-1_armhf.deb"
 
-        exec { commandLine 'scp', "pi@$rpiHost:$remoteCloneDir/app/build/fullpackage/$finalFileNameLinuxDeb", "$fullPackageOutputDir/$finalFileNameLinuxDeb" }
+        exec { commandLine 'scp', "pi@$rpiHost:$remoteCloneDir/app/build/fullpackage/$finalRpiFileNameLinuxDeb", "$fullPackageOutputDir/$finalRpiFileNameLinuxDeb" }
     }
+    outputs.file "$fullPackageOutputDir/$finalRpiFileNameLinuxDeb"
 }
 
+def destinationRootPath = Paths.get(readEnvOrFail('HYPERPACKAGE_DESTINATION_DIR'))
+def destinationVersionPath = destinationRootPath.resolve version
 task moveFinalArtifactsToDeploymentDir() {
     doLast {
-        def destinationRootPath = Paths.get(readEnvOrFail('HYPERPACKAGE_DESTINATION_DIR'))
-        def destinationVersionPath = destinationRootPath.resolve version
         mkdir destinationVersionPath
-        ant.move file: "$fullPackageOutputDir",
-                tofile: "$destinationVersionPath"
+        ant.move file: fullPackageOutputDir,
+                tofile: destinationVersionPath
     }
+    inputs.dir fullPackageOutputDir
+    inputs.dir destinationVersionPath
 }
 /**
  * Package the app on all platforms.
