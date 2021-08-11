@@ -273,21 +273,24 @@ task runOsSpecificPackaging(type: Exec) {
 
 task renameDistribution() {
     onlyIf { !OperatingSystem.current().windows }
-    doLast {
-        if (OperatingSystem.current().macOsX) {
+    if (OperatingSystem.current().macOsX) {
+        doLast {
             ant.move file: "$buildDir/jpackage/$applicationName-${version}.dmg",
                     tofile: "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
-            inputs.files "$buildDir/jpackage/$applicationName-${version}.dmg"
-            outputs.files "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
         }
-        if (OperatingSystem.current().linux) {
+        inputs.files "$buildDir/jpackage/$applicationName-${version}.dmg"
+        outputs.files "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
+    }
+
+    if (OperatingSystem.current().linux) {
+        doLast {
             ant.move(todir: fullPackageOutputDir) {
                 fileset dir: "$buildDir/jpackage", includes: '*.deb,*.rpm'
                 mapper type: "glob", from: "*", to: "Linux-*"
             }
-            inputs.dir "$buildDir/jpackage"
-            outputs.dir fullPackageOutputDir
         }
+        inputs.dir "$buildDir/jpackage"
+        outputs.dir fullPackageOutputDir
     }
 }
 
