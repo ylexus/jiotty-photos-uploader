@@ -421,7 +421,7 @@ task runRemoteRpiBuild(dependsOn: requireClientSecret) {
 }
 
 def hyperpackageDestDirStr = readEnvOrNull('HYPERPACKAGE_DESTINATION_DIR')
-def destinationVersionPath = hyperpackageDestDirStr ? Paths.get(destDirStr).resolve(version) : null
+def destinationVersionPath = hyperpackageDestDirStr ? Paths.get(hyperpackageDestDirStr).resolve(version) : null
 task moveFinalArtifactsToDeploymentDir() {
     doLast {
         mkdir destinationVersionPath
