@@ -48,45 +48,48 @@ repositories {
 dependencies {
     ext.orgJunitJupiterVersion = '5.7.2'
     ext.orgMockitoVersion = '3.10.0'
-    ext.orgImmutablesVersion = '2.8.8'
     ext.netYudichevJiottyVersion = '2.2.1'
     ext.orgApacheLoggingLog4jVersion = '2.14.1'
 
-    annotationProcessor "org.immutables:value:$orgImmutablesVersion"
-    testAnnotationProcessor "org.immutables:value:$orgImmutablesVersion"
-
     implementation platform("net.yudichev.jiotty:jiotty-bom:$netYudichevJiottyVersion")
+    annotationProcessor platform("net.yudichev.jiotty:jiotty-bom:$netYudichevJiottyVersion")
+    testAnnotationProcessor platform("net.yudichev.jiotty:jiotty-bom:$netYudichevJiottyVersion")
     implementation enforcedPlatform(project(':platform'))
 
-    implementation "net.yudichev.jiotty:jiotty-common"
-    implementation "net.yudichev.jiotty:jiotty-connector-google-common"
-    implementation "net.yudichev.jiotty:jiotty-connector-google-photos"
-    implementation "net.yudichev.jiotty:jiotty-connector-google-drive"
-    implementation "com.google.inject.extensions:guice-assistedinject"
+    annotationProcessor "org.immutables:value"
+    testAnnotationProcessor "org.immutables:value"
+
+    implementation ('net.yudichev.jiotty:jiotty-common') {
+        exclude group: 'com.sparkjava'
+    }
+    implementation('net.yudichev.jiotty:jiotty-connector-google-photos') {
+        exclude group: 'com.sparkjava'
+        exclude group: 'com.squareup.okhttp3'
+    }
+    implementation ('net.yudichev.jiotty:jiotty-connector-google-drive') {
+        exclude group: 'com.sparkjava'
+        exclude group: 'com.squareup.okhttp3'
+    }
     implementation "org.slf4j:slf4j-api"
     implementation "org.apache.logging.log4j:log4j-api"
     implementation "com.google.inject:guice"
     implementation "javax.inject:javax.inject"
-    implementation "com.google.guava:guava:29.0-jre"
+    implementation "com.google.guava:guava"
     implementation "com.google.code.findbugs:jsr305"
     implementation "com.google.errorprone:error_prone_annotations"
     implementation "com.fasterxml.jackson.core:jackson-annotations"
     implementation "com.google.api:gax"
-    implementation "com.google.api.grpc:proto-google-common-protos"
     implementation "commons-cli:commons-cli:1.4"
     implementation "com.fasterxml.jackson.core:jackson-databind"
     implementation "de.codecentric.centerdevice:centerdevice-nsmenufx:2.1.7"
     implementation "io.grpc:grpc-api"
-    implementation "com.squareup.okhttp3:okhttp"
     implementation "com.sandec:mdfx:0.2.3"
     implementation 'com.h2database:h2:1.4.200'
 
-    // This is to test dependency analyser
-    //implementation "org.apache.commons:commons-skin:4.2"
-    compileOnly "org.immutables:value:$orgImmutablesVersion"
+    compileOnly "org.immutables:value"
     runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$orgApacheLoggingLog4jVersion"
     runtimeOnly "org.apache.logging.log4j:log4j-jcl:$orgApacheLoggingLog4jVersion"
-    runtimeOnly "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.12.3"
+    runtimeOnly "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml"
     runtimeOnly "com.lmax:disruptor:3.4.4"
 
     testImplementation "net.yudichev.jiotty:jiotty-common"
@@ -96,7 +99,7 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$orgJunitJupiterVersion"
     testImplementation "org.mockito:mockito-junit-jupiter:$orgMockitoVersion"
     testImplementation "org.hamcrest:hamcrest:2.2"
-    testCompileOnly "org.immutables:value:$orgImmutablesVersion"
+    testCompileOnly "org.immutables:value"
 }
 
 test {
