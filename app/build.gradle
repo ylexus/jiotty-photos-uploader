@@ -119,7 +119,7 @@ task copyClientSecretIfDefined {
             rename(file(clientSecretPath).name, 'client_secret.json')
         }
     }
-    inputs.files clientSecretPath
+    inputs.files clientSecretPath ?: []
 }
 processResources.dependsOn 'copyClientSecretIfDefined'
 
