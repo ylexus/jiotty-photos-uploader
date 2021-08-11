@@ -420,8 +420,8 @@ task runRemoteRpiBuild(dependsOn: requireClientSecret) {
     outputs.file "$fullPackageOutputDir/$finalRpiFileNameLinuxDeb"
 }
 
-def destinationRootPath = Paths.get(readEnvOrFail('HYPERPACKAGE_DESTINATION_DIR'))
-def destinationVersionPath = destinationRootPath.resolve version
+def hyperpackageDestDirStr = readEnvOrNull('HYPERPACKAGE_DESTINATION_DIR')
+def destinationVersionPath = hyperpackageDestDirStr ? Paths.get(destDirStr).resolve(version) : null
 task moveFinalArtifactsToDeploymentDir() {
     doLast {
         mkdir destinationVersionPath
