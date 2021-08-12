@@ -39,14 +39,18 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
     public void browse(String url) {
         runLater(() -> {
             if (dialog == null) {
-                var dialogTitle = resourceBundle.getString("uiAuthorisationBrowserTitle");
-                try {
-                    dialog = dialogFactory.create(dialogTitle, "LoginDialog.fxml", this::customizeLoginDialog);
-                } catch (UnsatisfiedLinkError e) {
-                    if (e.getMessage() != null && e.getMessage().contains("jfxwebkit")) {
-                        dialog = dialogFactory.create(dialogTitle, "LoginDialogSimple.fxml", this::customizeSimpleLoginDialog);
-                    } else {
-                        throw e;
+                if (windows732Bit()) {
+                    // known issue on Windows 7 32 bit - jfxwebkit is not properly working with Google Login dialog (javascript issues)
+                    dialog = createSimpleLoginDialog();
+                } else {
+                    try {
+                        dialog = createFullLoginDialog();
+                    } catch (UnsatisfiedLinkError e) {
+                        if (e.getMessage() != null && e.getMessage().contains("jfxwebkit")) {
+                            dialog = createSimpleLoginDialog();
+                        } else {
+                            throw e;
+                        }
                     }
                 }
             }
@@ -54,6 +58,18 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
             dialog.show();
             dialog.<LoginDialogController>controller().load(url);
         });
+    }
+
+    private Dialog createFullLoginDialog() {
+        return dialogFactory.create(resourceBundle.getString("uiAuthorisationBrowserTitle"), "LoginDialog.fxml", this::customizeLoginDialog);
+    }
+
+    private Dialog createSimpleLoginDialog() {
+        return dialogFactory.create(resourceBundle.getString("uiAuthorisationBrowserTitle"), "LoginDialogSimple.fxml", this::customizeSimpleLoginDialog);
+    }
+
+    private static boolean windows732Bit() {
+        return "32".equals(System.getProperty("sun.arch.data.model")) && "Windows 7".equals(System.getProperty("os.name"));
     }
 
     @Override
