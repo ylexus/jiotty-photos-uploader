@@ -6,9 +6,11 @@ For enthusiasts, to build or run from sources:
 1. Follow [these steps](https://github.com/ylexus/jiotty-photos-uploader/wiki#using-your-own-google-api-client-secret) to generate your own Google API client
    secret file.
 2. Install JDK
-   1. for a desktop, use any JDK version 16 or higher.
+   1. for a desktop other than Windows 7 32 bit, use any JDK version 16 or higher.
    2. for a Raspberry Pi, use Liberica OpenJDK (because it contains RPi-compatible javafx). Go to https://bell-sw.com/pages/downloads/, select version 16 or
       higher, 32-bit, Linux, package: Full JDK, and install via `.deb`.
+   3. for Windows 7 32-bit, use Liberica OpenJDK (because it contains compatible javafx). Go to https://bell-sw.com/pages/downloads/, select version 16 or
+      higher, 32-bit, Windows, package: Full JDK, download and install.
 3. Clone this repository.
 4. `cd jiotty-photos-uploader`
 

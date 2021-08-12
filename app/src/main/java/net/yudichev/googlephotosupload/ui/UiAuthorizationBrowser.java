@@ -4,6 +4,8 @@ import javafx.stage.Stage;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.connector.google.common.AuthorizationBrowser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -14,6 +16,7 @@ import static javafx.application.Platform.runLater;
 import static javafx.stage.Modality.APPLICATION_MODAL;
 
 final class UiAuthorizationBrowser extends BaseLifecycleComponent implements AuthorizationBrowser {
+    private static final Logger logger = LoggerFactory.getLogger(UiAuthorizationBrowser.class);
     static {
         System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
     }
@@ -41,12 +44,14 @@ final class UiAuthorizationBrowser extends BaseLifecycleComponent implements Aut
             if (dialog == null) {
                 if (windows732Bit()) {
                     // known issue on Windows 7 32 bit - jfxwebkit is not properly working with Google Login dialog (javascript issues)
+                    logger.info("Known issues with jfxwebkit on Windows 7 32 bit - using system browser to open login URL");
                     dialog = createSimpleLoginDialog();
                 } else {
                     try {
                         dialog = createFullLoginDialog();
                     } catch (UnsatisfiedLinkError e) {
                         if (e.getMessage() != null && e.getMessage().contains("jfxwebkit")) {
+                            logger.info("JavaFX webkit library missing - using system browser to open login URL");
                             dialog = createSimpleLoginDialog();
                         } else {
                             throw e;

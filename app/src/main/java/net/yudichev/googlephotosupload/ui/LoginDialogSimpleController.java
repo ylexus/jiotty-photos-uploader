@@ -20,7 +20,6 @@ public final class LoginDialogSimpleController implements LoginDialogController 
 
     @Override
     public void load(String url) {
-        logger.info("JavaFX webkit library missing - using system browser to open login URL");
         javafxApplicationResourcesProvider.get().hostServices().showDocument(url);
     }
 }
