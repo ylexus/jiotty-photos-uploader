@@ -182,10 +182,10 @@ runtime {
     jpackage {
         imageName = 'Jiotty Photos Uploader'
         installerName = 'Jiotty Photos Uploader'
-        jvmArgs = application.applicationDefaultJvmArgs + ['-Dprism.verbose=true', '-Djavafx.verbose=true']
+        jvmArgs = ['-Dprism.verbose=true', '-Djavafx.verbose=true']
         if (OperatingSystem.current().macOsX) {
             installerType = 'dmg'
-            imageOptions = ['--verbose', /*'--mac-sign',*/ '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)']
+            imageOptions = ['--verbose', /*'--mac-sign', '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)'*/]
             installerOptions = ['--verbose']
             resourceDir = file("$buildDir/packaging-resources/macOS/out")
         }
