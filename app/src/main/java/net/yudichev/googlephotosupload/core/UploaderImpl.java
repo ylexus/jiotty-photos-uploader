@@ -52,6 +52,14 @@ final class UploaderImpl implements Uploader {
                 .thenCompose(ignored -> {
                     var albumDirectoriesFuture = directoryStructureSupplier.listAlbumDirectories(rootDirs);
                     var cloudAlbumsByTitleFuture = cloudAlbumsProvider.listCloudAlbums();
+                    albumDirectoriesFuture.exceptionally(throwable -> {
+                        cloudAlbumsByTitleFuture.cancel(true);
+                        return null;
+                    });
+                    cloudAlbumsByTitleFuture.exceptionally(throwable -> {
+                        albumDirectoriesFuture.cancel(true);
+                        return null;
+                    });
                     return albumDirectoriesFuture
                             .thenCompose(albumDirectories -> cloudAlbumsByTitleFuture
                                     .thenCompose(cloudAlbumsByTitle -> albumManager.listAlbumsByTitle(albumDirectories, cloudAlbumsByTitle)

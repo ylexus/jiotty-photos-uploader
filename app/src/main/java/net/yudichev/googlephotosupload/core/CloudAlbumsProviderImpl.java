@@ -45,18 +45,19 @@ final class CloudAlbumsProviderImpl extends BaseLifecycleComponent implements Cl
         checkStarted();
         logger.info("Loading albums in cloud (may take several minutes)...");
         var progressStatus = progressStatusFactory.create(resourceBundle.getString("cloudAlbumsProviderProgressTitle"), Optional.empty());
-        return cloudOperationHelper.withBackOffAndRetry(
-                "get all albums",
-                () -> googlePhotosClient.listAlbums(progressStatus::updateSuccess, executorService),
-                progressStatus::onBackoffDelay)
+        var result = cloudOperationHelper.withBackOffAndRetry(
+                        "get all albums",
+                        () -> googlePhotosClient.listAlbums(progressStatus::updateSuccess, executorService),
+                        progressStatus::onBackoffDelay)
                 .<Map<String, List<GooglePhotosAlbum>>>thenApply(albumsInCloud -> {
                     logger.info("... loaded {} album(s) in cloud", albumsInCloud.size());
                     return albumsInCloud.stream()
                             .collect(groupingBy(GooglePhotosAlbum::getTitle,
                                     () -> new HashMap<>(albumsInCloud.size()),
                                     toList()));
-                })
-                .whenComplete((ignored, e) -> progressStatus.close(e == null));
+                });
+        result.whenComplete((ignored, e) -> progressStatus.close(e == null));
+        return result;
     }
 
     @Override

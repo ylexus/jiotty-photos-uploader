@@ -51,6 +51,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
     @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized") // analysis failure
     private boolean fileNameBasedFailuresEnabled = true;
     private boolean resourceExhaustedExceptions;
+    private boolean listAlbumsNeverReturningEnabled;
 
     @Override
     public CompletableFuture<String> uploadMediaData(Path file, Executor executor) {
@@ -156,12 +157,18 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
 
     @Override
     public CompletableFuture<List<GooglePhotosAlbum>> listAlbums(IntConsumer loadedAlbumCountProgressCallback, Executor executor) {
-        return CompletableFuture.supplyAsync(() -> {
-            synchronized (lock) {
-                simulateResourceExhaustion(ImmutableSet.of("listAlbums"));
-                return ImmutableList.copyOf(albumsById.values());
+        synchronized (lock) {
+            if (listAlbumsNeverReturningEnabled) {
+                return new CompletableFuture<>();
+            } else {
+                return CompletableFuture.supplyAsync(() -> {
+                    synchronized (lock) {
+                        simulateResourceExhaustion(ImmutableSet.of("listAlbums"));
+                        return ImmutableList.copyOf(albumsById.values());
+                    }
+                }, executor);
             }
-        }, executor);
+        }
     }
 
     @Override
@@ -185,6 +192,12 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
     void disableFileNameBaseFailures() {
         synchronized (lock) {
             fileNameBasedFailuresEnabled = false;
+        }
+    }
+
+    void enableListAlbumsNeverReturning() {
+        synchronized (lock) {
+            listAlbumsNeverReturningEnabled = true;
         }
     }
 

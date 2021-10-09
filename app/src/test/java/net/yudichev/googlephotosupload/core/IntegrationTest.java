@@ -799,6 +799,24 @@ final class IntegrationTest {
         assertThat(spaceUsedProgress.getClosedWithSuccess(), is(optionalWithValue(equalTo(false))));
     }
 
+    @Test
+    void whenFileScanFailsBeforeCloudAlbumsLoader_thenBothProgressStatusesFail() throws InterruptedException {
+        var uploadRoot = this.uploadRoot;
+        this.uploadRoot = uploadRoot.resolve("nonExistingDir");
+        googlePhotosClient.enableListAlbumsNeverReturning();
+
+        try {
+            doExecuteUpload();
+
+            assertThat(progressStatusFactory.getStatusByName().get("Looking for files").getClosedWithSuccess(),
+                    is(optionalWithValue(equalTo(false))));
+            assertThat(progressStatusFactory.getStatusByName().get("Loading albums in Google Photos").getClosedWithSuccess(),
+                    is(optionalWithValue(equalTo(false))));
+        } finally {
+            this.uploadRoot = uploadRoot;
+        }
+    }
+
     private void createStandardTestFiles() throws IOException {
         /*
         outerAlbum

@@ -44,16 +44,17 @@ final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier
     @Override
     public CompletableFuture<List<AlbumDirectory>> listAlbumDirectories(List<Path> rootDirs) {
         var progressStatus = progressStatusFactory.create(resourceBundle.getString("directoryStructureSupplierProgressTitle"), Optional.empty());
-        rootDirs.forEach(rootDir -> checkArgument(Files.isDirectory(rootDir), "Path is not a directory: %s", rootDir));
-        return CompletableFuture.supplyAsync(() -> {
+        var resultFuture = CompletableFuture.<List<AlbumDirectory>>supplyAsync(() -> {
+            rootDirs.forEach(rootDir -> checkArgument(Files.isDirectory(rootDir), "Path is not a directory: %s", rootDir));
             logger.info("Scanning file system starting at roots {}...", rootDirs);
             var result = rootDirs.stream()
                     .flatMap(rootDir -> listAlbumDirectories(progressStatus, rootDir))
                     .collect(toImmutableList());
             logger.info("... done, {} directories found that will be used as albums", result.size());
-            progressStatus.closeSuccessfully();
             return result;
         });
+        resultFuture.whenComplete((ignored, e) -> progressStatus.close(e == null));
+        return resultFuture;
     }
 
     private Stream<AlbumDirectory> listAlbumDirectories(ProgressStatus progressStatus, Path rootDir) {
