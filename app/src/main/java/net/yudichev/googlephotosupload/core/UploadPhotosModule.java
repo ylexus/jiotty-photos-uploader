@@ -7,9 +7,6 @@ import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 import javax.inject.Singleton;
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-
-import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 
 @SuppressWarnings({"OverlyCoupledClass", "OverlyCoupledMethod"}) // OK for module
 public final class UploadPhotosModule extends BaseLifecycleComponentModule implements ExposedKeyModule<Uploader> {
@@ -28,9 +25,6 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
         bind(BuildVersion.class).asEagerSingleton();
         registerLifecycleComponent(LegacyLogCleaner.class);
         registerLifecycleComponent(LegacyAuthCleaner.class);
-
-        bind(ExecutorService.class).annotatedWith(Backpressured.class)
-                .toProvider(registerLifecycleComponent(BackpressuredExecutorServiceProvider.class));
 
         bind(DirectoryStructureSupplier.class).to(DirectoryStructureSupplierImpl.class);
 

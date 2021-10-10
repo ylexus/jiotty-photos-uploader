@@ -49,7 +49,7 @@ repositories {
 dependencies {
     ext.orgJunitJupiterVersion = '5.7.2'
     ext.orgMockitoVersion = '3.10.0'
-    ext.netYudichevJiottyVersion = '2.2.1'
+    ext.netYudichevJiottyVersion = '2.2.2'
     ext.orgApacheLoggingLog4jVersion = '2.14.1'
 
     implementation platform("net.yudichev.jiotty:jiotty-bom:$netYudichevJiottyVersion")
