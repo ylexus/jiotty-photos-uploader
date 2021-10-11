@@ -22,9 +22,7 @@ final class FatalUserCorrectableRemoteApiExceptionHandlerImpl implements FatalUs
     @Inject
     FatalUserCorrectableRemoteApiExceptionHandlerImpl(ResourceBundle resourceBundle) {
         exceptionToRetryableErrorMsg = ImmutableList.<Function<Throwable, Optional<String>>>of(
-                // TODO this is a special case, if ever https://github.com/google/java-photoslibrary/issues/29 is fixed,
-                //  this workaround should be removed
-                e -> e instanceof IllegalArgumentException && e.getMessage().contains("failed to finalize or get the result") ?
+                e -> e instanceof IllegalArgumentException && e.getMessage().contains("The file is empty") ?
                         Optional.of(resourceBundle.getString("fatalUserCorrectableRemoteApiException.maybeEmptyFile")) : Optional.empty(),
 
                 // https://github.com/ylexus/jiotty-photos-uploader/issues/14: this covers issues like "No permissions to add this media item to the album"

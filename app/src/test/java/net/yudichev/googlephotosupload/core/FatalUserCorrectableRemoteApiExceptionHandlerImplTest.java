@@ -29,7 +29,7 @@ class FatalUserCorrectableRemoteApiExceptionHandlerImplTest {
     @Test
     void failedToGetResult() {
         var invalidMediaItem = resultHandler.handle("operationName", new ApiException(
-                new IllegalArgumentException("The upload was completed but failed to finalize or get the result"),
+                new IllegalArgumentException("The file is empty"),
                 GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
                 true));
         assertThat(invalidMediaItem, optionalWithValue(equalTo("oops")));
