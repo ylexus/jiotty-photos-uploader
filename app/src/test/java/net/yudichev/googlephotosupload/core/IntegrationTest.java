@@ -808,6 +808,17 @@ final class IntegrationTest {
         try {
             doExecuteUpload();
 
+
+            // TODO this fails on github:
+            /*
+            2021-10-24T22:42:20.8941515Z IntegrationTest > whenFileScanFailsBeforeCloudAlbumsLoader_thenBothProgressStatusesFail() FAILED
+2021-10-24T22:42:20.8943145Z     java.lang.AssertionError:
+2021-10-24T22:42:20.8944004Z     Expected: is an Optional with a value that <false>
+2021-10-24T22:42:20.8944567Z          but: was not present
+2021-10-24T22:42:20.8945508Z         at org.hamcrest.MatcherAssert.assertThat(MatcherAssert.java:20)
+2021-10-24T22:42:20.8946909Z         at org.hamcrest.MatcherAssert.assertThat(MatcherAssert.java:6)
+2021-10-24T22:42:20.8950405Z         at net.yudichev.googlephotosupload.core.IntegrationTest.whenFileScanFailsBeforeCloudAlbumsLoader_thenBothProgressStatusesFail(IntegrationTest.java:811)
+             */
             assertThat(progressStatusFactory.getStatusByName().get("Looking for files").getClosedWithSuccess(),
                     is(optionalWithValue(equalTo(false))));
             assertThat(progressStatusFactory.getStatusByName().get("Loading albums in Google Photos").getClosedWithSuccess(),

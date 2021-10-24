@@ -1,5 +1,8 @@
 package net.yudichev.googlephotosupload.core;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -19,7 +22,7 @@ final class RecordingProgressStatusFactory implements ProgressStatusFactory {
 
     @Override
     public ProgressStatus create(String name, Optional<Integer> totalCount) {
-        var status = new RecordingProgressStatus(totalCount);
+        var status = new RecordingProgressStatus(name, totalCount);
         checkState(statusByName.put(name, status) == null, "status already created for %s", name);
         return status;
     }
@@ -39,14 +42,18 @@ final class RecordingProgressStatusFactory implements ProgressStatusFactory {
     }
 
     static final class RecordingProgressStatus implements ProgressStatus {
+        private static final Logger logger = LoggerFactory.getLogger(RecordingProgressStatus.class);
+
         private final Lock lock = new ReentrantLock();
         private final Set<KeyedError> recordedErrors = new HashSet<>();
+        private final String name;
         private Optional<Integer> totalCount;
         private int successCount;
         private String description;
         private Optional<Boolean> closedWithSuccess = Optional.empty();
 
-        private RecordingProgressStatus(Optional<Integer> totalCount) {
+        private RecordingProgressStatus(String name, Optional<Integer> totalCount) {
+            this.name = checkNotNull(name);
             this.totalCount = checkNotNull(totalCount);
         }
 
@@ -54,6 +61,7 @@ final class RecordingProgressStatusFactory implements ProgressStatusFactory {
         public void updateSuccess(int newValue) {
             inLock(lock, () -> {
                 successCount = newValue;
+                logger.debug("{}: updateSuccess->{}", name, newValue);
             });
         }
 
@@ -61,6 +69,7 @@ final class RecordingProgressStatusFactory implements ProgressStatusFactory {
         public void updateTotal(int newValue) {
             inLock(lock, () -> {
                 totalCount = Optional.of(newValue);
+                logger.debug("{}: updateTotal->{}", name, newValue);
             });
         }
 
@@ -68,6 +77,7 @@ final class RecordingProgressStatusFactory implements ProgressStatusFactory {
         public void updateDescription(String newValue) {
             inLock(lock, () -> {
                 description = newValue;
+                logger.debug("{}: updateDescription->{}", name, newValue);
             });
         }
 
@@ -75,6 +85,7 @@ final class RecordingProgressStatusFactory implements ProgressStatusFactory {
         public void incrementSuccessBy(int increment) {
             inLock(lock, () -> {
                 successCount += increment;
+                logger.debug("{}: incrementSuccessBy->{}", name, increment);
             });
         }
 
@@ -86,12 +97,16 @@ final class RecordingProgressStatusFactory implements ProgressStatusFactory {
         public void close(boolean success) {
             inLock(lock, () -> {
                 closedWithSuccess = Optional.of(success);
+                logger.debug("{}: close->{}", name, success);
             });
         }
 
         @Override
         public void addFailure(KeyedError keyedError) {
-            recordedErrors.add(keyedError);
+            inLock(lock, () -> {
+                recordedErrors.add(keyedError);
+                logger.debug("{}: addFailure->{}", name, keyedError);
+            });
         }
 
         public Set<KeyedError> getRecordedErrors() {
