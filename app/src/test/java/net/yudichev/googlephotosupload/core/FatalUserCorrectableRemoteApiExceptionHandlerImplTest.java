@@ -3,12 +3,16 @@ package net.yudichev.googlephotosupload.core;
 import com.google.api.gax.grpc.GrpcStatusCode;
 import com.google.api.gax.rpc.ApiException;
 import io.grpc.Status;
+import org.apache.http.client.HttpResponseException;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.PropertyResourceBundle;
 import java.util.ResourceBundle;
+import java.util.stream.Stream;
 
 import static net.yudichev.googlephotosupload.core.OptionalMatchers.optionalWithValue;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,12 +30,19 @@ class FatalUserCorrectableRemoteApiExceptionHandlerImplTest {
         resultHandler = new FatalUserCorrectableRemoteApiExceptionHandlerImpl(resourceBundle);
     }
 
-    @Test
-    void failedToGetResult() {
-        var invalidMediaItem = resultHandler.handle("operationName", new ApiException(
-                new IllegalArgumentException("The file is empty"),
-                GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT),
-                true));
-        assertThat(invalidMediaItem, optionalWithValue(equalTo("oops")));
+    @ParameterizedTest
+    @MethodSource
+    void failedToGetResult(Throwable exception, String expectedErrorMsg) {
+        var invalidMediaItem = resultHandler.handle("operationName", exception);
+        assertThat(invalidMediaItem, optionalWithValue(equalTo(expectedErrorMsg)));
+    }
+
+    public static Stream<Arguments> failedToGetResult() {
+        return Stream.of(
+                Arguments.of(new ApiException(new IllegalArgumentException("The file is empty"), GrpcStatusCode.of(Status.Code.INVALID_ARGUMENT), true),
+                        "oops"),
+                Arguments.of(new HttpResponseException(413, "The upload progress could not be verified. Request Entity Too Large"),
+                        "The upload progress could not be verified. Request Entity Too Large")
+        );
     }
 }

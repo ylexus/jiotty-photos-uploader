@@ -3,6 +3,7 @@ package net.yudichev.googlephotosupload.core;
 import com.google.common.collect.ImmutableList;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import org.apache.http.client.HttpResponseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,8 +27,12 @@ final class FatalUserCorrectableRemoteApiExceptionHandlerImpl implements FatalUs
                         Optional.of(resourceBundle.getString("fatalUserCorrectableRemoteApiException.maybeEmptyFile")) : Optional.empty(),
 
                 // https://github.com/ylexus/jiotty-photos-uploader/issues/14: this covers issues like "No permissions to add this media item to the album"
-                e -> e instanceof StatusRuntimeException && ((StatusRuntimeException) e).getStatus().getCode() == Status.Code.INVALID_ARGUMENT ?
-                        Optional.of(humanReadableMessage(e)) : Optional.empty());
+                e -> e instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.INVALID_ARGUMENT ?
+                        Optional.of(humanReadableMessage(sre)) : Optional.empty(),
+
+                // https://github.com/ylexus/jiotty-photos-uploader/issues/123
+                e -> e instanceof HttpResponseException httpe && httpe.getStatusCode() == 413 ?
+                        Optional.of(httpe.getReasonPhrase()) : Optional.empty());
     }
 
     @Override
