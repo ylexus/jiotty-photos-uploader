@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.common.collect.ImmutableSet;
+import net.yudichev.jiotty.common.async.AsyncOperationRetry;
 import net.yudichev.jiotty.connector.google.drive.GoogleDriveClient;
 import net.yudichev.jiotty.connector.google.drive.GoogleDrivePath;
 import org.slf4j.Logger;
@@ -30,7 +31,7 @@ final class DriveSpaceTrackerImpl implements DriveSpaceTracker {
     private final GoogleDriveClient googleDriveClient;
     private final PreferencesManager preferencesManager;
     private final ResourceBundle resourceBundle;
-    private final CloudOperationHelper cloudOperationHelper;
+    private final AsyncOperationRetry asyncOperationRetry;
     private final Lock lock = new ReentrantLock();
 
     private ProgressStatus driveSpaceStatus;
@@ -44,12 +45,12 @@ final class DriveSpaceTrackerImpl implements DriveSpaceTracker {
                           GoogleDriveClient googleDriveClient,
                           PreferencesManager preferencesManager,
                           ResourceBundle resourceBundle,
-                          CloudOperationHelper cloudOperationHelper) {
+                          AsyncOperationRetry asyncOperationRetry) {
         this.progressStatusFactory = progressStatusFactory;
         this.googleDriveClient = googleDriveClient;
         this.preferencesManager = checkNotNull(preferencesManager);
         this.resourceBundle = checkNotNull(resourceBundle);
-        this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
+        this.asyncOperationRetry = checkNotNull(asyncOperationRetry);
     }
 
     @Override
@@ -112,12 +113,12 @@ final class DriveSpaceTrackerImpl implements DriveSpaceTracker {
         if (driveSpaceStatus == null) {
             driveSpaceStatus = progressStatusFactory.create(resourceBundle.getString("driveSpaceStatusTitle"), Optional.empty());
         }
-        cloudOperationHelper.withBackOffAndRetry("Get drive quota",
-                // Creating a file in Drive refreshes usage stats
-                () -> googleDriveClient.getAppDataFolder(directExecutor()).createFile("file.txt", "text/plain", NO_DATA)
-                        .thenCompose(GoogleDrivePath::delete)
-                        .thenCompose(ignored -> googleDriveClient.aboutDrive(FIELDS, directExecutor())),
-                value -> {})
+        asyncOperationRetry.withBackOffAndRetry("Get drive quota",
+                        // Creating a file in Drive refreshes usage stats
+                        () -> googleDriveClient.getAppDataFolder(directExecutor()).createFile("file.txt", "text/plain", NO_DATA)
+                                .thenCompose(GoogleDrivePath::delete)
+                                .thenCompose(ignored -> googleDriveClient.aboutDrive(FIELDS, directExecutor())),
+                        value -> {})
                 .thenAccept(about -> {
                     limit = Optional.ofNullable(about.getStorageQuota().getLimit());
                     var usage = about.getStorageQuota().getUsage();

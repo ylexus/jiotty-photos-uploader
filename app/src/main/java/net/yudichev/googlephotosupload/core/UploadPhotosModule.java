@@ -1,6 +1,9 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.inject.TypeLiteral;
+import net.yudichev.jiotty.common.async.AsyncOperationFailureHandler;
+import net.yudichev.jiotty.common.async.AsyncOperationRetry;
+import net.yudichev.jiotty.common.async.AsyncOperationRetryImpl;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 
@@ -30,10 +33,10 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
 
         bind(new TypeLiteral<Optional<Duration>>() {}).annotatedWith(BackingOffRemoteApiExceptionHandlerImpl.GlobalInitialDelayOverride.class)
                 .toInstance(globalInitialDelayOverride);
-        bind(BackingOffRemoteApiExceptionHandler.class).to(BackingOffRemoteApiExceptionHandlerImpl.class);
+        bind(AsyncOperationFailureHandler.class).to(BackingOffRemoteApiExceptionHandlerImpl.class);
         bind(FatalUserCorrectableRemoteApiExceptionHandler.class).to(FatalUserCorrectableRemoteApiExceptionHandlerImpl.class);
 
-        bind(CloudOperationHelper.class).to(CloudOperationHelperImpl.class);
+        bind(AsyncOperationRetry.class).to(AsyncOperationRetryImpl.class);
         bind(CloudAlbumsProvider.class).to(registerLifecycleComponent(CloudAlbumsProviderImpl.class));
 
         bind(AlbumManager.class).to(registerLifecycleComponent(AlbumManagerImpl.class));

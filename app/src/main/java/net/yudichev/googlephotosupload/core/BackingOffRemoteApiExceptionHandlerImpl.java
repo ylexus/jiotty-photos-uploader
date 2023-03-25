@@ -4,6 +4,7 @@ import com.google.api.gax.rpc.*;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.inject.BindingAnnotation;
+import net.yudichev.jiotty.common.async.AsyncOperationFailureHandler;
 import net.yudichev.jiotty.common.lang.backoff.BackOff;
 import net.yudichev.jiotty.common.lang.backoff.ExponentialBackOff;
 import net.yudichev.jiotty.common.lang.backoff.SynchronizedBackOff;
@@ -24,7 +25,7 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static net.yudichev.jiotty.common.lang.backoff.BackOff.STOP;
 
-final class BackingOffRemoteApiExceptionHandlerImpl implements BackingOffRemoteApiExceptionHandler {
+final class BackingOffRemoteApiExceptionHandlerImpl implements AsyncOperationFailureHandler {
     private static final Logger logger = LoggerFactory.getLogger(BackingOffRemoteApiExceptionHandlerImpl.class);
     // Unfortunately, the "retryable" flag in most, if not all, all these exceptions is not reliable; some of these
     // are marked as not retryable while in reality they are

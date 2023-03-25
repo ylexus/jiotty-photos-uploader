@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.core;
 
+import net.yudichev.jiotty.common.async.AsyncOperationRetry;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
@@ -19,7 +20,7 @@ import static net.yudichev.googlephotosupload.core.Bindings.Backpressured;
 
 final class CloudAlbumsProviderImpl extends BaseLifecycleComponent implements CloudAlbumsProvider {
     private static final Logger logger = LoggerFactory.getLogger(CloudAlbumsProviderImpl.class);
-    private final CloudOperationHelper cloudOperationHelper;
+    private final AsyncOperationRetry asyncOperationRetry;
     private final GooglePhotosClient googlePhotosClient;
     private final Provider<ExecutorService> executorServiceProvider;
     private final ProgressStatusFactory progressStatusFactory;
@@ -28,12 +29,12 @@ final class CloudAlbumsProviderImpl extends BaseLifecycleComponent implements Cl
     private volatile ExecutorService executorService;
 
     @Inject
-    CloudAlbumsProviderImpl(CloudOperationHelper cloudOperationHelper,
+    CloudAlbumsProviderImpl(AsyncOperationRetry asyncOperationRetry,
                             GooglePhotosClient googlePhotosClient,
                             @SuppressWarnings("BoundedWildcard") @Backpressured Provider<ExecutorService> executorServiceProvider,
                             ProgressStatusFactory progressStatusFactory,
                             ResourceBundle resourceBundle) {
-        this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
+        this.asyncOperationRetry = checkNotNull(asyncOperationRetry);
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
         this.executorServiceProvider = executorServiceProvider;
         this.progressStatusFactory = checkNotNull(progressStatusFactory);
@@ -45,7 +46,7 @@ final class CloudAlbumsProviderImpl extends BaseLifecycleComponent implements Cl
         checkStarted();
         logger.info("Loading albums in cloud (may take several minutes)...");
         var progressStatus = progressStatusFactory.create(resourceBundle.getString("cloudAlbumsProviderProgressTitle"), Optional.empty());
-        var result = cloudOperationHelper.withBackOffAndRetry(
+        var result = asyncOperationRetry.withBackOffAndRetry(
                         "get all albums",
                         () -> googlePhotosClient.listAlbums(progressStatus::updateSuccess, executorService),
                         progressStatus::onBackoffDelay)

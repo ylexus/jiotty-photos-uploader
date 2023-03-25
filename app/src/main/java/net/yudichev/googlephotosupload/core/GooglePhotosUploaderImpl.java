@@ -3,6 +3,8 @@ package net.yudichev.googlephotosupload.core;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.rpc.Code;
+import net.yudichev.jiotty.common.async.AsyncOperationFailureHandler;
+import net.yudichev.jiotty.common.async.AsyncOperationRetry;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.ResultOrFailure;
 import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
@@ -49,7 +51,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
     @SuppressWarnings("NonConstantLogger") // as designed
     private final Logger logger = LoggerFactory.getLogger(getClass());
-    private final CloudOperationHelper cloudOperationHelper;
+    private final AsyncOperationRetry asyncOperationRetry;
     private final AddToAlbumStrategy addToAlbumStrategy;
     private final DriveSpaceTracker driveSpaceTracker;
     private final ResourceBundle resourceBundle;
@@ -58,7 +60,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     private final UploadStateManager uploadStateManager;
     private final CurrentDateTimeProvider currentDateTimeProvider;
     private final Provider<ExecutorService> executorServiceProvider;
-    private final BackingOffRemoteApiExceptionHandler backOffHandler;
+    private final AsyncOperationFailureHandler backOffHandler;
 
     // memory barrier for access to non-finals (as we must survive a restart), but should NOT be used to guard internal state of any other objects
     private volatile boolean memoryBarrier = true;
@@ -70,11 +72,11 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     @Inject
     GooglePhotosUploaderImpl(GooglePhotosClient googlePhotosClient,
                              @Backpressured Provider<ExecutorService> executorServiceProvider,
-                             BackingOffRemoteApiExceptionHandler backOffHandler,
+                             AsyncOperationFailureHandler backOffHandler,
                              FatalUserCorrectableRemoteApiExceptionHandler fatalUserCorrectableHandler,
                              UploadStateManager uploadStateManager,
                              CurrentDateTimeProvider currentDateTimeProvider,
-                             CloudOperationHelper cloudOperationHelper,
+                             AsyncOperationRetry asyncOperationRetry,
                              AddToAlbumStrategy addToAlbumStrategy,
                              DriveSpaceTracker driveSpaceTracker,
                              ResourceBundle resourceBundle) {
@@ -84,7 +86,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
         this.uploadStateManager = checkNotNull(uploadStateManager);
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
-        this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
+        this.asyncOperationRetry = checkNotNull(asyncOperationRetry);
         this.addToAlbumStrategy = checkNotNull(addToAlbumStrategy);
         this.driveSpaceTracker = checkNotNull(driveSpaceTracker);
         this.resourceBundle = checkNotNull(resourceBundle);
@@ -192,10 +194,13 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                         .setFileName(pathState.path().getFileName().toString())
                         .build())
                 .collect(toImmutableList());
-        return cloudOperationHelper.withBackOffAndRetry(
-                "create media items",
-                () -> googlePhotosClient.createMediaItems(albumId, pendingNewMediaItems, createMediaItemsExecutor(pendingPathStates, fileProgressStatus)),
-                fileProgressStatus::onBackoffDelay)
+        return asyncOperationRetry.withBackOffAndRetry(
+                        "create media items",
+                        () -> googlePhotosClient.createMediaItems(
+                                albumId,
+                                pendingNewMediaItems,
+                                createMediaItemsExecutor(pendingPathStates, fileProgressStatus)),
+                        fileProgressStatus::onBackoffDelay)
                 .<List<PathMediaItemOrError>>thenApply(mediaItemOrErrors -> {
                     ImmutableList.Builder<PathMediaItemOrError> resultListBuilder = ImmutableList.builder();
                     for (var i = 0; i < pendingPathStates.size(); i++) {
@@ -239,34 +244,34 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         checkStarted();
         checkState(memoryBarrier);
         return uploadedItemStateByPath.compute(file,
-                (theFile, currentFuture) -> {
-                    if (currentFuture == null || currentFuture.isCompletedExceptionally()) {
-                        logger.info("Scheduling upload of {}", file);
-                        currentFuture = doCreateMediaData(theFile, fileProgressStatus);
-                    } else {
-                        var itemState = currentFuture.getNow(null);
-                        if (itemState != null) {
-                            currentFuture = itemState.uploadState()
-                                    .filter(uploadMediaItemState -> {
-                                        if (itemState.mediaId().isPresent()) {
-                                            return true;
-                                        }
-                                        return uploadTokenNotExpired(file, uploadMediaItemState);
-                                    })
-                                    .map(uploadMediaItemState -> {
-                                        logger.info("Media data already uploaded, skipping: {}", file);
-                                        return completedFuture(itemState);
-                                    })
-                                    .orElseGet(() -> {
-                                        logger.info("Media data uploaded, but upload token expired, re-uploading: {}", file);
-                                        return doCreateMediaData(theFile, fileProgressStatus);
-                                    });
-                        } else {
-                            logger.error("Unexpected future state for {}: {}", file, currentFuture);
-                        }
-                    }
-                    return currentFuture;
-                })
+                        (theFile, currentFuture) -> {
+                            if (currentFuture == null || currentFuture.isCompletedExceptionally()) {
+                                logger.info("Scheduling upload of {}", file);
+                                currentFuture = doCreateMediaData(theFile, fileProgressStatus);
+                            } else {
+                                var itemState = currentFuture.getNow(null);
+                                if (itemState != null) {
+                                    currentFuture = itemState.uploadState()
+                                            .filter(uploadMediaItemState -> {
+                                                if (itemState.mediaId().isPresent()) {
+                                                    return true;
+                                                }
+                                                return uploadTokenNotExpired(file, uploadMediaItemState);
+                                            })
+                                            .map(uploadMediaItemState -> {
+                                                logger.info("Media data already uploaded, skipping: {}", file);
+                                                return completedFuture(itemState);
+                                            })
+                                            .orElseGet(() -> {
+                                                logger.info("Media data uploaded, but upload token expired, re-uploading: {}", file);
+                                                return doCreateMediaData(theFile, fileProgressStatus);
+                                            });
+                                } else {
+                                    logger.error("Unexpected future state for {}: {}", file, currentFuture);
+                                }
+                            }
+                            return currentFuture;
+                        })
                 .thenApply(itemState -> {
                     checkState(memoryBarrier);
                     uploadStateManager.saveItemState(file, itemState);

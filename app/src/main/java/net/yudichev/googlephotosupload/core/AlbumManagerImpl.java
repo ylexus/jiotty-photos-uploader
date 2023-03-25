@@ -2,6 +2,7 @@ package net.yudichev.googlephotosupload.core;
 
 import com.google.api.gax.rpc.InvalidArgumentException;
 import com.google.common.collect.ImmutableMap;
+import net.yudichev.jiotty.common.async.AsyncOperationRetry;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
@@ -37,7 +38,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
 
     private final GooglePhotosClient googlePhotosClient;
     private final Provider<ExecutorService> executorServiceProvider;
-    private final CloudOperationHelper cloudOperationHelper;
+    private final AsyncOperationRetry asyncOperationRetry;
     private final ProgressStatusFactory progressStatusFactory;
     private final ResourceBundle resourceBundle;
 
@@ -46,12 +47,12 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     @Inject
     AlbumManagerImpl(GooglePhotosClient googlePhotosClient,
                      @Backpressured Provider<ExecutorService> executorServiceProvider,
-                     CloudOperationHelper cloudOperationHelper,
+                     AsyncOperationRetry asyncOperationRetry,
                      ProgressStatusFactory progressStatusFactory,
                      ResourceBundle resourceBundle) {
         this.googlePhotosClient = checkNotNull(googlePhotosClient);
         this.executorServiceProvider = checkNotNull(executorServiceProvider);
-        this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
+        this.asyncOperationRetry = checkNotNull(asyncOperationRetry);
         this.progressStatusFactory = checkNotNull(progressStatusFactory);
         this.resourceBundle = checkNotNull(resourceBundle);
     }
@@ -144,13 +145,13 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                                 }
                                 var addOperationName = "add " + itemsToAdd.size() + " items for " + sourceAlbum.getTitle() +
                                         " to album " + destinationAlbum.getId();
-                                addFuture = cloudOperationHelper.withBackOffAndRetry(addOperationName,
+                                addFuture = asyncOperationRetry.withBackOffAndRetry(addOperationName,
                                         () -> withInvalidMediaItemErrorIgnored(addOperationName, destinationAlbum.addMediaItems(itemsToAdd, executorService)),
                                         backoffEventConsumer);
                             }
                             var removeOperationName = "remove " + itemsInGroup.size() + " items for " + sourceAlbum.getTitle() +
                                     " from album " + sourceAlbum.getId();
-                            return addFuture.thenCompose(aVoid -> cloudOperationHelper.withBackOffAndRetry(removeOperationName,
+                            return addFuture.thenCompose(aVoid -> asyncOperationRetry.withBackOffAndRetry(removeOperationName,
                                     () -> withInvalidMediaItemErrorIgnored(removeOperationName, sourceAlbum.removeMediaItems(itemsInGroup, executorService)),
                                     backoffEventConsumer));
                         })
@@ -165,7 +166,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
     }
 
     private CompletableFuture<List<GoogleMediaItem>> getItemsInAlbum(GooglePhotosAlbum sourceAlbum, LongConsumer backoffEventConsumer) {
-        return cloudOperationHelper.withBackOffAndRetry(
+        return asyncOperationRetry.withBackOffAndRetry(
                 "get media items in album " + sourceAlbum.getId(),
                 () -> sourceAlbum.getMediaItems(executorService),
                 backoffEventConsumer);
@@ -216,7 +217,7 @@ final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumMana
                 })
                 .orElseGet(() -> {
                     logger.info("Creating album [{}] for path [{}]", filesystemAlbumTitle, path);
-                    return cloudOperationHelper.withBackOffAndRetry(
+                    return asyncOperationRetry.withBackOffAndRetry(
                             "create album " + filesystemAlbumTitle,
                             () -> googlePhotosClient.createAlbum(filesystemAlbumTitle, executorService),
                             backoffEventConsumer);

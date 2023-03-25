@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.core;
 
+import net.yudichev.jiotty.common.async.AsyncOperationRetry;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
@@ -29,15 +30,15 @@ import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfListC
 final class AddToAlbumAfterCreatingStrategy implements AddToAlbumStrategy {
     private final Provider<ExecutorService> executorServiceProvider;
     private final FatalUserCorrectableRemoteApiExceptionHandler fatalUserCorrectableHandler;
-    private final CloudOperationHelper cloudOperationHelper;
+    private final AsyncOperationRetry asyncOperationRetry;
 
     @Inject
     AddToAlbumAfterCreatingStrategy(@Backpressured Provider<ExecutorService> executorServiceProvider,
                                     FatalUserCorrectableRemoteApiExceptionHandler fatalUserCorrectableHandler,
-                                    CloudOperationHelper cloudOperationHelper) {
+                                    AsyncOperationRetry asyncOperationRetry) {
         this.executorServiceProvider = checkNotNull(executorServiceProvider);
         this.fatalUserCorrectableHandler = checkNotNull(fatalUserCorrectableHandler);
-        this.cloudOperationHelper = checkNotNull(cloudOperationHelper);
+        this.asyncOperationRetry = checkNotNull(asyncOperationRetry);
     }
 
     @Override
@@ -72,14 +73,14 @@ final class AddToAlbumAfterCreatingStrategy implements AddToAlbumStrategy {
                             // (see https://github.com/ylexus/jiotty-photos-uploader/issues/34#issuecomment-639876779)
                             .distinct()
                             .collect(toImmutableList());
-                    return cloudOperationHelper.withBackOffAndRetry("add items to album",
-                            () -> partition(mediaItemsToAddToAlbum, GOOGLE_PHOTOS_API_BATCH_SIZE).stream()
-                                    .collect(toFutureOfListChaining(mediaItems -> album
-                                            .addMediaItems(mediaItems, statusUpdatingExecutor(album, directoryProgressStatus))))
-                                    .<Void>thenApply(ignored -> null),
-                            fileProgressStatus::onBackoffDelay)
+                    return asyncOperationRetry.withBackOffAndRetry("add items to album",
+                                    () -> partition(mediaItemsToAddToAlbum, GOOGLE_PHOTOS_API_BATCH_SIZE).stream()
+                                            .collect(toFutureOfListChaining(mediaItems -> album
+                                                    .addMediaItems(mediaItems, statusUpdatingExecutor(album, directoryProgressStatus))))
+                                            .<Void>thenApply(ignored -> null),
+                                    fileProgressStatus::onBackoffDelay)
                             .exceptionallyCompose(exception -> fatalUserCorrectableHandler.handle(
-                                    "adding items to album " + album.getTitle(), exception)
+                                            "adding items to album " + album.getTitle(), exception)
                                     .map(errorMessage -> {
                                         pathMediaItemOrErrors.stream()
                                                 .map(PathMediaItemOrError::path)

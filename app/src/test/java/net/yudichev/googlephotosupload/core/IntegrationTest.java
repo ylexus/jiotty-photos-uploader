@@ -48,7 +48,6 @@ import static java.nio.file.FileVisitResult.CONTINUE;
 import static java.time.Instant.EPOCH;
 import static java.time.Instant.now;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.toList;
 import static net.yudichev.googlephotosupload.cli.CliOptions.OPTIONS;
 import static net.yudichev.googlephotosupload.core.AddToAlbumMethod.AFTER_CREATING_ITEMS_SORTED;
 import static net.yudichev.googlephotosupload.core.GooglePhotosUploaderImpl.GOOGLE_PHOTOS_API_BATCH_SIZE;
@@ -330,7 +329,7 @@ final class IntegrationTest {
         uploadPhoto(preExistingAlbum1, "photo-in-album1.jpg");
         var items = IntStream.range(0, 51)
                 .mapToObj(i -> getAsUnchecked(() -> uploadPhoto(preExistingAlbum2, "photo" + i + ".jpg")))
-                .collect(toList());
+                .toList();
 
         doExecuteUpload();
 
@@ -357,7 +356,7 @@ final class IntegrationTest {
         uploadPhoto(preExistingAlbum1, "photo-in-album1.jpg");
         var items = IntStream.range(0, 49)
                 .mapToObj(i -> getAsUnchecked(() -> uploadPhoto(preExistingAlbum2, "photo" + i + ".jpg")))
-                .collect(toList());
+                .toList();
 
         doExecuteUpload();
 
@@ -701,7 +700,7 @@ final class IntegrationTest {
     }
 
     /**
-     * One of the issues from https://github.com/ylexus/jiotty-photos-uploader/issues/34
+     * One of the issues from <a href="https://github.com/ylexus/jiotty-photos-uploader/issues/34">Item 34</a>
      */
     @Test
     void twoFilesInSameDirectoryWithIdenticalContentOnePreviouslyUploadedButNotAddedToAlbum() throws Exception {
@@ -962,7 +961,7 @@ final class IntegrationTest {
             applicationExitedLatch.countDown();
         }, "application main");
         thread.start();
-        if (!applicationExitedLatch.await(30, SECONDS)) {
+        if (!applicationExitedLatch.await(5, SECONDS)) {
             for (var info : ManagementFactory.getThreadMXBean().dumpAllThreads(true, true)) {
                 //noinspection UseOfSystemOutOrSystemErr
                 System.err.print(info);
