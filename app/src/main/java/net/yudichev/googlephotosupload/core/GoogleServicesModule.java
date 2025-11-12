@@ -15,7 +15,6 @@ import static com.google.api.services.drive.DriveScopes.DRIVE_APPDATA;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 import static net.yudichev.jiotty.common.inject.BindingSpec.providedBy;
-import static net.yudichev.jiotty.connector.google.photos.GooglePhotosScopes.SCOPE_PHOTOS_LIBRARY;
 
 public final class GoogleServicesModule extends BaseLifecycleComponentModule {
     private final Path authDataStoreRootDir;
@@ -44,7 +43,10 @@ public final class GoogleServicesModule extends BaseLifecycleComponentModule {
         var settings = googleApiSettingsBuilder.build();
         installLifecycleComponentModule(GoogleAuthorizationModule.builder()
                 .setSettings(settings)
-                .addRequiredScopes(DRIVE_APPDATA, SCOPE_PHOTOS_LIBRARY)
+                .addRequiredScopes(DRIVE_APPDATA,
+                        "https://www.googleapis.com/auth/photoslibrary.appendonly",
+                        "https://www.googleapis.com/auth/photoslibrary.readonly.appcreateddata",
+                        "https://www.googleapis.com/auth/photoslibrary.edit.appcreateddata")
                 .build());
         var photosModule = GooglePhotosModule.builder().build();
         installLifecycleComponentModule(photosModule);
