@@ -1,13 +1,13 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.inject.TypeLiteral;
+import jakarta.inject.Singleton;
 import net.yudichev.jiotty.common.async.AsyncOperationFailureHandler;
 import net.yudichev.jiotty.common.async.AsyncOperationRetry;
 import net.yudichev.jiotty.common.async.AsyncOperationRetryImpl;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
 
-import javax.inject.Singleton;
 import java.time.Duration;
 import java.util.Optional;
 

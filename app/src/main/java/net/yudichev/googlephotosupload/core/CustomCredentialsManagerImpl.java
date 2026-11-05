@@ -1,14 +1,14 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.common.hash.Hashing;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import net.yudichev.jiotty.common.varstore.VarStore;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import net.yudichev.jiotty.persistence.varstore.VarStore;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -27,7 +27,7 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class CustomCredentialsManagerImpl extends BaseLifecycleComponent implements Provider<URL>, CustomCredentialsManager {
-    private static final Logger logger = LoggerFactory.getLogger(CustomCredentialsManagerImpl.class);
+    private static final Logger logger = LogManager.getLogger(CustomCredentialsManagerImpl.class);
 
     private static final String VAR_STORE_KEY = "customCredentialsManager.hashOfLoggedInCredentials";
     private static final URL STANDARD_CREDENTIALS_URL = getResource("client_secret.json");

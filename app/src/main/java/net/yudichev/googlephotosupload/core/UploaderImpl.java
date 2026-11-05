@@ -1,9 +1,9 @@
 package net.yudichev.googlephotosupload.core;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import jakarta.inject.Inject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -14,7 +14,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfList;
 
 final class UploaderImpl implements Uploader {
-    private static final Logger logger = LoggerFactory.getLogger(UploaderImpl.class);
+    private static final Logger logger = LogManager.getLogger(UploaderImpl.class);
     private final GooglePhotosUploader googlePhotosUploader;
     private final DirectoryStructureSupplier directoryStructureSupplier;
     private final AlbumManager albumManager;

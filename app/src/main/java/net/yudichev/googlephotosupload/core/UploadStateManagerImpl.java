@@ -2,13 +2,13 @@ package net.yudichev.googlephotosupload.core;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import net.yudichev.jiotty.common.varstore.VarStore;
+import net.yudichev.jiotty.persistence.varstore.VarStore;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.h2.tools.Server;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Path;
@@ -27,7 +27,7 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class UploadStateManagerImpl extends BaseLifecycleComponent implements UploadStateManager {
-    private static final Logger logger = LoggerFactory.getLogger(UploadStateManagerImpl.class);
+    private static final Logger logger = LogManager.getLogger(UploadStateManagerImpl.class);
 
     private static final String VAR_STORE_KEY = "photosUploader";
     private final VarStore varStore;
@@ -50,6 +50,7 @@ final class UploadStateManagerImpl extends BaseLifecycleComponent implements Upl
     @Override
     protected void doStart() {
         inLock(lock, () -> asUnchecked(() -> {
+            var legacyItems = LegacyH2Database.extractIfLegacy(h2DbPath);
             var url = "jdbc:h2:" + h2DbPath.toAbsolutePath();
             logger.debug("Creating connection to {}", url);
             //noinspection CallToDriverManagerGetConnection no need
@@ -69,8 +70,20 @@ final class UploadStateManagerImpl extends BaseLifecycleComponent implements Upl
             removeAllStmt = connection.prepareStatement("TRUNCATE TABLE MEDIA_ITEMS");
             updateOneStateStmt = connection.prepareStatement("MERGE INTO MEDIA_ITEMS (PATH, TOKEN, UPL_TIMESTAMP, MEDIA_ID) VALUES (?,?,?,?)");
 
+            if (legacyItems.isPresent()) {
+                migrateFromLegacyDatabase(legacyItems.get());
+            }
             migrateFromOldStorage();
         }));
+    }
+
+    private void migrateFromLegacyDatabase(Map<String, ItemState> items) throws SQLException {
+        for (var entry : items.entrySet()) {
+            addRowUpdateBatch(entry.getKey(), entry.getValue());
+        }
+        updateOneStateStmt.executeBatch();
+        connection.commit();
+        logger.info("Migrated {} item(s) from the old upload state database", items.size());
     }
 
     private void migrateFromOldStorage() throws SQLException {

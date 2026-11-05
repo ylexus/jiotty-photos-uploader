@@ -1,15 +1,15 @@
 package net.yudichev.googlephotosupload.cli;
 
+import jakarta.inject.Inject;
 import net.yudichev.googlephotosupload.core.KeyedError;
 import net.yudichev.googlephotosupload.core.ProgressStatus;
 import net.yudichev.googlephotosupload.core.ProgressStatusFactory;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
 import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.lang.throttling.ThrottlingConsumer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.locks.Lock;
@@ -19,7 +19,7 @@ import static net.yudichev.jiotty.common.lang.Locks.inLock;
 
 final class LoggingProgressStatusFactory implements ProgressStatusFactory {
     private static final long BACKOFF_DELAY_MS_BEFORE_NOTICE_APPEARS = Duration.ofMinutes(1).toMillis();
-    private static final Logger logger = LoggerFactory.getLogger(LoggingProgressStatusFactory.class);
+    private static final Logger logger = LogManager.getLogger(LoggingProgressStatusFactory.class);
     private final ThrottlingConsumer<Runnable> eventSink;
     private final SchedulingExecutor executor;
 
@@ -39,13 +39,13 @@ final class LoggingProgressStatusFactory implements ProgressStatusFactory {
 
             @Override
             public void updateSuccess(int newValue) {
-                inLock(lock, () -> { successCount = newValue;});
+                inLock(lock, () -> {successCount = newValue;});
                 throttledLog();
             }
 
             @Override
             public void updateTotal(int newValue) {
-                inLock(lock, () -> { totalCount = Optional.of(newValue);});
+                inLock(lock, () -> {totalCount = Optional.of(newValue);});
                 throttledLog();
             }
 
@@ -56,7 +56,7 @@ final class LoggingProgressStatusFactory implements ProgressStatusFactory {
 
             @Override
             public void incrementSuccessBy(int increment) {
-                inLock(lock, () -> { successCount += increment;});
+                inLock(lock, () -> {successCount += increment;});
                 throttledLog();
             }
 
@@ -70,7 +70,7 @@ final class LoggingProgressStatusFactory implements ProgressStatusFactory {
             @Override
             public void addFailure(KeyedError keyedError) {
                 logger.warn("Failure for {}: {}", keyedError.getKey(), keyedError.getError());
-                inLock(lock, () -> { failureCount += 1;});
+                inLock(lock, () -> {failureCount += 1;});
                 throttledLog();
             }
 

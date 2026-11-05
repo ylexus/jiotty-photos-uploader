@@ -1,14 +1,14 @@
 package net.yudichev.googlephotosupload.ui;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -19,7 +19,7 @@ import static net.yudichev.googlephotosupload.core.AppGlobals.APP_TITLE;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class UserInterface extends BaseLifecycleComponent implements Provider<JavafxApplicationResources> {
-    private static final Logger logger = LoggerFactory.getLogger(UserInterface.class);
+    private static final Logger logger = LogManager.getLogger(UserInterface.class);
 
     private final Consumer<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler;
     private final FxmlContainerFactory fxmlContainerFactory;

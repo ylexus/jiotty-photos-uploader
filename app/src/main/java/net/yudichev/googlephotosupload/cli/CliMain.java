@@ -5,8 +5,7 @@ import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.time.TimeModule;
 import org.apache.commons.cli.*;
 import org.apache.logging.log4j.LogManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.Logger;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -15,7 +14,7 @@ import static net.yudichev.googlephotosupload.core.BuildVersion.buildVersion;
 import static net.yudichev.googlephotosupload.core.SingleInstanceCheck.otherInstanceRunning;
 
 public final class CliMain {
-    private static final Logger logger = LoggerFactory.getLogger(CliMain.class);
+    private static final Logger logger = LogManager.getLogger(CliMain.class);
 
     public static void main(String[] args) {
         CommandLineParser parser = new DefaultParser();
@@ -59,7 +58,7 @@ public final class CliMain {
     private static void startApp(SettingsModule settingsModule, CommandLine commandLine) {
         Application.builder()
                 .addModule(() -> settingsModule)
-                .addModule(TimeModule::new)
+                .addModule(() -> TimeModule.builder().build())
                 .addModule(() -> new CoreDependenciesModule(settingsModule.getAuthDataStoreRootPath()))
                 .addModule(() -> GoogleServicesModule.builder()
                         .setAuthDataStoreRootDir(settingsModule.getAuthDataStoreRootPath())

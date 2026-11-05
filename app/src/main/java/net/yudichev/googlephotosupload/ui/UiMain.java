@@ -7,14 +7,16 @@ import net.yudichev.googlephotosupload.core.*;
 import net.yudichev.googlephotosupload.ui.Bindings.AuthBrowser;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.time.TimeModule;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.lang.management.ManagementFactory;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static net.yudichev.googlephotosupload.core.BuildVersion.buildVersion;
 import static net.yudichev.googlephotosupload.core.ResourceBundleModule.RESOURCE_BUNDLE;
 import static net.yudichev.googlephotosupload.core.SingleInstanceCheck.otherInstanceRunning;
@@ -22,8 +24,16 @@ import static net.yudichev.googlephotosupload.ui.FatalStartupError.showFatalStar
 import static net.yudichev.jiotty.common.inject.BindingSpec.annotatedWith;
 
 public final class UiMain extends javafx.application.Application {
-    private static final Logger logger = LoggerFactory.getLogger(UiMain.class);
+    private static final Logger logger = LogManager.getLogger(UiMain.class);
     private static final AtomicReference<Consumer<JavafxApplicationResources>> javafxApplicationResourcesHandler = new AtomicReference<>();
+    private static final List<String> DIAGNOSTIC_SYSTEM_PROPERTIES = List.of(
+            "os.name", "os.version", "os.arch",
+            "java.version", "java.vendor", "java.runtime.version", "java.vm.name",
+            "javafx.version", "javafx.runtime.version", "prism.order",
+            "user.language", "user.country", "file.encoding", "sun.jnu.encoding", "stdout.encoding");
+    /// Set once JavaFX has started. JavaFX can only be launched once per JVM, while every application restart (e.g. on Stop or logout) creates a new
+    /// injector, and so a new [UserInterface] that asks for the resources again; later requests get the existing ones.
+    private static volatile JavafxApplicationResources javafxApplicationResources;
 
     public static void main(String[] args) {
         var settingsModule = new SettingsModule();
@@ -32,16 +42,24 @@ public final class UiMain extends javafx.application.Application {
             return;
         }
         logger.info("Version {}", buildVersion());
-        logger.info("System properties {}", System.getProperties());
-        logger.info("Environment {}", System.getenv());
+        // Only properties useful for diagnosing platform issues: users are asked to share logs, and the full property set and the environment carry
+        // user names, home paths and, potentially, secrets.
+        logger.info("System properties {}", DIAGNOSTIC_SYSTEM_PROPERTIES.stream()
+                .filter(name -> System.getProperty(name) != null)
+                .collect(toImmutableMap(name -> name, System::getProperty)));
         logger.info("Input Arguments {}", ManagementFactory.getRuntimeMXBean().getInputArguments());
         Application.builder()
                 .addModule(() -> settingsModule)
                 .addModule(() -> new UiModule(handler -> {
-                    checkState(javafxApplicationResourcesHandler.compareAndSet(null, handler), "can only launch once");
-                    new Thread(() -> launch(args)).start();
+                    var existingResources = javafxApplicationResources;
+                    if (existingResources == null) {
+                        checkState(javafxApplicationResourcesHandler.compareAndSet(null, handler), "can only launch once");
+                        new Thread(() -> launch(args)).start();
+                    } else {
+                        Platform.runLater(() -> handler.accept(existingResources));
+                    }
                 }))
-                .addModule(TimeModule::new)
+                .addModule(() -> TimeModule.builder().build())
                 .addModule(() -> new CoreDependenciesModule(settingsModule.getAuthDataStoreRootPath()))
                 .addModule(() -> GoogleServicesModule.builder()
                         .setAuthDataStoreRootDir(settingsModule.getAuthDataStoreRootPath())
@@ -60,9 +78,11 @@ public final class UiMain extends javafx.application.Application {
         primaryStage.setMinWidth(500);
         primaryStage.setMinHeight(500);
         primaryStage.getIcons().add(new Image(getClass().getResource("/Icon1024.png").toString()));
-        javafxApplicationResourcesHandler.get().accept(JavafxApplicationResources.builder()
+        var resources = JavafxApplicationResources.builder()
                 .setHostServices(getHostServices())
                 .setPrimaryStage(primaryStage)
-                .build());
+                .build();
+        javafxApplicationResources = resources;
+        javafxApplicationResourcesHandler.get().accept(resources);
     }
 }

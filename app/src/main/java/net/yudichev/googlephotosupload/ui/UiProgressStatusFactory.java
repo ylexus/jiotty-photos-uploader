@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.ui;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
+
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;

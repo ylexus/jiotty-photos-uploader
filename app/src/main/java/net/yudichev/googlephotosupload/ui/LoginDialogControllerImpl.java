@@ -1,5 +1,7 @@
 package net.yudichev.googlephotosupload.ui;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -7,8 +9,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.web.WebView;
 import net.yudichev.googlephotosupload.core.CustomCredentialsManager;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.util.ResourceBundle;
 
 import static com.google.common.base.Preconditions.checkNotNull;

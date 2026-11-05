@@ -2,7 +2,7 @@ package net.yudichev.googlephotosupload.core;
 
 import com.google.inject.Key;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
-import net.yudichev.jiotty.common.varstore.VarStoreModule;
+import net.yudichev.jiotty.persistence.varstore.VarStoreModule;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -36,7 +36,8 @@ public final class SettingsModule extends BaseLifecycleComponentModule {
         expose(settingsRootKey);
 
         var varStoreModule = VarStoreModule.builder()
-                .setPath(literally(settingsRootPath.resolve("data.json")))
+                .withPath(literally(settingsRootPath.resolve("data.json")))
+                .withSingleUser(literally(true))
                 .build();
         installLifecycleComponentModule(varStoreModule);
         expose(varStoreModule.getExposedKey());

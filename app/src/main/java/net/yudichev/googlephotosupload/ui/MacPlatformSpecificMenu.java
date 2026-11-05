@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.ui;
 
-import de.codecentric.centerdevice.MenuToolkit;
+import de.jangassen.MenuToolkit;
+import jakarta.inject.Inject;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.control.Menu;
@@ -9,7 +10,6 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCodeCombination;
 
-import javax.inject.Inject;
 import java.util.ResourceBundle;
 
 import static com.google.common.base.Preconditions.checkNotNull;

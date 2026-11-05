@@ -2,12 +2,12 @@ package net.yudichev.googlephotosupload.core;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.immutables.value.Value;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -26,7 +26,7 @@ import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.huma
 import static net.yudichev.jiotty.common.lang.MoreThrowables.asUnchecked;
 
 final class DirectoryStructureSupplierImpl implements DirectoryStructureSupplier {
-    private static final Logger logger = LoggerFactory.getLogger(DirectoryStructureSupplierImpl.class);
+    private static final Logger logger = LogManager.getLogger(DirectoryStructureSupplierImpl.class);
 
     private final ProgressStatusFactory progressStatusFactory;
     private final PreferencesManager preferencesManager;

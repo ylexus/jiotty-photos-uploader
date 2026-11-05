@@ -1,11 +1,10 @@
 package net.yudichev.googlephotosupload.cli;
 
+import jakarta.inject.Singleton;
 import net.yudichev.googlephotosupload.core.PreferencesManager;
 import net.yudichev.googlephotosupload.core.ProgressStatusFactory;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import org.apache.commons.cli.CommandLine;
-
-import javax.inject.Singleton;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

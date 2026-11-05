@@ -1,12 +1,12 @@
 package net.yudichev.googlephotosupload.ui;
 
 import com.google.inject.assistedinject.Assisted;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.util.function.Consumer;
 
 final class DialogImpl implements Dialog {

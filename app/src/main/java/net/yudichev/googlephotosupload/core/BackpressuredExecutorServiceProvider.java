@@ -1,11 +1,11 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Provider;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -16,7 +16,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 final class BackpressuredExecutorServiceProvider extends BaseLifecycleComponent implements Provider<ExecutorService> {
-    private static final Logger logger = LoggerFactory.getLogger(BackpressuredExecutorServiceProvider.class);
+    private static final Logger logger = LogManager.getLogger(BackpressuredExecutorServiceProvider.class);
     private ThreadPoolExecutor executor;
 
     @Override

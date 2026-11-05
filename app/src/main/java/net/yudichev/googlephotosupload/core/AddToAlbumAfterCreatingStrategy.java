@@ -1,12 +1,12 @@
 package net.yudichev.googlephotosupload.core;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.async.AsyncOperationRetry;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;

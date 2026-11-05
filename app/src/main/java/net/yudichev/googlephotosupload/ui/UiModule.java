@@ -2,12 +2,12 @@ package net.yudichev.googlephotosupload.ui;
 
 import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
+import jakarta.inject.Singleton;
 import net.yudichev.googlephotosupload.core.PreferencesManager;
 import net.yudichev.googlephotosupload.core.ProgressStatus;
 import net.yudichev.googlephotosupload.core.ProgressStatusFactory;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 
-import javax.inject.Singleton;
 import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkNotNull;

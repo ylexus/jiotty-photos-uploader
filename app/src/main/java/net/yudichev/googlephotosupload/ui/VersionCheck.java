@@ -4,17 +4,17 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.reflect.TypeToken;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.PackagePrivateImmutablesStyle;
-import net.yudichev.jiotty.common.varstore.VarStore;
+import net.yudichev.jiotty.persistence.varstore.VarStore;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.immutables.value.Value.Immutable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -30,7 +30,7 @@ import static net.yudichev.jiotty.common.rest.RestClients.newClient;
 
 
 final class VersionCheck extends BaseLifecycleComponent {
-    private static final Logger logger = LoggerFactory.getLogger(VersionCheck.class);
+    private static final Logger logger = LogManager.getLogger(VersionCheck.class);
     private static final String VAR_STORE_KEY = "versionCheck";
     private static final Pattern RELEASE_VERSION_PATTERN = Pattern.compile("\\d+\\.\\d+\\.\\d+");
     private final DialogFactory dialogFactory;

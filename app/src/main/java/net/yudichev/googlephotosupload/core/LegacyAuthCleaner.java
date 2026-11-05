@@ -1,11 +1,11 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.common.io.MoreFiles;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,7 +15,7 @@ import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static net.yudichev.googlephotosupload.core.Bindings.GoogleAuthRootDir;
 
 final class LegacyAuthCleaner extends BaseLifecycleComponent {
-    private static final Logger logger = LoggerFactory.getLogger(LegacyAuthCleaner.class);
+    private static final Logger logger = LogManager.getLogger(LegacyAuthCleaner.class);
     private final Path googleAuthRootDir;
 
     @Inject

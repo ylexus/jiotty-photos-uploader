@@ -1,5 +1,7 @@
 package net.yudichev.googlephotosupload.ui;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.scene.control.*;
@@ -9,12 +11,10 @@ import javafx.util.StringConverter;
 import javafx.util.converter.DoubleStringConverter;
 import javafx.util.converter.IntegerStringConverter;
 import net.yudichev.googlephotosupload.core.*;
-import net.yudichev.jiotty.common.varstore.VarStore;
+import net.yudichev.jiotty.persistence.varstore.VarStore;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;

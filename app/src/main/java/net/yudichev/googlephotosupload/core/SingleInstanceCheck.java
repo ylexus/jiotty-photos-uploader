@@ -1,7 +1,7 @@
 package net.yudichev.googlephotosupload.core;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -12,7 +12,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
 
 public final class SingleInstanceCheck {
-    private static final Logger logger = LoggerFactory.getLogger(SingleInstanceCheck.class);
+    private static final Logger logger = LogManager.getLogger(SingleInstanceCheck.class);
     // keeps the reference to the lock so that it's not garbage collected
     @SuppressWarnings({"FieldCanBeLocal", "StaticVariableMayNotBeInitialized"})
     private static FileLock LOCK;

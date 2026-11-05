@@ -1,9 +1,9 @@
 package net.yudichev.googlephotosupload.core;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import org.apache.commons.cli.CommandLine;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 

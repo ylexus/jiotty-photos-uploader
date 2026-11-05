@@ -3,6 +3,8 @@ package net.yudichev.googlephotosupload.core;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.rpc.Code;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.async.AsyncOperationFailureHandler;
 import net.yudichev.jiotty.common.async.AsyncOperationRetry;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
@@ -11,11 +13,9 @@ import net.yudichev.jiotty.common.time.CurrentDateTimeProvider;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
 import net.yudichev.jiotty.connector.google.photos.NewMediaItem;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -50,7 +50,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     public static final int DRIVE_SPACE_MONITORING_BATCH_SIZE = 20;
 
     @SuppressWarnings("NonConstantLogger") // as designed
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final Logger logger = LogManager.getLogger(getClass());
     private final AsyncOperationRetry asyncOperationRetry;
     private final AddToAlbumStrategy addToAlbumStrategy;
     private final DriveSpaceTracker driveSpaceTracker;

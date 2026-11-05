@@ -11,8 +11,8 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import net.yudichev.jiotty.common.lang.Json;
 import net.yudichev.jiotty.connector.google.photos.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
 import java.nio.file.Files;
@@ -40,7 +40,7 @@ final class RecordingGooglePhotosClient implements GooglePhotosClient {
     private static final DateTimeFormatter FILE_DATE_FORMAT = DateTimeFormatter
             .ofPattern("yyyy_MM_dd_HH_mm_ss")
             .withZone(ZoneOffset.UTC);
-    private static final Logger logger = LoggerFactory.getLogger(RecordingGooglePhotosClient.class);
+    private static final Logger logger = LogManager.getLogger(RecordingGooglePhotosClient.class);
     private final Map<String, MediaBinary> binariesByUploadToken = new LinkedHashMap<>();
     private final Map<MediaItemContents, MediaItem> itemsByContents = new LinkedHashMap<>();
     private final Map<String, MediaItem> itemsById = new LinkedHashMap<>();

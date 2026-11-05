@@ -41,6 +41,11 @@ final class TestTimeModule extends AbstractModule {
             public Instant currentInstant() {
                 return currentInstant;
             }
+
+            @Override
+            public long nanoTime() {
+                return Duration.between(EPOCH, currentInstant).toNanos();
+            }
         });
     }
 }

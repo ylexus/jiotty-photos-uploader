@@ -1,10 +1,10 @@
 package net.yudichev.googlephotosupload.core;
 
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,7 +14,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.googlephotosupload.core.Bindings.SettingsRoot;
 
 final class LegacyLogCleaner extends BaseLifecycleComponent {
-    private static final Logger logger = LoggerFactory.getLogger(LegacyLogCleaner.class);
+    private static final Logger logger = LogManager.getLogger(LegacyLogCleaner.class);
     private final Path settingsRoot;
 
     @Inject

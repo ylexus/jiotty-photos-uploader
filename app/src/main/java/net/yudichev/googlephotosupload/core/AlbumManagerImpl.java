@@ -2,17 +2,17 @@ package net.yudichev.googlephotosupload.core;
 
 import com.google.api.gax.rpc.InvalidArgumentException;
 import com.google.common.collect.ImmutableMap;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.common.async.AsyncOperationRetry;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.CompletableFutures;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.*;
@@ -34,7 +34,7 @@ import static net.yudichev.jiotty.common.lang.CompletableFutures.toFutureOfList;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class AlbumManagerImpl extends BaseLifecycleComponent implements AlbumManager {
-    private static final Logger logger = LoggerFactory.getLogger(AlbumManagerImpl.class);
+    private static final Logger logger = LogManager.getLogger(AlbumManagerImpl.class);
 
     private final GooglePhotosClient googlePhotosClient;
     private final Provider<ExecutorService> executorServiceProvider;

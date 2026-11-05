@@ -1,13 +1,13 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.common.collect.ImmutableList;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import org.apache.commons.cli.CommandLine;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
@@ -19,7 +19,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static net.yudichev.jiotty.common.lang.CompletableFutures.logErrorOnFailure;
 
 final class IntegrationTestUploadStarter extends BaseLifecycleComponent {
-    private static final Logger logger = LoggerFactory.getLogger(IntegrationTestUploadStarter.class);
+    private static final Logger logger = LogManager.getLogger(IntegrationTestUploadStarter.class);
 
     private static final AtomicReference<Throwable> lastFailure = new AtomicReference<>();
     private static final AtomicBoolean forgetUploadStateOnShutdown = new AtomicBoolean();

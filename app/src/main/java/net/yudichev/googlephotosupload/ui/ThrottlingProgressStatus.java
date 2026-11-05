@@ -2,6 +2,7 @@ package net.yudichev.googlephotosupload.ui;
 
 import com.google.inject.BindingAnnotation;
 import com.google.inject.assistedinject.Assisted;
+import jakarta.inject.Inject;
 import net.yudichev.googlephotosupload.core.KeyedError;
 import net.yudichev.googlephotosupload.core.ProgressStatus;
 import net.yudichev.jiotty.common.async.ExecutorFactory;
@@ -9,7 +10,6 @@ import net.yudichev.jiotty.common.async.SchedulingExecutor;
 import net.yudichev.jiotty.common.lang.Closeable;
 import net.yudichev.jiotty.common.lang.throttling.ThrottlingConsumer;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;

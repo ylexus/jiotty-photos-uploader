@@ -1,6 +1,6 @@
 module net.yudichev.googlephotosupload {
     requires com.google.guice;
-    requires javax.inject;
+    requires jakarta.inject;
     requires javafx.fxml;
     requires com.google.common;
     requires jiotty.common;

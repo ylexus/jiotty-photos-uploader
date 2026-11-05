@@ -1,13 +1,13 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.common.collect.ImmutableSet;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.async.AsyncOperationRetry;
 import net.yudichev.jiotty.connector.google.drive.GoogleDriveClient;
 import net.yudichev.jiotty.connector.google.drive.GoogleDrivePath;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
@@ -22,7 +22,7 @@ import static net.yudichev.jiotty.common.lang.Locks.inLock;
 import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 
 final class DriveSpaceTrackerImpl implements DriveSpaceTracker {
-    private static final Logger logger = LoggerFactory.getLogger(DriveSpaceTrackerImpl.class);
+    private static final Logger logger = LogManager.getLogger(DriveSpaceTrackerImpl.class);
 
     private static final long CHECK_SPACE_EVERY_BYTES = 10 * 1024 * 1024; // 50 MB
     private static final ImmutableSet<String> FIELDS = ImmutableSet.of("storageQuota/limit", "storageQuota/usage");

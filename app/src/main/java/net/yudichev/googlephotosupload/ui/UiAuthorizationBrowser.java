@@ -1,14 +1,14 @@
 package net.yudichev.googlephotosupload.ui;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import javafx.stage.Stage;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.connector.google.common.AuthorizationBrowser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.util.ResourceBundle;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -16,7 +16,8 @@ import static javafx.application.Platform.runLater;
 import static javafx.stage.Modality.APPLICATION_MODAL;
 
 final class UiAuthorizationBrowser extends BaseLifecycleComponent implements AuthorizationBrowser {
-    private static final Logger logger = LoggerFactory.getLogger(UiAuthorizationBrowser.class);
+    private static final Logger logger = LogManager.getLogger(UiAuthorizationBrowser.class);
+
     static {
         System.setProperty("sun.net.http.allowRestrictedHeaders", "true");
     }

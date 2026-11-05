@@ -1,10 +1,10 @@
 package net.yudichev.googlephotosupload.cli;
 
+import jakarta.inject.Inject;
 import net.yudichev.googlephotosupload.core.Preferences;
 import net.yudichev.googlephotosupload.core.PreferencesManager;
-import net.yudichev.jiotty.common.varstore.VarStore;
+import net.yudichev.jiotty.persistence.varstore.VarStore;
 
-import javax.inject.Inject;
 import java.util.function.Function;
 
 final class PreferencesManagerImpl implements PreferencesManager {

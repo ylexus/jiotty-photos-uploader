@@ -1,5 +1,7 @@
 package net.yudichev.googlephotosupload.ui;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import javafx.event.ActionEvent;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonType;
@@ -10,8 +12,6 @@ import net.yudichev.googlephotosupload.core.AddToAlbumMethod;
 import net.yudichev.googlephotosupload.core.PreferencesManager;
 import net.yudichev.jiotty.common.app.ApplicationLifecycleControl;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.ResourceBundle;

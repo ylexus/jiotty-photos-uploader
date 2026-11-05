@@ -1,10 +1,10 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Path;

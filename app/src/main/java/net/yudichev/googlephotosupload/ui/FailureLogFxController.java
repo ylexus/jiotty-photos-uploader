@@ -1,5 +1,7 @@
 package net.yudichev.googlephotosupload.ui;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.Clipboard;
@@ -8,8 +10,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import net.yudichev.googlephotosupload.core.KeyedError;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Collection;

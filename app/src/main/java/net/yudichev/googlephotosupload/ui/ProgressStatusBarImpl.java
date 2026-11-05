@@ -1,11 +1,11 @@
 package net.yudichev.googlephotosupload.ui;
 
 import com.google.inject.assistedinject.Assisted;
+import jakarta.inject.Inject;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import net.yudichev.googlephotosupload.core.KeyedError;
 
-import javax.inject.Inject;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;

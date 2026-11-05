@@ -1,5 +1,7 @@
 package net.yudichev.googlephotosupload.ui;
 
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
@@ -8,12 +10,10 @@ import javafx.scene.text.TextFlow;
 import net.yudichev.googlephotosupload.core.Uploader;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
 import net.yudichev.jiotty.common.lang.Closeable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,7 +27,7 @@ import static net.yudichev.googlephotosupload.core.HumanReadableExceptionMessage
 
 @SuppressWarnings("ClassWithTooManyFields") // OK for a FX controller
 public final class UploadPaneControllerImpl extends BaseLifecycleComponent implements UploadPaneController {
-    private static final Logger logger = LoggerFactory.getLogger(UploadPaneControllerImpl.class);
+    private static final Logger logger = LogManager.getLogger(UploadPaneControllerImpl.class);
 
     private final Uploader uploader;
     private final Restarter restarter;

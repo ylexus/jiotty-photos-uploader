@@ -20,7 +20,7 @@ public final class CoreDependenciesModule extends BaseLifecycleComponentModule {
 
     @Override
     protected void configure() {
-        var executorModule = new ExecutorModule();
+        var executorModule = ExecutorModule.builder().build();
         installLifecycleComponentModule(executorModule);
 
         // Google Client components logically depend on this component, because executors are passed directly to the API calls

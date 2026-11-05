@@ -1,6 +1,8 @@
 package net.yudichev.googlephotosupload.ui;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
@@ -10,11 +12,9 @@ import javafx.scene.input.KeyCombination;
 import javafx.stage.Stage;
 import net.yudichev.googlephotosupload.core.UploadStateManager;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -42,7 +42,7 @@ import static net.yudichev.jiotty.common.lang.Runnables.guarded;
 
 final class Diagnostics extends BaseLifecycleComponent {
     private static final DateTimeFormatter DUMP_FILE_NAME_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
-    private static final Logger logger = LoggerFactory.getLogger(Diagnostics.class);
+    private static final Logger logger = LogManager.getLogger(Diagnostics.class);
 
     private final Provider<JavafxApplicationResources> javafxApplicationResourcesProvider;
     private final Path settingsRoot;
@@ -146,7 +146,10 @@ final class Diagnostics extends BaseLifecycleComponent {
         public void writeSeveralThreadDumpsAsync() {
             logger.info("Requested thread dumps");
             scheduledExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder().setDaemon(true).build());
-            scheduledExecutor.scheduleAtFixedRate(guarded(logger, "dump threads", this::writeThreadDump), 0, 5, SECONDS);
+            scheduledExecutor.scheduleAtFixedRate(guarded("dump threads", this::writeThreadDump, (task, e) -> logger.error("Failed to {}", task, e)),
+                    0,
+                    5,
+                    SECONDS);
         }
 
         private void writeThreadDump() {

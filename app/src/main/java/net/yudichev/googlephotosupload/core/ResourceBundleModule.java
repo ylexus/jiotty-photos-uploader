@@ -2,8 +2,8 @@ package net.yudichev.googlephotosupload.core;
 
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponentModule;
 import net.yudichev.jiotty.common.inject.ExposedKeyModule;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.List;
@@ -13,8 +13,6 @@ import java.util.ResourceBundle;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public final class ResourceBundleModule extends BaseLifecycleComponentModule implements ExposedKeyModule<ResourceBundle> {
-    private static final Logger logger = LoggerFactory.getLogger(ResourceBundleModule.class);
-
     public static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("i18n.Resources", new ResourceBundle.Control() {
         @Override
         public List<Locale> getCandidateLocales(String baseName, Locale locale) {
@@ -48,6 +46,7 @@ public final class ResourceBundleModule extends BaseLifecycleComponentModule imp
             return super.getFallbackLocale(baseName, locale);
         }
     });
+    private static final Logger logger = LogManager.getLogger(ResourceBundleModule.class);
 
     static {
         logger.debug("Using resource bundle locale {}", RESOURCE_BUNDLE.getLocale());

@@ -1,8 +1,7 @@
 package net.yudichev.googlephotosupload.core;
 
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-
-import javax.inject.Inject;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

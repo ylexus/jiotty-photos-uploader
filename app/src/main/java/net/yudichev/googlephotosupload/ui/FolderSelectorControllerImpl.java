@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.ui;
 
+import jakarta.inject.Inject;
 import javafx.application.Platform;
 import javafx.beans.value.ObservableValueBase;
 import javafx.collections.ListChangeListener;
@@ -16,9 +17,8 @@ import javafx.stage.DirectoryChooser;
 import javafx.util.Callback;
 import net.yudichev.googlephotosupload.core.Uploader;
 import net.yudichev.jiotty.common.inject.BaseLifecycleComponent;
-import net.yudichev.jiotty.common.varstore.VarStore;
+import net.yudichev.jiotty.persistence.varstore.VarStore;
 
-import javax.inject.Inject;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;

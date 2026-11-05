@@ -1,5 +1,6 @@
 package net.yudichev.googlephotosupload.ui;
 
+import jakarta.inject.Inject;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
@@ -10,7 +11,6 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.text.Text;
 import net.yudichev.googlephotosupload.core.KeyedError;
 
-import javax.inject.Inject;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Optional;

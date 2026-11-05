@@ -1,13 +1,13 @@
 package net.yudichev.googlephotosupload.ui;
 
 import com.sandec.mdfx.MarkdownView;
+import jakarta.inject.Inject;
+import jakarta.inject.Provider;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
 
-import javax.inject.Inject;
-import javax.inject.Provider;
 import java.util.List;
 import java.util.ResourceBundle;
 

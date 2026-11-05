@@ -7,19 +7,20 @@ import java.nio.file.Paths
 
 plugins {
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.10'
-    id 'org.beryx.runtime' version '1.12.5'
-    id "name.remal.check-updates" version "1.3.1"
-
-    // TODO no good alternative to maven duplicate finder
-    // id "net.idlestate.gradle-duplicate-classes-check" version "1.0.2"
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+    id 'org.beryx.runtime' version '2.0.1'
 }
 
 version = readEnvOrDefault 'VERSION', '0.DEV'
-sourceCompatibility = '16'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
 
 ext {
-    javafxVersion = '16'
+    javafxVersion = '25.0.5'
     windowsVmPath = "$System.env.HOME/Virtual Machines.localized/Windows 10 x64.vmwarevm/Windows 10 x64.vmx"
     linuxVmPath = "$System.env.HOME/Virtual Machines.localized/OpenSUSE.vmwarevm/OpenSUSE.vmx"
     fullPackageOutputDir = "$buildDir/fullpackage"
@@ -33,107 +34,124 @@ repositories {
     }
     mavenCentral()
     maven {
-        url "https://maven.google.com"
+        url = "https://maven.google.com"
     }
     maven {
-        url "https://oss.sonatype.org/content/repositories/snapshots"
+        url = "https://central.sonatype.com/repository/maven-snapshots/"
         mavenContent {
             snapshotsOnly()
         }
+        content {
+            includeGroup "net.yudichev.jiotty"
+        }
     }
     maven {
-        url "https://sandec.jfrog.io/artifactory/repo"
+        // mdfx is not published to Maven Central
+        url = "https://sandec.jfrog.io/artifactory/repo"
+        content {
+            includeGroup "com.sandec"
+        }
+    }
+}
+
+configurations {
+    // The H2 version that wrote upload state databases before 2.1.0; bundled as a resource and loaded in an isolated class loader only to migrate
+    // such a database to the current H2 file format (see LegacyH2Database).
+    legacyH2 {
+        transitive = false
+    }
+    // Mockito's inline mock maker needs its agent attached at JVM start, as dynamic agent loading is going away (JEP 451).
+    mockitoAgent {
+        transitive = false
     }
 }
 
 dependencies {
-    ext.orgJunitJupiterVersion = '5.7.2'
-    ext.orgMockitoVersion = '3.10.0'
-    ext.netYudichevJiottyVersion = '2.3.0'
-    ext.orgApacheLoggingLog4jVersion = '2.14.1'
+    def jiottyVersion = '3.8.0-SNAPSHOT'
+    def jiottyBom = platform("net.yudichev.jiotty:jiotty-bom:$jiottyVersion")
 
-    implementation platform("net.yudichev.jiotty:jiotty-bom:$netYudichevJiottyVersion")
-    annotationProcessor platform("net.yudichev.jiotty:jiotty-bom:$netYudichevJiottyVersion")
-    testAnnotationProcessor platform("net.yudichev.jiotty:jiotty-bom:$netYudichevJiottyVersion")
-    implementation enforcedPlatform(project(':platform'))
+    implementation jiottyBom
+    annotationProcessor jiottyBom
+    testAnnotationProcessor jiottyBom
+    testImplementation platform('org.junit:junit-bom:6.1.3')
 
     annotationProcessor "org.immutables:value"
     testAnnotationProcessor "org.immutables:value"
+    compileOnly "org.immutables:value"
+    testCompileOnly "org.immutables:value"
 
-    implementation('net.yudichev.jiotty:jiotty-common') {
-        exclude group: 'com.sparkjava'
-    }
+    implementation 'net.yudichev.jiotty:jiotty-common'
     implementation('net.yudichev.jiotty:jiotty-connector-google-photos') {
-        exclude group: 'com.sparkjava'
         exclude group: 'com.squareup.okhttp3'
     }
     implementation('net.yudichev.jiotty:jiotty-connector-google-drive') {
-        exclude group: 'com.sparkjava'
         exclude group: 'com.squareup.okhttp3'
     }
-    implementation "org.slf4j:slf4j-api"
+    implementation 'net.yudichev.jiotty:jiotty-persistence-varstore'
     implementation "org.apache.logging.log4j:log4j-api"
     implementation "com.google.inject:guice"
-    implementation "javax.inject:javax.inject"
+    implementation "jakarta.inject:jakarta.inject-api"
     implementation "com.google.guava:guava"
     implementation "com.google.code.findbugs:jsr305"
     implementation "com.google.errorprone:error_prone_annotations"
     implementation "com.fasterxml.jackson.core:jackson-annotations"
-    implementation "com.google.api:gax"
-    implementation "commons-cli:commons-cli:1.4"
     implementation "com.fasterxml.jackson.core:jackson-databind"
-    implementation "de.codecentric.centerdevice:centerdevice-nsmenufx:2.1.7"
+    implementation "com.google.api:gax"
     implementation "io.grpc:grpc-api"
-    implementation "com.sandec:mdfx:0.2.3"
-    implementation 'com.h2database:h2:1.4.200'
+    implementation "commons-cli:commons-cli:1.11.0"
+    implementation "de.jangassen:nsmenufx:3.1.0"
+    implementation "com.sandec:mdfx:0.2.12"
+    implementation 'com.h2database:h2:2.5.252'
 
-    compileOnly "org.immutables:value"
-    runtimeOnly "org.apache.logging.log4j:log4j-slf4j-impl:$orgApacheLoggingLog4jVersion"
-    runtimeOnly "org.apache.logging.log4j:log4j-jcl:$orgApacheLoggingLog4jVersion"
+    legacyH2 'com.h2database:h2:1.4.200'
+
+    runtimeOnly "org.apache.logging.log4j:log4j-core"
+    runtimeOnly "org.apache.logging.log4j:log4j-slf4j2-impl"
+    runtimeOnly "org.apache.logging.log4j:log4j-jcl"
     runtimeOnly "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml"
-    runtimeOnly "com.lmax:disruptor:3.4.4"
 
-    testImplementation "net.yudichev.jiotty:jiotty-common"
-    testImplementation "org.junit.jupiter:junit-jupiter-api:$orgJunitJupiterVersion"
-    testImplementation "org.junit.jupiter:junit-jupiter-params:$orgJunitJupiterVersion"
     testImplementation "net.yudichev.jiotty:jiotty-connector-google-drive::tests"
-    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$orgJunitJupiterVersion"
-    testImplementation "org.mockito:mockito-junit-jupiter:$orgMockitoVersion"
-    testImplementation "org.hamcrest:hamcrest:2.2"
-    testCompileOnly "org.immutables:value"
+    testImplementation "org.junit.jupiter:junit-jupiter-api"
+    testImplementation "org.junit.jupiter:junit-jupiter-params"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    testImplementation "org.mockito:mockito-junit-jupiter:5.24.0"
+    testImplementation "org.hamcrest:hamcrest:3.0"
+    mockitoAgent "org.mockito:mockito-core:5.24.0"
 }
 
-test {
+tasks.named('processResources', ProcessResources) {
+    from(configurations.legacyH2) {
+        into 'net/yudichev/googlephotosupload/core'
+        rename { 'legacy-h2.jar' }
+    }
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
     systemProperty "user.language", "en"
+    jvmArgs "-javaagent:${configurations.mockitoAgent.asPath}"
 }
 
 String clientSecretPath = readEnvOrNull('CLIENT_SECRET_PATH')
-task copyClientSecretIfDefined {
-    onlyIf { clientSecretPath }
-    doLast {
-        if (!file(clientSecretPath).exists()) {
-            throw new InvalidUserDataException("Client secret file not found: $clientSecretPath")
-        }
-        processResources {
-            from clientSecretPath
-            rename(file(clientSecretPath).name, 'client_secret.json')
+tasks.named('processResources', ProcessResources) {
+    if (clientSecretPath) {
+        from(clientSecretPath) {
+            rename { 'client_secret.json' }
         }
     }
-    inputs.files clientSecretPath ?: []
 }
-processResources.dependsOn 'copyClientSecretIfDefined'
 
-task requireClientSecret {
+tasks.register('requireClientSecret') {
     doLast {
         if (!clientSecretPath) {
             throw new InvalidUserDataException("CLIENT_SECRET_PATH system property or environment variable missing - " +
                     "should exist and contain a path to Google OAuth client secret file")
         }
+        if (!file(clientSecretPath).exists()) {
+            throw new InvalidUserDataException("Client secret file not found: $clientSecretPath")
+        }
     }
-}
-
-test {
-    useJUnitPlatform()
 }
 
 jar {
@@ -144,14 +162,13 @@ jar {
 }
 
 application {
-    mainClassName = 'net.yudichev.googlephotosupload.Main'
+    mainClass = 'net.yudichev.googlephotosupload.Main'
     applicationName = 'Jiotty Photos Uploader'
-    applicationDefaultJvmArgs = ['--add-exports', 'javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED',
-                                 '--add-opens', 'javafx.graphics/com.sun.javafx.tk.quantum=ALL-UNNAMED',
-                                 '--add-opens', 'javafx.controls/javafx.scene.control=ALL-UNNAMED',
-                                 '--add-exports', 'javafx.graphics/com.sun.glass.ui=ALL-UNNAMED',
-                                 '--add-exports', 'javafx.controls/com.sun.javafx.scene.control=ALL-UNNAMED',
-                                 '--add-exports', 'javafx.graphics/com.sun.javafx.menu=ALL-UNNAMED']
+    applicationDefaultJvmArgs = [
+            // HypnosResizePolicy calls TableColumnBase.doSetWidth
+            '--add-opens', 'javafx.controls/javafx.scene.control=ALL-UNNAMED',
+            // JavaFX and JNA (used by NSMenuFX) load native libraries; without this Java 25 warns, and later versions will refuse
+            '--enable-native-access=javafx.graphics,javafx.media,javafx.web,ALL-UNNAMED']
 }
 
 javafx {
@@ -171,8 +188,8 @@ runtime {
     modules = [
             // required by httpclient, missed by default when building and running on Windows
             'java.naming',
-            // required to establish an SSL connection
-            'jdk.crypto.ec',
+            // the Google OAuth login callback server (LocalServerReceiver) is built on the JDK's HTTP server
+            'jdk.httpserver',
             // required for a heap dump via JMX
             'jdk.management'
     ]
@@ -182,12 +199,16 @@ runtime {
     jpackage {
         imageName = 'Jiotty Photos Uploader'
         installerName = 'Jiotty Photos Uploader'
-        jvmArgs = ['-Dprism.verbose=true', '-Djavafx.verbose=true']
+        jvmArgs = application.applicationDefaultJvmArgs + ['-Dprism.verbose=true', '-Djavafx.verbose=true']
         if (OperatingSystem.current().macOsX) {
             installerType = 'dmg'
-            imageOptions = ['--verbose', /*'--mac-sign', '--mac-signing-key-user-name', 'Alexey Yudichev (J4R72JZQ9P)'*/]
+            imageOptions = ['--verbose',
+                            '--mac-package-identifier', 'net.yudichev.googlephotosupload.ui',
+                            '--mac-app-category', 'photography',
+                            '--copyright', 'Copyright (C) 2020-2026 Alexey Yudichev']
             installerOptions = ['--verbose']
-            resourceDir = file("$buildDir/packaging-resources/macOS/out")
+            // icons only: jpackage generates Info.plist from the options above
+            resourceDir = file("$projectDir/src/main/packaging-resources/macOS/out")
         }
         if (OperatingSystem.current().windows) {
             installerType = 'msi'
@@ -212,17 +233,8 @@ jpackage.dependsOn 'check'
 jpackage.dependsOn 'requireClientSecret'
 
 task copyPackagingResources(type: Copy) {
-    onlyIf { !OperatingSystem.current().linux }
-    if (OperatingSystem.current().macOsX) {
-        from("$projectDir/src/main/packaging-resources/macOS/out") {
-            exclude '**/*.plist'
-        }
-        from("$projectDir/src/main/packaging-resources/macOS/out") {
-            include '**/*.plist'
-            filter(ReplaceTokens, tokens: [version: version])
-        }
-        into "$buildDir/packaging-resources/macOS/out"
-    } else if (OperatingSystem.current().windows) {
+    onlyIf { OperatingSystem.current().windows }
+    if (OperatingSystem.current().windows) {
         from("$projectDir/src/main/packaging-resources/windows/out") {
             include '**/*.xml'
             filter(ReplaceTokens, tokens: [version: version, appName: 'Jiotty Photos Uploader'])
@@ -250,10 +262,10 @@ def finalFileNameWindowsMsix = "Windows10-jiotty-photos-uploader-${version}.msix
 task prepareOsSpecificPackaging {
     onlyIf { OperatingSystem.current().windows }
     doLast {
-        ant.move file: "$buildDir/jpackage/$applicationName-${version}.msi",
+        ant.move file: "$buildDir/jpackage/${application.applicationName}-${version}.msi",
                 tofile: "$fullPackageOutputDir/$finalFileNameWindowsMsi"
     }
-    inputs.files "$buildDir/jpackage/$applicationName-${version}.msi"
+    inputs.files "$buildDir/jpackage/${application.applicationName}-${version}.msi"
     outputs.files "$fullPackageOutputDir/$finalFileNameWindowsMsi"
 }
 
@@ -275,10 +287,10 @@ task renameDistribution() {
     onlyIf { !OperatingSystem.current().windows }
     if (OperatingSystem.current().macOsX) {
         doLast {
-            ant.move file: "$buildDir/jpackage/$applicationName-${version}.dmg",
+            ant.move file: "$buildDir/jpackage/${application.applicationName}-${version}.dmg",
                     tofile: "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
         }
-        inputs.files "$buildDir/jpackage/$applicationName-${version}.dmg"
+        inputs.files "$buildDir/jpackage/${application.applicationName}-${version}.dmg"
         outputs.files "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
     }
 

@@ -10,10 +10,10 @@ import net.yudichev.googlephotosupload.core.RecordingGooglePhotosClient.Album;
 import net.yudichev.googlephotosupload.core.RecordingGooglePhotosClient.MediaItem;
 import net.yudichev.jiotty.common.app.Application;
 import net.yudichev.jiotty.common.lang.Json;
-import net.yudichev.jiotty.common.varstore.VarStore;
 import net.yudichev.jiotty.connector.google.drive.InMemoryGoogleDriveClient;
 import net.yudichev.jiotty.connector.google.photos.GoogleMediaItem;
 import net.yudichev.jiotty.connector.google.photos.GooglePhotosAlbum;
+import net.yudichev.jiotty.persistence.varstore.VarStore;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.hamcrest.CustomTypeSafeMatcher;
@@ -201,7 +201,7 @@ final class IntegrationTest {
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 equalTo("Uploading media files"),
                 contains(KeyedError.of(invalidMediaItemPath.toAbsolutePath(),
-                        "INVALID_ARGUMENT: uploadMediaData"))));
+                        "StatusRuntime: INVALID_ARGUMENT: uploadMediaData"))));
         doVerifyGoogleClientState();
 
         var uploadedMediaItemIdByAbsolutePath = readState();
@@ -572,7 +572,7 @@ final class IntegrationTest {
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 equalTo("Uploading media files"),
                 contains(KeyedError.of(photoInPreExistingAlbumPath.toAbsolutePath(),
-                        "INVALID_ARGUMENT: No permission to add media items to this album"))));
+                        "StatusRuntime: INVALID_ARGUMENT: No permission to add media items to this album"))));
 
         assertThat(googlePhotosClient.getAllItems(), hasItem(
                 allOf(itemForFile(photoInPreExistingAlbumPath), itemWithNoAlbum())

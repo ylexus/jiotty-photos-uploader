@@ -3,11 +3,11 @@ package net.yudichev.googlephotosupload.core;
 import com.google.common.collect.ImmutableList;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import jakarta.inject.Inject;
 import org.apache.http.client.HttpResponseException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
 import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
@@ -17,7 +17,7 @@ import static com.google.common.base.Throwables.getCausalChain;
 import static net.yudichev.jiotty.common.lang.HumanReadableExceptionMessage.humanReadableMessage;
 
 final class FatalUserCorrectableRemoteApiExceptionHandlerImpl implements FatalUserCorrectableRemoteApiExceptionHandler {
-    private static final Logger logger = LoggerFactory.getLogger(FatalUserCorrectableRemoteApiExceptionHandlerImpl.class);
+    private static final Logger logger = LogManager.getLogger(FatalUserCorrectableRemoteApiExceptionHandlerImpl.class);
     private final List<Function<Throwable, Optional<String>>> exceptionToRetryableErrorMsg;
 
     @Inject

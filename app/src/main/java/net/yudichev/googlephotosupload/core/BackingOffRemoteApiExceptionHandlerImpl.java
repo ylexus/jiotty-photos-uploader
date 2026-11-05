@@ -4,14 +4,14 @@ import com.google.api.gax.rpc.*;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.inject.BindingAnnotation;
+import jakarta.inject.Inject;
 import net.yudichev.jiotty.common.async.AsyncOperationFailureHandler;
 import net.yudichev.jiotty.common.lang.backoff.BackOff;
 import net.yudichev.jiotty.common.lang.backoff.ExponentialBackOff;
 import net.yudichev.jiotty.common.lang.backoff.SynchronizedBackOff;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import javax.inject.Inject;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.time.Duration;
@@ -26,7 +26,7 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 import static net.yudichev.jiotty.common.lang.backoff.BackOff.STOP;
 
 final class BackingOffRemoteApiExceptionHandlerImpl implements AsyncOperationFailureHandler {
-    private static final Logger logger = LoggerFactory.getLogger(BackingOffRemoteApiExceptionHandlerImpl.class);
+    private static final Logger logger = LogManager.getLogger(BackingOffRemoteApiExceptionHandlerImpl.class);
     // Unfortunately, the "retryable" flag in most, if not all, all these exceptions is not reliable; some of these
     // are marked as not retryable while in reality they are
     private final BiMap<Class<? extends Throwable>, BackOff> backoffByRetryableExceptionType;
