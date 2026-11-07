@@ -13,6 +13,9 @@ out/**
 /.idea/misc.xml
 /.idea/vcs.xml
 /.idea/$PRODUCT_WORKSPACE_FILE$
+/.idea/git_toolbox_prj.xml
+/.idea/GrepConsole.xml
+/.idea/git_toolbox_blame.xml
 /app/.gradle/
 /app/build/
 /app/src/main/generated/
