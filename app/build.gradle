@@ -299,6 +299,8 @@ def msixFileName = "Windows-jiotty-photos-uploader-${version}.msix"
 tasks.register('stageMsix', Sync) {
     description = 'Lays out the app image with the MSIX manifest and logos, ready for makeappx'
     dependsOn 'jpackageImage'
+    // the MSI task (jpackage) writes to the same directory as the app image
+    mustRunAfter 'jpackage'
     from(layout.buildDirectory.dir("jpackage/${application.applicationName}"))
     from("$projectDir/src/main/packaging-resources/windows/msix") {
         exclude 'AppxManifest.xml'
