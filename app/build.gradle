@@ -56,7 +56,7 @@ configurations {
 }
 
 dependencies {
-    def jiottyVersion = '3.8.0'
+    def jiottyVersion = '3.8.1'
     def jiottyBom = platform("net.yudichev.jiotty:jiotty-bom:$jiottyVersion")
 
     implementation jiottyBom
@@ -179,7 +179,7 @@ runtime {
     modules = [
             // required by httpclient, missed by default when building and running on Windows
             'java.naming',
-            // the Google OAuth login callback server (LocalServerReceiver) is built on the JDK's HTTP server
+            // the Google OAuth login callback server (jiotty's LocalCallbackReceiver) is built on the JDK's HTTP server
             'jdk.httpserver',
             // required for a heap dump via JMX
             'jdk.management'
