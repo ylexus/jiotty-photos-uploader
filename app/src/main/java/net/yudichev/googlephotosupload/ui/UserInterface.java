@@ -45,7 +45,7 @@ final class UserInterface extends BaseLifecycleComponent implements Provider<Jav
         if (javafxApplicationResources == null) {
             var initLatch = new CountDownLatch(1);
             javafxApplicationResourcesHandler.accept(javafxApplicationResources -> {
-                Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+                Thread.currentThread().setUncaughtExceptionHandler((_, throwable) -> {
                     logger.error("Unhandled exception", throwable);
                     applicationLifecycleControl.initiateShutdown();
                 });
@@ -58,7 +58,8 @@ final class UserInterface extends BaseLifecycleComponent implements Provider<Jav
                 primaryStage.setScene(new Scene(parent));
                 primaryStage.setTitle(APP_TITLE);
                 primaryStage.show();
-                primaryStage.setOnHiding(e -> applicationLifecycleControl.initiateShutdown());
+                primaryStage.setOnHiding(_ -> applicationLifecycleControl.initiateShutdown());
+                UiMain.setJavafxStopHandler(applicationLifecycleControl::initiateShutdown);
                 initLatch.countDown();
             });
             logger.info("Waiting for 30 seconds until UI is initialized");

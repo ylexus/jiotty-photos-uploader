@@ -1,6 +1,7 @@
 package net.yudichev.googlephotosupload.core;
 
 import com.google.common.collect.ImmutableSet;
+import net.yudichev.jiotty.common.lang.Json;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -12,6 +13,13 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 class PreferencesTest {
+    @Test
+    void readsPreferencesSavedWithTheRemovedAddToAlbumStrategy() {
+        var preferences = Json.parse("{\"addToAlbumStrategy\": \"AFTER_CREATING_ITEMS_SORTED\", \"albumDelimiter\": \" / \"}", Preferences.class);
+
+        assertThat(preferences.albumDelimiter(), is(" / "));
+    }
+
     @SuppressWarnings("deprecation")
     @Test
     void migrationOfPatterns() {

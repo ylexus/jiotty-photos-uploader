@@ -6,7 +6,6 @@ import org.apache.commons.cli.CommandLine;
 import java.util.function.Function;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static net.yudichev.googlephotosupload.core.AddToAlbumMethod.AFTER_CREATING_ITEMS_SORTED;
 
 public final class IntegrationTestUploadStarterModule extends BaseLifecycleComponentModule {
     private static Preferences preferences;
@@ -24,7 +23,7 @@ public final class IntegrationTestUploadStarterModule extends BaseLifecycleCompo
     }
 
     public static void setDefaultPreferences() {
-        preferences = Preferences.builder().setAddToAlbumStrategy(AFTER_CREATING_ITEMS_SORTED).build();
+        preferences = Preferences.builder().build();
     }
 
     public static void modifyPreferences(Function<Preferences, Preferences> modifier) {

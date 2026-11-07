@@ -28,7 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.net.URL;
+import java.net.URI;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,6 +36,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -47,9 +48,10 @@ import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.nio.file.FileVisitResult.CONTINUE;
 import static java.time.Instant.EPOCH;
 import static java.time.Instant.now;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.yudichev.googlephotosupload.cli.CliOptions.OPTIONS;
-import static net.yudichev.googlephotosupload.core.AddToAlbumMethod.AFTER_CREATING_ITEMS_SORTED;
+import static net.yudichev.googlephotosupload.core.GooglePhotosUploaderImpl.DRIVE_SPACE_MONITORING_BATCH_SIZE;
 import static net.yudichev.googlephotosupload.core.GooglePhotosUploaderImpl.GOOGLE_PHOTOS_API_BATCH_SIZE;
 import static net.yudichev.googlephotosupload.core.IntegrationTestUploadStarter.getLastFailure;
 import static net.yudichev.googlephotosupload.core.IntegrationTestUploadStarterModule.modifyPreferences;
@@ -105,12 +107,14 @@ final class IntegrationTest {
 
         getLastFailure().ifPresent(Assertions::fail);
 
-        var spaceUsedProgress = progressStatusFactory.getStatusByName().get("Google Account Space Used (currently unreliable!)");
+        var spaceUsedProgress = progressStatusFactory.getStatusByName().get("Google Account Space Used (may lag behind recent uploads)");
         assertThat(spaceUsedProgress.getTotalCount(), optionalWithValue(equalTo(1024)));
         assertThat(spaceUsedProgress.getDescription(), not(endsWith(" 0 B")));
     }
 
+    // the application is stopped explicitly
     @Test
+    @SuppressWarnings("resource")
     void skipsUploadIfSavedStateShowsAlreadyUploaded() throws Exception {
         createStandardTestFiles();
 
@@ -119,7 +123,7 @@ final class IntegrationTest {
                 .build();
         app.start();
         try {
-            var varStore = app.getInjector().getInstance(VarStore.class);
+            var varStore = requireNonNull(app.getInjector()).getInstance(VarStore.class);
             var outerAlbumPhotoAbsolutePath = outerAlbumPhoto.toAbsolutePath().toString();
             varStore.saveValue("photosUploader", UploadState.builder()
                     .putUploadedMediaItemIdByAbsolutePath(outerAlbumPhotoAbsolutePath,
@@ -232,7 +236,7 @@ final class IntegrationTest {
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
-                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                contains(KeyedError.of(URI.create("http://photos.com/outer-album1").toURL(),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
         doVerifyGoogleClientItemState();
         assertThat(googlePhotosClient.getAllAlbums(), containsInAnyOrder(
@@ -276,10 +280,10 @@ final class IntegrationTest {
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
                 containsInAnyOrder(
-                        KeyedError.of(new URL("http://photos.com/outer-album1"),
+                        KeyedError.of(URI.create("http://photos.com/outer-album1").toURL(),
                                 "Album 'outer-album' may now be empty and will require manual deletion " +
                                         "(Google Photos API does not allow me to delete it for you)"),
-                        KeyedError.of(new URL("http://photos.com/outer-album2"),
+                        KeyedError.of(URI.create("http://photos.com/outer-album2").toURL(),
                                 "Album 'outer-album' may now be empty and will require manual deletion " +
                                         "(Google Photos API does not allow me to delete it for you)"))));
 
@@ -312,7 +316,7 @@ final class IntegrationTest {
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
-                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                contains(KeyedError.of(URI.create("http://photos.com/outer-album1").toURL(),
                         "Album 'outer-album' may now be empty and will require manual deletion " +
                                 "(Google Photos API does not allow me to delete it for you)"))));
 
@@ -336,7 +340,7 @@ final class IntegrationTest {
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
-                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                contains(KeyedError.of(URI.create("http://photos.com/outer-album1").toURL(),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
 
         var outerAlbumItems = preExistingAlbum1.getMediaItems().get(30, SECONDS);
@@ -363,7 +367,7 @@ final class IntegrationTest {
         getLastFailure().ifPresent(Assertions::fail);
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
-                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                contains(KeyedError.of(URI.create("http://photos.com/outer-album1").toURL(),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
 
         var outerAlbumItems = preExistingAlbum1.getMediaItems().get(30, SECONDS);
@@ -414,7 +418,7 @@ final class IntegrationTest {
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName().keySet(), hasSize(1));
         assertThat(progressStatusFactory.getRecordedErrorsByProgressName(), hasEntry(
                 containsString("Reconciling"),
-                contains(KeyedError.of(new URL("http://photos.com/outer-album1"),
+                contains(KeyedError.of(URI.create("http://photos.com/outer-album1").toURL(),
                         "Album 'outer-album' may now be empty and will require manual deletion (Google Photos API does not allow me to delete it for you)"))));
         assertThat(googlePhotosClient.getAllItems(), containsInAnyOrder(
                 allOf(itemForFile(rootPhoto), itemWithNoAlbum()),
@@ -619,36 +623,30 @@ final class IntegrationTest {
     }
 
     @Test
-    void inSortedModeAddsItemsToAlbumInTheOrderOfTheirCreationTime() throws Exception {
-        modifyPreferences(preferences -> preferences.withAddToAlbumStrategy(AFTER_CREATING_ITEMS_SORTED));
-
-        var albumWithSortedFilesPath = uploadRoot.resolve("albumWithSortedFiles").toAbsolutePath();
-        Files.createDirectory(albumWithSortedFilesPath);
-        var file3 = albumWithSortedFilesPath.resolve("file3.jpg");
-        var file1 = albumWithSortedFilesPath.resolve("file1.jpg");
-        var file2 = albumWithSortedFilesPath.resolve("file2.jpg");
-
-        writeMediaFile(file3, MediaItemContents.of(Instant.ofEpochMilli(3), uniqueData()));
-        writeMediaFile(file1, MediaItemContents.of(Instant.ofEpochMilli(1), uniqueData()));
-        writeMediaFile(file2, MediaItemContents.of(Instant.ofEpochMilli(2), uniqueData()));
+    void withDriveSpaceCheckUploadsEachFileOnceInFileNameOrder() throws Exception {
+        modifyPreferences(preferences -> preferences.withFailOnDriveSpace(FailOnDriveSpaceOption.builder().setMaxUsedPercentage(99.0).build()));
+        var albumPath = uploadRoot.resolve("album").toAbsolutePath();
+        Files.createDirectory(albumPath);
+        // more than two drive space monitoring batches, written in reverse name order
+        var fileCount = 2 * DRIVE_SPACE_MONITORING_BATCH_SIZE + 5;
+        var filePaths = IntStream.range(0, fileCount)
+                .mapToObj(i -> albumPath.resolve(String.format("file%03d.jpg", i)))
+                .collect(toImmutableList());
+        filePaths.reverse().forEach(path -> asUnchecked(() -> writeMediaFile(path)));
 
         doExecuteUpload();
 
         getLastFailure().ifPresent(Assertions::fail);
         assertNoRecordedProgressErrors();
-
-        var album = (Album) googlePhotosClient.getAllAlbums().stream()
-                .filter(createdGooglePhotosAlbum -> "albumWithSortedFiles".equals(createdGooglePhotosAlbum.getTitle()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Could not find album 'albumWithSortedFiles'"));
-        assertThat(album.getItems(), contains(
-                itemForFile(file1),
-                itemForFile(file2),
-                itemForFile(file3)));
+        assertThat(progressStatusFactory.getStatusByName().get("Uploading media files").getSuccessCount(), is(fileCount));
+        var album = (Album) getOnlyElement(googlePhotosClient.getAllAlbums());
+        List<Matcher<? super RecordingGooglePhotosClient.MediaItem>> itemsInFileNameOrder =
+                filePaths.stream().map(IntegrationTest::itemForFile).collect(toImmutableList());
+        assertThat(album.getItems(), contains(itemsInFileNameOrder));
     }
 
     @Test
-    void inRegularModeSortsByFilename() throws Exception {
+    void addsItemsToAlbumInFileNameOrder() throws Exception {
         var albumWithSortedFilesPath = uploadRoot.resolve("albumWithSortedFiles").toAbsolutePath();
         Files.createDirectory(albumWithSortedFilesPath);
         var file3 = albumWithSortedFilesPath.resolve("file3.jpg");
@@ -794,7 +792,7 @@ final class IntegrationTest {
 
         doExecuteUpload();
         assertThat(getLastFailure().map(Throwables::getRootCause), optionalWithValue(equalTo(rootCause)));
-        var spaceUsedProgress = progressStatusFactory.getStatusByName().get("Google Account Space Used (currently unreliable!)");
+        var spaceUsedProgress = progressStatusFactory.getStatusByName().get("Google Account Space Used (may lag behind recent uploads)");
         assertThat(spaceUsedProgress.getClosedWithSuccess(), is(optionalWithValue(equalTo(false))));
     }
 
@@ -862,13 +860,15 @@ final class IntegrationTest {
         return dataGenerator++;
     }
 
+    // the application is stopped explicitly
+    @SuppressWarnings("resource")
     private Map<String, ItemState> readState() throws InterruptedException {
         var app = Application.builder()
                 .addModule(() -> new SettingsModule(settingsRootPath))
                 .build();
         app.start();
         try {
-            return app.getInjector().getInstance(UploadStateManager.class).loadUploadedMediaItemIdByAbsolutePath();
+            return requireNonNull(app.getInjector()).getInstance(UploadStateManager.class).loadUploadedMediaItemIdByAbsolutePath();
         } finally {
             app.stop();
         }
@@ -936,6 +936,8 @@ final class IntegrationTest {
                         itemWithDescription(optionalWithValue(equalTo(innerAlbumPhoto.getFileName().toString()))))));
     }
 
+    // the application is stopped explicitly
+    @SuppressWarnings("resource")
     private void doExecuteUpload(String... additionalCommandLineOptions) throws InterruptedException {
         CommandLineParser parser = new DefaultParser();
         var commandLine = getAsUnchecked(() -> parser.parse(OPTIONS, ImmutableList.<String>builder()

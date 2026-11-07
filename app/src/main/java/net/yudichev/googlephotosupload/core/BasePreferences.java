@@ -60,6 +60,8 @@ abstract class BasePreferences {
      * @deprecated {@link #scanExclusionGlobs()} is the newer alternative
      */
     @Deprecated
+    // still read from preferences saved by older versions
+    @SuppressWarnings("DeprecatedIsStillUsed")
     public abstract Optional<Set<String>> scanExclusionPatterns();
 
     @Value.Default
@@ -71,8 +73,6 @@ abstract class BasePreferences {
     public Set<String> scanInclusionGlobs() {
         return ImmutableSet.of();
     }
-
-    public abstract Optional<AddToAlbumMethod> addToAlbumStrategy();
 
     @Value.Default
     public String albumDelimiter() {

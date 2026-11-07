@@ -77,17 +77,12 @@ final class UiModule extends BaseLifecycleComponentModule {
         var uploadPaneControllerKey = registerLifecycleComponent(UploadPaneControllerImpl.class);
         bind(UploadPaneController.class).to(uploadPaneControllerKey);
 
-        bind(UploaderStrategyChoicePanelControllerImpl.class).in(Singleton.class);
-        bind(UploaderStrategyChoicePanelController.class).toProvider(UploaderStrategyChoicePanelControllerProvider.class).in(Singleton.class);
-
         // needed for FxmlLoader to find them
         expose(MainScreenControllerImpl.class);
         expose(LoginDialogControllerImpl.class);
         expose(FolderSelectorControllerImpl.class);
         expose(PreferencesDialogController.class);
         expose(SupportPaneController.class);
-        expose(UploaderStrategyChoicePanelController.class);
-        expose(UploaderStrategyChoicePanelControllerImpl.class);
         expose(uploadPaneControllerKey);
     }
 }

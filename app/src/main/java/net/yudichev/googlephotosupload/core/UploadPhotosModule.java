@@ -41,15 +41,6 @@ public final class UploadPhotosModule extends BaseLifecycleComponentModule imple
 
         bind(AlbumManager.class).to(registerLifecycleComponent(AlbumManagerImpl.class));
 
-        bind(AddToAlbumStrategy.class)
-                .annotatedWith(SelectingAddToAlbumStrategy.WhileCreatingItems.class)
-                .to(AddToAlbumWhileCreatingStrategy.class)
-                .in(Singleton.class);
-        bind(AddToAlbumStrategy.class)
-                .annotatedWith(SelectingAddToAlbumStrategy.AfterCreatingItemsSorted.class)
-                .to(AddToAlbumAfterCreatingStrategy.class)
-                .in(Singleton.class);
-        bind(AddToAlbumStrategy.class).to(SelectingAddToAlbumStrategy.class);
         bind(DriveSpaceTracker.class).to(DriveSpaceTrackerImpl.class).in(Singleton.class);
         bind(GooglePhotosUploader.class).to(registerLifecycleComponent(GooglePhotosUploaderImpl.class));
 

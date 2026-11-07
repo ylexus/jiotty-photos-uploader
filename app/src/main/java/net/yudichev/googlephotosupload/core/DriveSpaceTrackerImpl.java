@@ -24,7 +24,7 @@ import static net.yudichev.jiotty.common.lang.MoreThrowables.getAsUnchecked;
 final class DriveSpaceTrackerImpl implements DriveSpaceTracker {
     private static final Logger logger = LogManager.getLogger(DriveSpaceTrackerImpl.class);
 
-    private static final long CHECK_SPACE_EVERY_BYTES = 10 * 1024 * 1024; // 50 MB
+    private static final long CHECK_SPACE_EVERY_BYTES = 10 * 1024 * 1024; // 10 MB
     private static final ImmutableSet<String> FIELDS = ImmutableSet.of("storageQuota/limit", "storageQuota/usage");
     private static final byte[] NO_DATA = new byte[0];
     private final ProgressStatusFactory progressStatusFactory;
@@ -118,7 +118,7 @@ final class DriveSpaceTrackerImpl implements DriveSpaceTracker {
                         () -> googleDriveClient.getAppDataFolder(directExecutor()).createFile("file.txt", "text/plain", NO_DATA)
                                 .thenCompose(GoogleDrivePath::delete)
                                 .thenCompose(ignored -> googleDriveClient.aboutDrive(FIELDS, directExecutor())),
-                        value -> {})
+                        _ -> {})
                 .thenAccept(about -> {
                     limit = Optional.ofNullable(about.getStorageQuota().getLimit());
                     var usage = about.getStorageQuota().getUsage();
@@ -142,12 +142,16 @@ final class DriveSpaceTrackerImpl implements DriveSpaceTracker {
                 },
                 () -> {
                     //noinspection OptionalGetWithoutIsPresent mutually exclusive
-                    if (toMegabytes(usage / limitBytes * 100) >= option.maxUsedPercentage().get()) {
+                    if (maxUsedPercentageReached(usage, limitBytes, option.maxUsedPercentage().get())) {
                         throw new IllegalStateException(String
                                 .format(resourceBundle.getString("driveSpaceMaxUsedPercentageViolated"), option.maxUsedPercentage().get()));
                     }
                 }
         )));
+    }
+
+    static boolean maxUsedPercentageReached(long usageBytes, long limitBytes, double maxUsedPercentage) {
+        return usageBytes * 100.0 / limitBytes >= maxUsedPercentage;
     }
 
     private static String formatSize(long bytes) {

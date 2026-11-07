@@ -17,6 +17,7 @@ import java.util.function.Consumer;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.Objects.requireNonNull;
 import static net.yudichev.googlephotosupload.core.BuildVersion.buildVersion;
 import static net.yudichev.googlephotosupload.core.ResourceBundleModule.RESOURCE_BUNDLE;
 import static net.yudichev.googlephotosupload.core.SingleInstanceCheck.otherInstanceRunning;
@@ -33,8 +34,12 @@ public final class UiMain extends javafx.application.Application {
             "user.language", "user.country", "file.encoding", "sun.jnu.encoding", "stdout.encoding");
     /// Set once JavaFX has started. JavaFX can only be launched once per JVM, while every application restart (e.g. on Stop or logout) creates a new
     /// injector, and so a new [UserInterface] that asks for the resources again; later requests get the existing ones.
-    private static volatile JavafxApplicationResources javafxApplicationResources;
+    private static final AtomicReference<JavafxApplicationResources> javafxApplicationResources = new AtomicReference<>();
+    /// What to do if JavaFX is stopped other than by the application shutting down (e.g. Quit from the Dock): set by the current [UserInterface].
+    private static volatile Runnable javafxStopHandler = () -> {};
 
+    // run() stops the application before it returns
+    @SuppressWarnings("resource")
     public static void main(String[] args) {
         var settingsModule = new SettingsModule();
         if (otherInstanceRunning(settingsModule.getSettingsRootPath())) {
@@ -51,7 +56,7 @@ public final class UiMain extends javafx.application.Application {
         Application.builder()
                 .addModule(() -> settingsModule)
                 .addModule(() -> new UiModule(handler -> {
-                    var existingResources = javafxApplicationResources;
+                    var existingResources = javafxApplicationResources.get();
                     if (existingResources == null) {
                         checkState(javafxApplicationResourcesHandler.compareAndSet(null, handler), "can only launch once");
                         new Thread(() -> launch(args)).start();
@@ -70,19 +75,30 @@ public final class UiMain extends javafx.application.Application {
                 .addModule(UiAuthorizationBrowserModule::new)
                 .build()
                 .run();
+        javafxStopHandler = () -> {};
         Platform.exit();
+    }
+
+    static void setJavafxStopHandler(Runnable handler) {
+        javafxStopHandler = handler;
+    }
+
+    @Override
+    public void stop() {
+        logger.info("JavaFX is stopping");
+        javafxStopHandler.run();
     }
 
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setMinWidth(500);
         primaryStage.setMinHeight(500);
-        primaryStage.getIcons().add(new Image(getClass().getResource("/Icon1024.png").toString()));
+        primaryStage.getIcons().add(new Image(requireNonNull(getClass().getResource("/Icon1024.png")).toString()));
         var resources = JavafxApplicationResources.builder()
                 .setHostServices(getHostServices())
                 .setPrimaryStage(primaryStage)
                 .build();
-        javafxApplicationResources = resources;
+        javafxApplicationResources.set(resources);
         javafxApplicationResourcesHandler.get().accept(resources);
     }
 }

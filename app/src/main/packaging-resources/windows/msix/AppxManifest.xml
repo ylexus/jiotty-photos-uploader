@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MSIX manifest for the Microsoft Store. Tokens are replaced by the packageMsix task; identityName, publisher and publisherDisplayName must match
+     the values Partner Center shows under Product management > Product identity. -->
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+         IgnorableNamespaces="uap rescap">
+    <Identity Name="@identityName@"
+              Publisher="@publisher@"
+              Version="@version@.0"
+              ProcessorArchitecture="x64"/>
+    <Properties>
+        <DisplayName>Jiotty Photos Uploader</DisplayName>
+        <PublisherDisplayName>@publisherDisplayName@</PublisherDisplayName>
+        <Logo>Assets\StoreLogo.png</Logo>
+    </Properties>
+    <Dependencies>
+        <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0"/>
+    </Dependencies>
+    <Resources>
+        <Resource Language="en-us"/>
+    </Resources>
+    <Applications>
+        <Application Id="JiottyPhotosUploader"
+                     Executable="Jiotty Photos Uploader.exe"
+                     EntryPoint="Windows.FullTrustApplication">
+            <uap:VisualElements DisplayName="Jiotty Photos Uploader"
+                                Description="Uploads photos and videos to Google Photos, creating albums from your folder structure"
+                                BackgroundColor="transparent"
+                                Square150x150Logo="Assets\Square150x150Logo.png"
+                                Square44x44Logo="Assets\Square44x44Logo.png"/>
+        </Application>
+    </Applications>
+    <Capabilities>
+        <Capability Name="internetClient"/>
+        <!-- a regular desktop (Win32) application: the bundled Java runtime runs outside the app container -->
+        <rescap:Capability Name="runFullTrust"/>
+    </Capabilities>
+</Package>

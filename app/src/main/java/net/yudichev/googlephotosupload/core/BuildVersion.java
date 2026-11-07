@@ -1,11 +1,9 @@
 package net.yudichev.googlephotosupload.core;
 
-import java.util.Optional;
+import static java.util.Objects.requireNonNullElse;
 
 public final class BuildVersion {
-    private static final String IMPLEMENTATION_VERSION = Optional
-            .ofNullable(BuildVersion.class.getPackage().getImplementationVersion())
-            .orElse("0.DEV");
+    private static final String IMPLEMENTATION_VERSION = requireNonNullElse(BuildVersion.class.getPackage().getImplementationVersion(), "0.DEV");
 
     BuildVersion() {
     }

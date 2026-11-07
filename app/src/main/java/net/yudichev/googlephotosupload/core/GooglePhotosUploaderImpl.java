@@ -52,7 +52,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
     @SuppressWarnings("NonConstantLogger") // as designed
     private final Logger logger = LogManager.getLogger(getClass());
     private final AsyncOperationRetry asyncOperationRetry;
-    private final AddToAlbumStrategy addToAlbumStrategy;
     private final DriveSpaceTracker driveSpaceTracker;
     private final ResourceBundle resourceBundle;
     private final FatalUserCorrectableRemoteApiExceptionHandler fatalUserCorrectableHandler;
@@ -77,7 +76,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                              UploadStateManager uploadStateManager,
                              CurrentDateTimeProvider currentDateTimeProvider,
                              AsyncOperationRetry asyncOperationRetry,
-                             AddToAlbumStrategy addToAlbumStrategy,
                              DriveSpaceTracker driveSpaceTracker,
                              ResourceBundle resourceBundle) {
         this.executorServiceProvider = checkNotNull(executorServiceProvider);
@@ -87,7 +85,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         this.uploadStateManager = checkNotNull(uploadStateManager);
         this.currentDateTimeProvider = checkNotNull(currentDateTimeProvider);
         this.asyncOperationRetry = checkNotNull(asyncOperationRetry);
-        this.addToAlbumStrategy = checkNotNull(addToAlbumStrategy);
         this.driveSpaceTracker = checkNotNull(driveSpaceTracker);
         this.resourceBundle = checkNotNull(resourceBundle);
     }
@@ -105,28 +102,26 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                     var sortedPaths = paths.stream()
                             .sorted(comparing(path -> path.getFileName().toString()))
                             .collect(toList());
-                    Function<List<Path>, CompletableFuture<Void>> uploader = partition -> {
-                        var createMediaDataResultsFuture = partition.stream()
-                                .map(path -> createMediaData(path, fileProgressStatus)
-                                        .thenApply(itemState -> {
-                                            itemState.toFailure().ifPresentOrElse(
-                                                    error -> fileProgressStatus.addFailure(KeyedError.of(path, error)),
-                                                    fileProgressStatus::incrementSuccess);
-                                            return PathState.of(path, itemState);
-                                        }))
-                                .collect(toFutureOfList());
-                        return addToAlbumStrategy.addToAlbum(
-                                createMediaDataResultsFuture,
-                                googlePhotosAlbum,
-                                fileProgressStatus,
-                                directoryProgressStatus,
-                                (albumId, pathStates) -> createMediaItems(albumId, fileProgressStatus, pathStates),
-                                this::getItemState);
-                    };
+                    // Items are added to the album in the same call that creates them: the API only lets an app add its own items to an
+                    // album afterwards, and an item that the user already has in their library is returned as their existing item
+                    var albumId = googlePhotosAlbum.map(GooglePhotosAlbum::getId);
+                    Function<List<Path>, CompletableFuture<Void>> uploader = partition -> partition.stream()
+                            .map(path -> createMediaData(path, fileProgressStatus)
+                                    .thenApply(itemState -> {
+                                        itemState.toFailure().ifPresentOrElse(
+                                                error -> fileProgressStatus.addFailure(KeyedError.of(path, error)),
+                                                fileProgressStatus::incrementSuccess);
+                                        return PathState.of(path, itemState);
+                                    }))
+                            .collect(toFutureOfList())
+                            .thenCompose(pathStates -> Lists.partition(pathStates, GOOGLE_PHOTOS_API_BATCH_SIZE).stream()
+                                    .map(batch -> createMediaItems(albumId, fileProgressStatus, batch))
+                                    .collect(toFutureOfList()))
+                            .thenApply(_ -> null);
                     return driveSpaceTracker.validationEnabled() ?
                             Lists.partition(sortedPaths, DRIVE_SPACE_MONITORING_BATCH_SIZE).stream()
-                                    .collect(toFutureOfListChaining(partition -> uploader.apply(files)))
-                                    .<Void>thenApply(list -> null) :
+                                    .collect(toFutureOfListChaining(uploader))
+                                    .<Void>thenApply(_ -> null) :
                             uploader.apply(sortedPaths);
                 });
     }
@@ -163,12 +158,6 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
         memoryBarrier = true;
     }
 
-    private ItemState getItemState(Path path) {
-        var itemState = uploadedItemStateByPath.get(path).getNow(null);
-        checkState(itemState != null, "item state future must be completed");
-        return itemState;
-    }
-
     /**
      * @return list of items that were successfully created, which may be less in size than the specified
      * {@code createMediaDataResults}
@@ -190,7 +179,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
 
         List<NewMediaItem> pendingNewMediaItems = pendingPathStates.stream()
                 .map(pathState -> NewMediaItem.builder()
-                        .setUploadToken(pathState.state().toSuccess().get().uploadState().get().token())
+                        .setUploadToken(pathState.state().toSuccess().orElseThrow().uploadState().orElseThrow().token())
                         .setFileName(pathState.path().getFileName().toString())
                         .build())
                 .collect(toImmutableList());
@@ -258,7 +247,7 @@ final class GooglePhotosUploaderImpl extends BaseLifecycleComponent implements G
                                                 }
                                                 return uploadTokenNotExpired(file, uploadMediaItemState);
                                             })
-                                            .map(uploadMediaItemState -> {
+                                            .map(_ -> {
                                                 logger.info("Media data already uploaded, skipping: {}", file);
                                                 return completedFuture(itemState);
                                             })

@@ -21,6 +21,7 @@ final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
     private final ResourceBundle resourceBundle;
     private MenuItem preferencesMenuItem;
     private MenuItem aboutMenuItem;
+    private MenuItem quitMenuItem;
 
     @Inject
     MacPlatformSpecificMenu(ResourceBundle resourceBundle) {
@@ -34,6 +35,8 @@ final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
         preferencesMenuItem.setAccelerator(new KeyCodeCombination(COMMA, META_DOWN));
 
         var tk = MenuToolkit.toolkit(resourceBundle.getLocale());
+        // keeps NSMenuFX's localised label and Cmd+Q, but its action (Platform.exit()) would stop JavaFX behind the application's back
+        quitMenuItem = tk.createQuitMenuItem(APP_TITLE);
         tk.setApplicationMenu(new Menu("Apple",
                 null,
                 aboutMenuItem,
@@ -44,12 +47,12 @@ final class MacPlatformSpecificMenu implements PlatformSpecificMenu {
                 tk.createHideOthersMenuItem(),
                 tk.createUnhideAllMenuItem(),
                 new SeparatorMenuItem(),
-                tk.createQuitMenuItem(APP_TITLE)));
+                quitMenuItem));
     }
 
     @Override
     public void setOnExitAction(EventHandler<ActionEvent> onExitEventHandler) {
-        // no dedicated exit menu items on Mac
+        quitMenuItem.setOnAction(onExitEventHandler);
     }
 
     @Override

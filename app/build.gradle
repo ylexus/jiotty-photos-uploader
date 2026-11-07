@@ -1,9 +1,5 @@
 import org.apache.tools.ant.filters.ReplaceTokens
-import org.gradle.internal.jvm.Jvm
 import org.gradle.internal.os.OperatingSystem
-
-import java.nio.file.Files
-import java.nio.file.Paths
 
 plugins {
     id 'application'
@@ -16,34 +12,27 @@ version = readEnvOrDefault 'VERSION', '0.DEV'
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
+        // Liberica "Full" bundles JavaFX as modules, which jlink puts into the packaged runtime (see checkToolchainHasJavaFx)
+        vendor = JvmVendorSpec.BELLSOFT
     }
 }
 
 ext {
     javafxVersion = '25.0.5'
-    windowsVmPath = "$System.env.HOME/Virtual Machines.localized/Windows 10 x64.vmwarevm/Windows 10 x64.vmx"
-    linuxVmPath = "$System.env.HOME/Virtual Machines.localized/OpenSUSE.vmwarevm/OpenSUSE.vmx"
-    fullPackageOutputDir = "$buildDir/fullpackage"
 }
 
+// macOS signing: MAC_SIGNING_IDENTITY is a codesign identity, e.g. "Developer ID Application: <name> (<team ID>)"; without it the app is
+// built unsigned, fine for local testing. MAC_NOTARY_PROFILE names the notarytool keychain profile used by notarizeDmg.
+String macSigningIdentity = readEnvOrNull('MAC_SIGNING_IDENTITY')
+String macNotaryProfile = readEnvOrNull('MAC_NOTARY_PROFILE')
+// optional: a keychain other than the default search list that holds the signing identity (e.g. a temporary one on CI)
+String macSigningKeychain = readEnvOrNull('MAC_SIGNING_KEYCHAIN')
+File macEntitlements = file('src/main/packaging-resources/macOS/entitlements.plist')
+
 repositories {
-    mavenLocal() {
-        content {
-            includeGroup "net.yudichev.jiotty"
-        }
-    }
     mavenCentral()
     maven {
         url = "https://maven.google.com"
-    }
-    maven {
-        url = "https://central.sonatype.com/repository/maven-snapshots/"
-        mavenContent {
-            snapshotsOnly()
-        }
-        content {
-            includeGroup "net.yudichev.jiotty"
-        }
     }
     maven {
         // mdfx is not published to Maven Central
@@ -67,7 +56,7 @@ configurations {
 }
 
 dependencies {
-    def jiottyVersion = '3.8.0-SNAPSHOT'
+    def jiottyVersion = '3.8.0'
     def jiottyBom = platform("net.yudichev.jiotty:jiotty-bom:$jiottyVersion")
 
     implementation jiottyBom
@@ -103,6 +92,8 @@ dependencies {
     implementation "com.sandec:mdfx:0.2.12"
     implementation 'com.h2database:h2:2.5.252'
 
+    // only used to read upload state databases written by app versions up to 2.1.0, then migrate them
+    //noinspection VulnerableLibrariesLocal
     legacyH2 'com.h2database:h2:1.4.200'
 
     runtimeOnly "org.apache.logging.log4j:log4j-core"
@@ -206,6 +197,14 @@ runtime {
                             '--mac-package-identifier', 'net.yudichev.googlephotosupload.ui',
                             '--mac-app-category', 'photography',
                             '--copyright', 'Copyright (C) 2020-2026 Alexey Yudichev']
+            if (macSigningIdentity) {
+                imageOptions += ['--mac-sign',
+                                 '--mac-app-image-sign-identity', macSigningIdentity,
+                                 '--mac-entitlements', macEntitlements.absolutePath]
+                if (macSigningKeychain) {
+                    imageOptions += ['--mac-signing-keychain', macSigningKeychain]
+                }
+            }
             installerOptions = ['--verbose']
             // icons only: jpackage generates Info.plist from the options above
             resourceDir = file("$projectDir/src/main/packaging-resources/macOS/out")
@@ -225,249 +224,180 @@ runtime {
             installerName = 'JiottyPhotosUploader' // cannot have spaces in Debian resource names
             imageOptions = ['--verbose']
             resourceDir = file("$projectDir/src/main/packaging-resources/linux")
+            //noinspection GroovyResultOfAssignmentUsed the closure's result is not used
             installerOptions = ['--verbose', '--linux-shortcut', '--linux-package-name', 'jiotty-photos-uploader']
         }
     }
 }
-jpackage.dependsOn 'check'
-jpackage.dependsOn 'requireClientSecret'
-
-task copyPackagingResources(type: Copy) {
-    onlyIf { OperatingSystem.current().windows }
-    if (OperatingSystem.current().windows) {
-        from("$projectDir/src/main/packaging-resources/windows/out") {
-            include '**/*.xml'
-            filter(ReplaceTokens, tokens: [version: version, appName: 'Jiotty Photos Uploader'])
-        }
-        into "$buildDir/packaging-resources/windows/out"
-    } else {
-        // workaround for "task.destinationDir must not be null"
-        destinationDir buildDir
-    }
+tasks.named('jpackage') {
+    dependsOn 'check', 'requireClientSecret'
 }
-jpackage.dependsOn 'copyPackagingResources'
 
-task ensureVersionReleaseReady {
+// The packaged app takes JavaFX from the runtime image, whose native libraries are then plain files (simple to sign), so the JavaFX jars, which only
+// `run` and the tests need, are left out of the package. That only works if the JDK that jlink uses has the JavaFX modules.
+tasks.register('checkToolchainHasJavaFx') {
+    def toolchainHome = javaToolchains.launcherFor(java.toolchain).map { it.metadata.installationPath.asFile }
     doLast {
-        if (!(version ==~ /\d+\.\d+\.\d+/)) {
-            throw new InvalidUserDataException("version must be set to X.Y.Z format but was: ${version}; add -DVERSION=X.Y.Z to the command line and try again")
+        def javaFxJmod = new File(toolchainHome.get(), 'jmods/javafx.graphics.jmod')
+        if (!javaFxJmod.exists()) {
+            throw new GradleException("The Java toolchain at ${toolchainHome.get()} has no JavaFX modules ($javaFxJmod is missing); " +
+                    "packaging needs a JDK that bundles JavaFX, e.g. Liberica Full")
         }
     }
 }
+tasks.named('jre') { dependsOn 'checkToolchainHasJavaFx' }
+tasks.named('installDist', Sync) {
+    exclude 'javafx-*.jar'
+}
 
-def finalFileNameWindowsMsi = "Windows7-jiotty-photos-uploader-${version}.msi"
-// TODO this file name is duplicated
-def finalFileNameWindowsMsix = "Windows10-jiotty-photos-uploader-${version}.msix"
-
-task prepareOsSpecificPackaging {
-    onlyIf { OperatingSystem.current().windows }
+tasks.register('ensureVersionReleaseReady') {
+    def releaseVersion = version
     doLast {
-        ant.move file: "$buildDir/jpackage/${application.applicationName}-${version}.msi",
-                tofile: "$fullPackageOutputDir/$finalFileNameWindowsMsi"
-    }
-    inputs.files "$buildDir/jpackage/${application.applicationName}-${version}.msi"
-    outputs.files "$fullPackageOutputDir/$finalFileNameWindowsMsi"
-}
-
-task runOsSpecificPackaging(type: Exec) {
-    onlyIf { !OperatingSystem.current().linux }
-    if (OperatingSystem.current().macOsX) {
-        commandLine "$rootDir/macos_notarize_dmg.sh", 'Jiotty Photos Uploader', "$version", Jvm.current().getJavaHome()
-        inputs.dir "${buildDir}/jpackage/Jiotty Photos Uploader.app"
-        inputs.file "${buildDir}/jpackage/Jiotty Photos Uploader-${version}.dmg"
-        outputs.dir "${buildDir}/jpackage/Jiotty Photos Uploader.app"
-        outputs.file "${buildDir}/jpackage/Jiotty Photos Uploader-${version}.dmg"
-    }
-    if (OperatingSystem.current().windows) {
-        commandLine "$rootDir/windows-create-appx.bat", "$version"
-    }
-}
-
-task renameDistribution() {
-    onlyIf { !OperatingSystem.current().windows }
-    if (OperatingSystem.current().macOsX) {
-        doLast {
-            ant.move file: "$buildDir/jpackage/${application.applicationName}-${version}.dmg",
-                    tofile: "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
+        if (!(releaseVersion ==~ /\d+\.\d+\.\d+/)) {
+            throw new InvalidUserDataException("version must be set to X.Y.Z format but was: ${releaseVersion}; " +
+                    "add -DVERSION=X.Y.Z to the command line and try again")
         }
-        inputs.files "$buildDir/jpackage/${application.applicationName}-${version}.dmg"
-        outputs.files "$fullPackageOutputDir/macOS-jiotty-photos-uploader-${version}.dmg"
-    }
-
-    if (OperatingSystem.current().linux) {
-        doLast {
-            ant.move(todir: fullPackageOutputDir) {
-                fileset dir: "$buildDir/jpackage", includes: '*.deb,*.rpm'
-                mapper type: "glob", from: "*", to: "Linux-*"
-            }
-        }
-        inputs.dir "$buildDir/jpackage"
-        outputs.dir fullPackageOutputDir
     }
 }
 
-/**
- * Package the app on the current platform.
- */
-task fullpackage {
+// --- macOS: sign (when MAC_SIGNING_IDENTITY is set), then notarize the DMG (fullpackage only, needs MAC_NOTARY_PROFILE) ---
+
+tasks.register('signJarNativeLibraries', Exec) {
+    description = 'Signs the macOS native libraries inside the jars that go into the app bundle, which jpackage does not reach'
+    onlyIf { OperatingSystem.current().macOsX && macSigningIdentity }
+    dependsOn 'installDist'
+    def libDir = tasks.named('installDist', Sync).map { new File(it.destinationDir, 'lib') }
+    commandLine 'bash', file('src/main/packaging-resources/macOS/sign-jar-natives.sh').absolutePath
+    argumentProviders.add({ [libDir.get().absolutePath, macSigningIdentity ?: '', macEntitlements.absolutePath] } as CommandLineArgumentProvider)
+    environment 'MAC_SIGNING_KEYCHAIN', macSigningKeychain ?: ''
+}
+tasks.named('jpackageImage') { dependsOn 'signJarNativeLibraries' }
+
+def macArch = System.getProperty('os.arch') == 'aarch64' ? 'arm64' : 'x64'
+def macDmgFileName = "macOS-${macArch}-jiotty-photos-uploader-${version}.dmg"
+
+tasks.register('notarizeDmg', Exec) {
+    description = 'Signs and notarizes the DMG, and staples the notarization ticket to it'
+    onlyIf { OperatingSystem.current().macOsX }
+    dependsOn 'jpackage'
     doFirst {
-        mkdir fullPackageOutputDir
-    }
-
-    dependsOn ensureVersionReleaseReady
-
-    dependsOn jpackage
-    jpackage.mustRunAfter 'ensureVersionReleaseReady'
-
-    dependsOn prepareOsSpecificPackaging
-    prepareOsSpecificPackaging.mustRunAfter 'jpackage'
-
-    dependsOn runOsSpecificPackaging
-    runOsSpecificPackaging.mustRunAfter 'prepareOsSpecificPackaging'
-
-    dependsOn renameDistribution
-    renameDistribution.mustRunAfter 'runOsSpecificPackaging'
-}
-
-int vmrun(GString vmPath, String usernamePropertyName, String pwdPropertyName, String command, List<String> args = [], ignoreExitCode = false) {
-    def vmUser = readEnvOrFail usernamePropertyName
-    def vmPassword = readEnvOrFail pwdPropertyName
-    def argsFull = ['vmrun', '-T', 'ws', '-gu', vmUser, '-gp', vmPassword, command, vmPath] + args
-    return exec {
-        commandLine argsFull
-        ignoreExitValue ignoreExitCode
-    }.exitValue
-}
-
-int vmrunWindows(String command, List<String> args = [], ignoreExitCode = false) {
-    vmrun windowsVmPath, 'VMRUN_WIN_USER', 'VMRUN_WIN_PWD', command, args, ignoreExitCode
-}
-
-task runRemoteWindowsBuild(dependsOn: requireClientSecret) {
-    doLast {
-        def remoteCloneDir = "C:\\java\\jiotty-photos-uploader"
-        vmrunWindows 'start'
-        def tmpClientSecretGuestPath = 'C:\\java\\clientSecret.json'
-        vmrunWindows 'CopyFileFromHostToGuest', [clientSecretPath, tmpClientSecretGuestPath]
-        mkdir "$buildDir/jpackage"
-        def pullAndBuildExitCode = vmrunWindows 'runProgramInGuest', ['-interactive', '-activeWindow', "$remoteCloneDir\\pull_and_build.bat", "$version"], true
-        vmrunWindows 'deleteFileInGuest', [tmpClientSecretGuestPath]
-        def buildLogGuestPath = "$buildDir/pull_and_build.windows.log"
-        vmrunWindows 'CopyFileFromGuestToHost', ["$remoteCloneDir\\pull_and_build.log", buildLogGuestPath], true
-        def remoteLogFile = Paths.get(buildLogGuestPath)
-        if (pullAndBuildExitCode != 0) {
-            if (Files.exists(remoteLogFile)) {
-                println Files.readString(remoteLogFile)
-            }
-            throw new GradleScriptException("VM build execution failed, see errors above", null)
+        if (!macSigningIdentity || !macNotaryProfile) {
+            throw new InvalidUserDataException('A release DMG must be signed and notarized: set MAC_SIGNING_IDENTITY (e.g. ' +
+                    '"Developer ID Application: <name> (<team ID>)") and MAC_NOTARY_PROFILE (a notarytool keychain profile name)')
         }
-        mkdir fullPackageOutputDir
-        vmrunWindows 'CopyFileFromGuestToHost',
-                ["$remoteCloneDir\\app\\build\\fullpackage\\$finalFileNameWindowsMsi", "$fullPackageOutputDir/$finalFileNameWindowsMsi"]
-        vmrunWindows 'CopyFileFromGuestToHost',
-                ["$remoteCloneDir\\app\\build\\fullpackage\\$finalFileNameWindowsMsix", "$fullPackageOutputDir/$finalFileNameWindowsMsix"]
-        vmrunWindows 'suspend'
     }
+    def dmgFile = layout.buildDirectory.file("jpackage/${application.applicationName}-${version}.dmg")
+    commandLine 'bash', file('src/main/packaging-resources/macOS/notarize-dmg.sh').absolutePath
+    argumentProviders.add({ [dmgFile.get().asFile.absolutePath, macSigningIdentity ?: '', macNotaryProfile ?: ''] } as CommandLineArgumentProvider)
 }
 
-int vmrunLinux(String command, List<String> args = [], ignoreExitCode = false) {
-    vmrun linuxVmPath, 'VMRUN_LINUX_USER', 'VMRUN_LINUX_PWD', command, args, ignoreExitCode
+// --- Windows: MSI from jpackage; MSIX, for the Microsoft Store, from the same app image ---
+
+def msiFileName = "Windows-jiotty-photos-uploader-${version}.msi"
+def msixFileName = "Windows-jiotty-photos-uploader-${version}.msix"
+
+tasks.register('stageMsix', Sync) {
+    description = 'Lays out the app image with the MSIX manifest and logos, ready for makeappx'
+    dependsOn 'jpackageImage'
+    from(layout.buildDirectory.dir("jpackage/${application.applicationName}"))
+    from("$projectDir/src/main/packaging-resources/windows/msix") {
+        exclude 'AppxManifest.xml'
+    }
+    from("$projectDir/src/main/packaging-resources/windows/msix") {
+        include 'AppxManifest.xml'
+        filter(ReplaceTokens, tokens: [
+                version             : version.toString(),
+                // placeholders for local builds; the Store build passes the values from Partner Center's Product identity page
+                identityName        : readEnvOrDefault('MSIX_IDENTITY_NAME', 'JiottyPhotosUploader.Dev'),
+                publisher           : readEnvOrDefault('MSIX_PUBLISHER', 'CN=Alexey Yudichev'),
+                publisherDisplayName: readEnvOrDefault('MSIX_PUBLISHER_DISPLAY_NAME', 'Alexey Yudichev')])
+    }
+    into layout.buildDirectory.dir('msix')
 }
 
-task runRemoteLinuxBuild(dependsOn: requireClientSecret) {
-    doLast {
-        def vmUser = readEnvOrFail 'VMRUN_LINUX_USER'
-        def remoteCloneDir = "/home/$vmUser/java/jiotty-photos-uploader"
-        vmrunLinux 'start'
-        def tmpClientSecretGuestPath = "/home/$vmUser/java/clientSecret.json"
-        vmrunLinux 'CopyFileFromHostToGuest', [clientSecretPath, tmpClientSecretGuestPath]
-        mkdir "$buildDir/jpackage"
-        vmrunLinux 'runScriptInGuest', ['/bin/bash', "chmod +x $remoteCloneDir/pull_and_build.sh"]
-        def pullAndBuildExitCode = vmrunLinux 'runProgramInGuest', ['-interactive', '-activeWindow', "$remoteCloneDir/pull_and_build.sh", "$version"], true
-        vmrunLinux 'deleteFileInGuest', [tmpClientSecretGuestPath]
-        def buildLogPath = "$buildDir/pull_and_build.linux.log"
-        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/pull_and_build.log", buildLogPath], true
-        def remoteLogFile = Paths.get(buildLogPath)
-        if (pullAndBuildExitCode != 0) {
-            if (Files.exists(remoteLogFile)) {
-                println Files.readString(remoteLogFile)
-            }
-            throw new GradleScriptException("VM build execution failed, see errors above", null)
+tasks.register('packageMsix', Exec) {
+    description = 'Packs the MSIX with makeappx from the Windows SDK; the package is unsigned, as the Microsoft Store signs it'
+    onlyIf { OperatingSystem.current().windows }
+    dependsOn 'stageMsix'
+    def stagingDir = layout.buildDirectory.dir('msix')
+    def msixFile = layout.buildDirectory.file("fullpackage/$msixFileName")
+    outputs.file msixFile
+    doFirst {
+        msixFile.get().asFile.parentFile.mkdirs()
+        it.executable findMakeAppx()
+    }
+    args 'pack', '/o', '/d', stagingDir.get().asFile.absolutePath, '/p', msixFile.get().asFile.absolutePath
+}
+
+static String findMakeAppx() {
+    def kitsBin = new File(System.getenv('ProgramFiles(x86)') ?: 'C:\\Program Files (x86)', 'Windows Kits\\10\\bin')
+    def candidates = (kitsBin.listFiles() ?: [] as File[])
+            .findAll { it.name ==~ /10\.[\d.]+/ }
+            .sort { left, right -> compareVersions(right.name, left.name) }
+            .collect { new File(it, 'x64\\makeappx.exe') }
+            .findAll { it.exists() }
+    if (candidates.isEmpty()) {
+        throw new GradleException("makeappx.exe not found under $kitsBin; install the Windows SDK")
+    }
+    candidates.first().absolutePath
+}
+
+static int compareVersions(String left, String right) {
+    def leftParts = left.tokenize('.')*.toInteger()
+    def rightParts = right.tokenize('.')*.toInteger()
+    for (int index = 0; index < Math.min(leftParts.size(), rightParts.size()); index++) {
+        if (leftParts[index] != rightParts[index]) {
+            return leftParts[index] <=> rightParts[index]
         }
-        mkdir fullPackageOutputDir
-        def finalFileNameLinuxDeb = "Linux-jiotty-photos-uploader_$version-1_amd64.deb"
-        def finalFileNameLinuxRpm = "Linux-jiotty-photos-uploader-$version-1.x86_64.rpm"
-        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/app/build/fullpackage/$finalFileNameLinuxDeb", "$fullPackageOutputDir/$finalFileNameLinuxDeb"]
-        vmrunLinux 'CopyFileFromGuestToHost', ["$remoteCloneDir/app/build/fullpackage/$finalFileNameLinuxRpm", "$fullPackageOutputDir/$finalFileNameLinuxRpm"]
-        vmrunLinux 'suspend'
     }
+    leftParts.size() <=> rightParts.size()
 }
 
-def finalRpiFileNameLinuxDeb = "Linux-jiotty-photos-uploader_$version-1_armhf.deb"
-task runRemoteRpiBuild(dependsOn: requireClientSecret) {
-    doLast {
-        def remoteCloneDir = '/home/pi/java/jiotty-photos-uploader'
-        def tmpClientSecretGuestPath = "/home/pi/java/clientSecret.json"
-        def rpiHost = readEnvOrFail 'RPI_HOST'
-        exec { commandLine 'scp', clientSecretPath, "pi@$rpiHost:$tmpClientSecretGuestPath" }
-        mkdir "$buildDir/jpackage"
-        def pullAndBuildExitCode = exec {
-            commandLine 'ssh', "pi@$rpiHost", "chmod +x $remoteCloneDir/pull_and_build.sh && $remoteCloneDir/pull_and_build.sh $version"
-            ignoreExitValue true
-        }.exitValue
-        exec { commandLine 'ssh', "pi@$rpiHost", "rm $tmpClientSecretGuestPath" }
-        def buildLogPath = "$buildDir/pull_and_build.rpi.log"
-        exec {
-            commandLine 'scp', "pi@$rpiHost:$remoteCloneDir/pull_and_build.log", buildLogPath
-            ignoreExitValue true
-        }
-        def remoteLogFile = Paths.get(buildLogPath)
-        if (pullAndBuildExitCode != 0) {
-            if (Files.exists(remoteLogFile)) {
-                println Files.readString(remoteLogFile)
-            }
-            throw new GradleScriptException("RPi build execution failed, see errors above", null)
-        }
-        mkdir fullPackageOutputDir
-
-        exec { commandLine 'scp', "pi@$rpiHost:$remoteCloneDir/app/build/fullpackage/$finalRpiFileNameLinuxDeb", "$fullPackageOutputDir/$finalRpiFileNameLinuxDeb" }
-    }
-    outputs.file "$fullPackageOutputDir/$finalRpiFileNameLinuxDeb"
-}
-
-def hyperpackageDestDirStr = readEnvOrNull('HYPERPACKAGE_DESTINATION_DIR')
-def destinationVersionPath = hyperpackageDestDirStr ? Paths.get(hyperpackageDestDirStr).resolve(version) : null
-task moveFinalArtifactsToDeploymentDir() {
-    doLast {
-        mkdir destinationVersionPath
-        ant.move file: fullPackageOutputDir,
-                tofile: destinationVersionPath
-    }
-    inputs.dir fullPackageOutputDir
-    outputs.dir destinationVersionPath
-}
 /**
- * Package the app on all platforms.
+ * Packages the app for release on the current platform into build/fullpackage: on macOS a signed and notarized DMG, on Windows an MSI and an MSIX
+ * (on Linux, not currently released, a deb and an rpm).
  */
-task hyperpackage {
-    dependsOn fullpackage
-    dependsOn runRemoteWindowsBuild
-    dependsOn runRemoteLinuxBuild
-    dependsOn runRemoteRpiBuild
-    dependsOn moveFinalArtifactsToDeploymentDir
-    moveFinalArtifactsToDeploymentDir.mustRunAfter 'fullpackage', 'runRemoteWindowsBuild', 'runRemoteLinuxBuild', 'runRemoteRpiBuild'
+tasks.register('fullpackage') {
+    dependsOn 'ensureVersionReleaseReady'
+    def outputDir = layout.buildDirectory.dir('fullpackage')
+    def jpackageDir = layout.buildDirectory.dir('jpackage')
+    def appName = application.applicationName
+    def releaseVersion = version
+    if (OperatingSystem.current().macOsX) {
+        dependsOn 'notarizeDmg'
+        doLast {
+            project.copy {
+                from jpackageDir.get().file("$appName-${releaseVersion}.dmg")
+                into outputDir
+                rename { macDmgFileName }
+            }
+        }
+    } else if (OperatingSystem.current().windows) {
+        dependsOn 'jpackage', 'packageMsix'
+        doLast {
+            project.copy {
+                from jpackageDir.get().file("$appName-${releaseVersion}.msi")
+                into outputDir
+                rename { msiFileName }
+            }
+        }
+    } else {
+        // not currently released, kept buildable
+        dependsOn 'jpackage'
+        doLast {
+            project.copy {
+                from jpackageDir.get().asFile
+                include '*.deb', '*.rpm'
+                into outputDir
+                rename { "Linux-$it" }
+            }
+        }
+    }
 }
+tasks.named('jpackage') { mustRunAfter 'ensureVersionReleaseReady' }
 
 private static readEnvOrNull(String variableName) {
     System.getProperty(variableName, System.getenv(variableName))
-}
-
-private static readEnvOrFail(String variableName) {
-    def value = readEnvOrNull(variableName)
-    if (value == null) {
-        throw new InvalidUserDataException("Missing environment or system property ${variableName}")
-    }
-    return value
 }
 
 private static readEnvOrDefault(String variableName, String defaultValue) {

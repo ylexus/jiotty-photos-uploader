@@ -10,7 +10,10 @@ import javafx.stage.FileChooser;
 import javafx.util.StringConverter;
 import javafx.util.converter.DoubleStringConverter;
 import javafx.util.converter.IntegerStringConverter;
-import net.yudichev.googlephotosupload.core.*;
+import net.yudichev.googlephotosupload.core.CustomCredentialsManager;
+import net.yudichev.googlephotosupload.core.FailOnDriveSpaceOption;
+import net.yudichev.googlephotosupload.core.Preferences;
+import net.yudichev.googlephotosupload.core.PreferencesManager;
 import net.yudichev.jiotty.persistence.varstore.VarStore;
 
 import javax.annotation.Nonnull;
@@ -34,7 +37,6 @@ public final class PreferencesDialogController implements PreferencesManager {
 
     private static final String VAR_STORE_KEY = "preferences";
     private final VarStore varStore;
-    private final Provider<UploaderStrategyChoicePanelController> uploaderStrategyChoicePanelControllerProvider;
     private final Restarter restarter;
     private final ResourceBundle resourceBundle;
     private final Lock lock = new ReentrantLock();
@@ -47,7 +49,6 @@ public final class PreferencesDialogController implements PreferencesManager {
     public TabPane tabPane;
     public Tab tabAccount;
 
-    public TitledPane uploaderStrategyChoiceContainer;
     public PreferencePatternEditorController excludePanelController;
     public PreferencePatternEditorController includePanelController;
 
@@ -74,13 +75,11 @@ public final class PreferencesDialogController implements PreferencesManager {
 
     @Inject
     PreferencesDialogController(VarStore varStore,
-                                Provider<UploaderStrategyChoicePanelController> uploaderStrategyChoicePanelControllerProvider,
                                 Provider<JavafxApplicationResources> javafxApplicationResourcesProvider,
                                 CustomCredentialsManager customCredentialsManager,
                                 Restarter restarter,
                                 ResourceBundle resourceBundle) {
         this.varStore = checkNotNull(varStore);
-        this.uploaderStrategyChoicePanelControllerProvider = checkNotNull(uploaderStrategyChoicePanelControllerProvider);
         customCredentials = new CustomCredentials(customCredentialsManager);
         albumDelimiter = new AlbumDelimiter();
         relevantDir = new RelevantDir();
@@ -97,14 +96,9 @@ public final class PreferencesDialogController implements PreferencesManager {
     }
 
     public void initialize() {
-        var uploaderStrategyChoicePanelController = uploaderStrategyChoicePanelControllerProvider.get();
-        uploaderStrategyChoiceContainer.setContent(uploaderStrategyChoicePanelController.getRoot());
-        uploaderStrategyChoicePanelController.addSelectionChangeListener(this::onUploaderStrategyChange);
-
         inLock(lock, () -> {
             excludePanelController.initialise(preferences.scanExclusionGlobs(), this::onExcludeGlobsChanged);
             includePanelController.initialise(preferences.scanInclusionGlobs(), this::onIncludeGlobsChanged);
-            preferences.addToAlbumStrategy().ifPresent(uploaderStrategyChoicePanelController::setSelection);
 
             albumDelimiter.initialise();
             relevantDir.initialise();
@@ -127,13 +121,6 @@ public final class PreferencesDialogController implements PreferencesManager {
     private void onIncludeGlobsChanged(List<String> patterns) {
         inLock(lock, () -> {
             preferences = preferences.withScanInclusionGlobs(patterns);
-            savePreferences();
-        });
-    }
-
-    private void onUploaderStrategyChange(AddToAlbumMethod strategy) {
-        inLock(lock, () -> {
-            preferences = preferences.withAddToAlbumStrategy(strategy);
             savePreferences();
         });
     }
@@ -322,7 +309,7 @@ public final class PreferencesDialogController implements PreferencesManager {
                     change -> change.getControlNewText().isEmpty() || change.getControlNewText().equals(change.getControlText())
                             || RELEVANT_DIR_DEPTH_PATTERN.matcher(change.getControlNewText()).matches() ? change : null);
             relevantDirDepthTitleLimitTextFieldFormatter.valueProperty().addListener(
-                    (observable, oldValue, newValue) -> onRelevantDirDepthTitleLimitChange(newValue));
+                    (_, _, newValue) -> onRelevantDirDepthTitleLimitChange(newValue));
             relevantDirDepthTitleLimitTextField.setTextFormatter(relevantDirDepthTitleLimitTextFieldFormatter);
             relevantDirDepthTitleFullRadioButton.setSelected(preferences.relevantDirDepthLimit().isEmpty());
             relevantDirDepthTitleLimitedRadioButton.setSelected(preferences.relevantDirDepthLimit().isPresent());
@@ -424,7 +411,7 @@ public final class PreferencesDialogController implements PreferencesManager {
                                 return null;
                             }
                         });
-                textFormatter.valueProperty().addListener((observable, oldValue, newValue) -> onTextChange(newValue));
+                textFormatter.valueProperty().addListener((_, _, newValue) -> onTextChange(newValue));
                 textField.setTextFormatter(textFormatter);
             }
 

@@ -13,6 +13,8 @@ import java.util.ResourceBundle;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public final class ResourceBundleModule extends BaseLifecycleComponentModule implements ExposedKeyModule<ResourceBundle> {
+    // declared before RESOURCE_BUNDLE, whose initialisation logs
+    private static final Logger logger = LogManager.getLogger(ResourceBundleModule.class);
     public static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("i18n.Resources", new ResourceBundle.Control() {
         @Override
         public List<Locale> getCandidateLocales(String baseName, Locale locale) {
@@ -37,16 +39,15 @@ public final class ResourceBundleModule extends BaseLifecycleComponentModule imp
             checkNotNull(baseName);
             if ("zh".equals(locale.getLanguage())) {
                 if ("CHS".equals(locale.getVariant().toUpperCase()) || "CHS".equals(locale.getCountry().toUpperCase())) {
-                    return new Locale("zh", "Hans");
+                    return Locale.of("zh", "Hans");
                 }
                 if ("CHT".equals(locale.getVariant().toUpperCase()) || "CHT".equals(locale.getCountry().toUpperCase())) {
-                    return new Locale("zh", "Hant");
+                    return Locale.of("zh", "Hant");
                 }
             }
             return super.getFallbackLocale(baseName, locale);
         }
     });
-    private static final Logger logger = LogManager.getLogger(ResourceBundleModule.class);
 
     static {
         logger.debug("Using resource bundle locale {}", RESOURCE_BUNDLE.getLocale());
