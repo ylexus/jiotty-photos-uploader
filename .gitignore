@@ -19,3 +19,4 @@ out/**
 /app/.gradle/
 /app/build/
 /app/src/main/generated/
+.DS_Store
