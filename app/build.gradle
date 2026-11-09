@@ -301,7 +301,18 @@ tasks.register('stageMsix', Sync) {
     dependsOn 'jpackageImage'
     // the MSI task (jpackage) writes to the same directory as the app image
     mustRunAfter 'jpackage'
-    from(layout.buildDirectory.dir("jpackage/${application.applicationName}"))
+    def msixRevision = readEnvOrDefault('MSIX_REVISION', '0')
+    doFirst {
+        if (!(msixRevision ==~ /\d+/)) {
+            throw new InvalidUserDataException("MSIX_REVISION must be a number but was: ${msixRevision}")
+        }
+    }
+    from(layout.buildDirectory.dir("jpackage/${application.applicationName}")) {
+        // tells the app it was installed from the Microsoft Store, which updates it, so it must not offer GitHub releases
+        filesMatching('app/*.cfg') {
+            filter { String line -> line == '[JavaOptions]' ? line + System.lineSeparator() + 'java-options=-Djiotty.distribution=msstore' : line }
+        }
+    }
     from("$projectDir/src/main/packaging-resources/windows/msix") {
         exclude 'AppxManifest.xml'
     }
@@ -309,12 +320,22 @@ tasks.register('stageMsix', Sync) {
         include 'AppxManifest.xml'
         filter(ReplaceTokens, tokens: [
                 version             : version.toString(),
+                // the 4th part of the package version: raise it to resubmit the same app version to the Store
+                msixRevision        : msixRevision,
                 // placeholders for local builds; the Store build passes the values from Partner Center's Product identity page
                 identityName        : readEnvOrDefault('MSIX_IDENTITY_NAME', 'JiottyPhotosUploader.Dev'),
                 publisher           : readEnvOrDefault('MSIX_PUBLISHER', 'CN=Alexey Yudichev'),
                 publisherDisplayName: readEnvOrDefault('MSIX_PUBLISHER_DISPLAY_NAME', 'Alexey Yudichev')])
     }
     into layout.buildDirectory.dir('msix')
+    doLast {
+        if (OperatingSystem.current().windows) {
+            def cfgFiles = fileTree(layout.buildDirectory.dir('msix/app')).matching { include '*.cfg' }.files
+            if (!cfgFiles.any { it.text.contains('-Djiotty.distribution=msstore') }) {
+                throw new GradleException("The Microsoft Store marker was not added to the launcher configuration: ${cfgFiles}")
+            }
+        }
+    }
 }
 
 tasks.register('packageMsix', Exec) {

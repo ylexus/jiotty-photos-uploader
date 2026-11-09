@@ -65,4 +65,7 @@ Use the version `X.Y.Z` throughout; the build rejects anything else.
 
 5. **GitHub release:** tag `X.Y.Z`, attach the two DMGs and the MSI, publish. The app's update check offers any newer `X.Y.Z` release to existing users.
 
-6. **Microsoft Store:** Partner Center > the app > new submission, upload the MSIX. Certification usually takes a few days.
+6. **Microsoft Store:** Partner Center > the app > new submission, upload the MSIX. Certification usually takes a few days. The Store package's
+   launcher sets `-Djiotty.distribution=msstore`, which turns off the app's GitHub update check, as the Store updates the app. To submit a new package
+   for the same app version (e.g. after cancelling a submission), run the workflow again with a higher `msix_revision`, the 4th part of the package
+   version.

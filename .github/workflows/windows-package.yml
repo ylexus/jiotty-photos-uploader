@@ -10,6 +10,10 @@ on:
       version:
         description: Version to build, X.Y.Z
         required: true
+      msix_revision:
+        description: MSIX package revision, the 4th part of its version; raise it to resubmit the same version to the Store
+        required: false
+        default: '0'
 
 permissions:
   contents: read
@@ -19,6 +23,7 @@ jobs:
     runs-on: windows-latest
     env:
       VERSION: ${{ inputs.version }}
+      MSIX_REVISION: ${{ inputs.msix_revision }}
       MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
       MSIX_PUBLISHER: ${{ vars.MSIX_PUBLISHER }}
       MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
