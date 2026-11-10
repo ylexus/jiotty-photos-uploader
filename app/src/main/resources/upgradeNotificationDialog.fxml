@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.web.WebView?>
 <VBox xmlns:fx="http://javafx.com/fxml/1" prefWidth="800.0" spacing="5.0" stylesheets="@style.css" xmlns="http://javafx.com/javafx/10.0.2-internal"
       fx:controller="net.yudichev.googlephotosupload.ui.UpgradeNotificationDialogControllerImpl">
     <Label fx:id="label" maxHeight="Infinity" minHeight="-Infinity" wrapText="true"/>
@@ -13,7 +16,7 @@
         <Button onAction="#onIgnoreButtonAction" text="%upgradeIgnoreVersionButton"/>
     </FlowPane>
     <TitledPane fx:id="releaseNotesPane" expanded="false" text="%upgradeReleaseNotes" VBox.vgrow="ALWAYS">
-        <ScrollPane fx:id="releaseNotesScrollPane" fitToWidth="true"/>
+        <WebView fx:id="releaseNotesView" prefHeight="400.0" contextMenuEnabled="false"/>
     </TitledPane>
     <padding>
         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
