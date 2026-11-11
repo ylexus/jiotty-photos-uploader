@@ -7,7 +7,7 @@
          IgnorableNamespaces="uap rescap">
     <Identity Name="@identityName@"
               Publisher="@publisher@"
-              Version="@version@.@msixRevision@"
+              Version="@version@.0"
               ProcessorArchitecture="x64"/>
     <Properties>
         <DisplayName>Jiotty Photos Uploader</DisplayName>
