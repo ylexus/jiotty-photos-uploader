@@ -22,7 +22,9 @@ The Google OAuth client secret is baked into every package: locally it comes fro
 
        xcrun notarytool store-credentials jiotty-notary --apple-id <Apple ID> --team-id <team ID>
 
-3. For the Intel package, an **x64** Liberica JDK 25 *Full* (`bellsoft-jdk25...-macos-amd64-full.tar.gz` from https://bell-sw.com/pages/downloads/),
+3. The app that runs the build (the terminal, or the IDE whose terminal you use) must be allowed to control Finder: jpackage lays out the DMG window
+   with Finder, and the build fails otherwise. Allow it in System Settings > Privacy & Security > Automation.
+4. For the Intel package, an **x64** Liberica JDK 25 *Full* (`bellsoft-jdk25...-macos-amd64-full.tar.gz` from https://bell-sw.com/pages/downloads/),
    unpacked somewhere outside `/Library/Java/JavaVirtualMachines` so that Gradle doesn't pick it for native builds, e.g. `/path/to/jdk-25-x64`.
    Rosetta must be installed (`softwareupdate --install-rosetta`).
 

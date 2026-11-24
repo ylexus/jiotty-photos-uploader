@@ -1,6 +1,8 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.internal.os.OperatingSystem
 
+import java.nio.file.Files
+
 plugins {
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.1.0'
@@ -190,6 +192,9 @@ runtime {
         jvmArgs = application.applicationDefaultJvmArgs + ['-Dprism.verbose=true', '-Djavafx.verbose=true']
         if (OperatingSystem.current().macOsX) {
             installerType = 'dmg'
+            // gRPC's Netty extracts its native SSL library, changes the library's install name and re-signs it with "codesign -s -", which fails on
+            // a library that is already signed; the changed library keeps our now invalid signature, and macOS kills the signed app as it loads it
+            jvmArgs += ['-Dio.grpc.netty.shaded.io.netty.native.tryPatchShadedId=false']
             imageOptions = ['--verbose',
                             '--mac-package-identifier', 'net.yudichev.googlephotosupload.ui',
                             '--mac-app-category', 'photography',
@@ -203,7 +208,7 @@ runtime {
                 }
             }
             installerOptions = ['--verbose']
-            // icons only: jpackage generates Info.plist from the options above
+            // icons and the DMG window layout script; jpackage generates Info.plist from the options above
             resourceDir = file("$projectDir/src/main/packaging-resources/macOS/out")
         }
         if (OperatingSystem.current().windows) {
@@ -273,10 +278,49 @@ tasks.named('jpackageImage') { dependsOn 'signJarNativeLibraries' }
 def macArch = System.getProperty('os.arch') == 'aarch64' ? 'arm64' : 'x64'
 def macDmgFileName = "macOS-${macArch}-jiotty-photos-uploader-${version}.dmg"
 
+// jpackage lays out the DMG window (the drag-to-Applications link and the icon positions) with an AppleScript that drives Finder (ours is in
+// the resource dir); if the script fails, for instance because the build may not control Finder, jpackage carries on, and the DMG opens as a
+// bare window with only the app in it
+tasks.named('jpackage') {
+    doFirst {
+        // Finder does not save the window layout of a disk while another disk with the same name is mounted
+        if (OperatingSystem.current().macOsX && new File("/Volumes/${application.applicationName}").exists()) {
+            throw new GradleException("Eject the disk \"${application.applicationName}\" (an earlier DMG of the app) first: while it is mounted, " +
+                    'Finder does not save the layout of the new DMG\'s window')
+        }
+    }
+}
+
+tasks.register('verifyDmgLayout') {
+    description = 'Checks that the DMG has the Applications link and the Finder window layout'
+    onlyIf { OperatingSystem.current().macOsX }
+    dependsOn 'jpackage'
+    def dmgFile = layout.buildDirectory.file("jpackage/${application.applicationName}-${version}.dmg")
+    doLast {
+        def mountPoint = File.createTempDir('jiotty-dmg-check')
+        def attach = ['hdiutil', 'attach', '-nobrowse', '-readonly', '-mountpoint', mountPoint.absolutePath, dmgFile.get().asFile.absolutePath].execute()
+        attach.waitForProcessOutput(new StringBuilder(), System.err)
+        if (attach.exitValue() != 0) {
+            throw new GradleException("Could not mount ${dmgFile.get().asFile}")
+        }
+        try {
+            def applicationsLink = new File(mountPoint, 'Applications')
+            if (!Files.isSymbolicLink(applicationsLink.toPath()) || !new File(mountPoint, '.DS_Store').exists()) {
+                throw new GradleException('The DMG has no Applications link or window layout: jpackage could not script Finder. Allow the app that ' +
+                        'runs the build (e.g. the terminal or the IDE) to control Finder in System Settings > Privacy & Security > Automation, eject ' +
+                        'any disk with the app\'s name, then rebuild. Run with --info to see jpackage\'s output.')
+            }
+        } finally {
+            ['hdiutil', 'detach', '-quiet', mountPoint.absolutePath].execute().waitFor()
+            mountPoint.delete()
+        }
+    }
+}
+
 tasks.register('notarizeDmg', Exec) {
     description = 'Signs and notarizes the DMG, and staples the notarization ticket to it'
     onlyIf { OperatingSystem.current().macOsX }
-    dependsOn 'jpackage'
+    dependsOn 'jpackage', 'verifyDmgLayout'
     doFirst {
         if (!macSigningIdentity || !macNotaryProfile) {
             throw new InvalidUserDataException('A release DMG must be signed and notarized: set MAC_SIGNING_IDENTITY (e.g. ' +
